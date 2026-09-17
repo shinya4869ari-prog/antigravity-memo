@@ -211,7 +211,7 @@ let isSyncing = false;
 async function fetchMemosFromCloud(quiet = false) {
   if (isSyncing) return;
   isSyncing = true;
-  if (!quiet) setCloudStatus('syncing', 'クラウド確認中...');
+  if (!quiet) setCloudStatus('syncing', '同期中...');
 
   try {
     const res = await fetch('/api/memos');
@@ -225,18 +225,18 @@ async function fetchMemosFromCloud(quiet = false) {
         localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
         updateStats();
         render();
-        setCloudStatus('synced', '☁️ クラウド同期完了 (KV)');
+        setCloudStatus('synced', 'Cloud KV 同期済');
       } else {
         // KV is bound but empty: seed initial memos to cloud
-        setCloudStatus('syncing', 'クラウド初期投入中...');
+        setCloudStatus('syncing', '初期同期中...');
         await saveMemosToCloud();
       }
     } else if (data && data.mode === 'local') {
-      setCloudStatus('local', '📱 ローカル保存中 (KV未接続)');
+      setCloudStatus('local', 'ローカル保存 (KV未接続)');
     }
   } catch (err) {
     console.warn('Cloud sync offline / error:', err);
-    setCloudStatus('local', '📱 ローカル保存中 (オフライン)');
+    setCloudStatus('local', 'ローカル保存 (オフライン)');
   } finally {
     isSyncing = false;
   }
@@ -256,13 +256,13 @@ async function saveMemosToCloud() {
     const result = await res.json();
 
     if (result.mode === 'kv') {
-      setCloudStatus('synced', '☁️ クラウド同期完了 (KV)');
+      setCloudStatus('synced', 'Cloud KV 同期済');
     } else {
-      setCloudStatus('local', '📱 ローカル保存中 (KV未接続)');
+      setCloudStatus('local', 'ローカル保存 (KV未接続)');
     }
   } catch (err) {
     console.warn('Failed to save to cloud:', err);
-    setCloudStatus('local', '📱 ローカル保存中 (オフライン)');
+    setCloudStatus('local', 'ローカル保存 (オフライン)');
   }
 }
 
