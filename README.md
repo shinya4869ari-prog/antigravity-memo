@@ -53,5 +53,13 @@ antigravity-memo-app/
 ├── app.js           # アプリロジック、LocalStorage、プロンプト生成、D&D
 ├── _worker.js       # Cloudflare Pages Functions / Workers エッジAPI
 ├── wrangler.json    # Cloudflare デプロイ設定ファイル
+├── TODO.md          # 開発ロードマップ・次やることリスト
 └── README.md        # 本ドキュメント
 ```
+
+---
+
+## 📋 開発ロードマップ (次やること)
+今後の機能拡張や改善タスクは [TODO.md](TODO.md) に整理されています。
+Cloudflare KVによる端末間同期やPWA対応、音声入力などの実装予定が含まれています。
+

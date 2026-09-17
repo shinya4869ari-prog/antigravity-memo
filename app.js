@@ -3,51 +3,84 @@
  * Supports: LocalStorage, Drag & Drop, Markdown Prompt Generation, Cloudflare Ready
  */
 
-// Initial Sample Data (for first-time users)
+// Initial Sample Data & Actionable Roadmap (Next Steps)
 const INITIAL_MEMOS = [
   {
-    id: 'memo-init-1',
-    category: 'fix',
-    title: 'レスポンシブ時のヘッダー余白とボタン配置の最適化',
-    description: 'スマートフォン幅（幅480px以下）で閲覧した際に、ヘッダーのアクションボタンが折り返されて重なる場合があるので、フレックスの折り返しやパディングを調整してほしい。',
+    id: 'memo-next-1',
+    category: 'task',
+    title: 'Cloudflare Pages と GitHub リポジトリの自動デプロイ連携',
+    description: 'Cloudflareダッシュボードで「Pages」>「Gitに接続」を選び、今回作成した antigravity-memo リポジトリを紐付けて、pushするたびに世界中に自動更新されるように設定する。',
     priority: 'high',
     status: 'todo',
-    scope: 'style.css / .app-header',
-    createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 5).toISOString()
+    scope: 'Cloudflare Pages ダッシュボード',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
-    id: 'memo-init-2',
+    id: 'memo-next-2',
+    category: 'fix',
+    title: 'スマホ実機でのタッチ操作とモーダル表示の最適化',
+    description: 'Cloudflare Pagesで公開されたURLをスマホ実機で開き、カードのタップやプロンプトコピーボタンの押しやすさ、モーダルのスクロール挙動を確認・微調整する。',
+    priority: 'high',
+    status: 'todo',
+    scope: 'style.css / レスポンシブ',
+    createdAt: new Date(Date.now() - 1800000).toISOString(),
+    updatedAt: new Date(Date.now() - 1800000).toISOString()
+  },
+  {
+    id: 'memo-next-3',
+    category: 'task',
+    title: '開発ロードマップ (TODO.md) の作成と進捗管理',
+    description: 'Antigravityと一緒に次に進めるべきタスク、今後実装したい機能（KV同期、PWA化、音声入力）を整理してプロジェクト内に保存・管理する。',
+    priority: 'med',
+    status: 'in_progress',
+    scope: 'TODO.md, README.md',
+    createdAt: new Date(Date.now() - 3600000).toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'memo-next-4',
     category: 'idea',
-    title: 'Cloudflare Workers KV と連携したリアルタイム複数端末同期',
-    description: '現在はLocalStorageに保存されているデータを、CloudflareのWorkers KV または D1 データベースと同期させて、外出先のスマホとPCで全く同じ指示ボードを自動同期できるようにしたい。',
+    title: 'Cloudflare Workers KV と連携した複数端末リアルタイム同期',
+    description: '現在はLocalStorageに保存されているデータを、CloudflareのWorkers KV または D1 と同期させ、外出先のスマホでメモした内容がPC画面にも自動反映されるようにする。',
     priority: 'med',
     status: 'backlog',
     scope: '_worker.js / API連携',
-    createdAt: new Date(Date.now() - 3600000 * 12).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 12).toISOString()
+    createdAt: new Date(Date.now() - 7200000).toISOString(),
+    updatedAt: new Date(Date.now() - 7200000).toISOString()
   },
   {
-    id: 'memo-init-3',
-    category: 'task',
-    title: 'Antigravityへのワンクリック指示フォーマットにDiff形式を含めるオプション',
-    description: 'コードの修正依頼プロンプトをコピーする際に、「期待する変更の差分イメージ（Diff）」を書き込める入力欄をモーダルに追加してほしい。',
+    id: 'memo-next-5',
+    category: 'idea',
+    title: 'PWA (Progressive Web Apps) 対応でスマホのホーム画面からアプリ起動',
+    description: 'manifest.json とアプリアイコンを追加し、スマホの「ホーム画面に追加」から本物のネイティブアプリ感覚でワンタップ起動できるようにする。',
     priority: 'med',
-    status: 'in_progress',
-    scope: 'index.html, app.js',
-    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 2).toISOString()
+    status: 'backlog',
+    scope: 'manifest.json, service-worker',
+    createdAt: new Date(Date.now() - 10800000).toISOString(),
+    updatedAt: new Date(Date.now() - 10800000).toISOString()
   },
   {
-    id: 'memo-init-4',
+    id: 'memo-next-6',
+    category: 'idea',
+    title: '音声入力機能（Web Speech API）によるハンズフリーメモ追加',
+    description: '外出先やキーボードを打てない時でも、マイクボタンを押して喋るだけでアイデアや訂正要望を自動テキスト化してメモカードに登録できるようにする。',
+    priority: 'low',
+    status: 'backlog',
+    scope: 'app.js, index.html',
+    createdAt: new Date(Date.now() - 14400000).toISOString(),
+    updatedAt: new Date(Date.now() - 14400000).toISOString()
+  },
+  {
+    id: 'memo-next-7',
     category: 'rule',
     title: 'UIデザインの指針: Cloudflareオレンジとフューチャリスティックなダーク調を維持',
-    description: '今後の機能追加時も、Cloudflareのアクセントオレンジ（#f38020）とAntigravityのサイバーダーク背景、滑らかな角丸とガラスモーフィズムを基調とすること。外部の巨大ライブラリ（Tailwind等）は使わずVanilla CSSで完結させる。',
+    description: '今後の機能追加時も、Cloudflareのアクセントオレンジ（#f38020）とAntigravityのサイバーダーク背景、滑らかな角丸とガラスモーフィズムを基調とすること。Vanilla CSSで軽量かつ堅牢に完結させる。',
     priority: 'high',
     status: 'done',
     scope: 'プロジェクト全体 / デザインルール',
-    createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 48).toISOString()
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000).toISOString()
   }
 ];
 
