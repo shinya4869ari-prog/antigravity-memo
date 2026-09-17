@@ -32,6 +32,8 @@
     1. GitHub の [Installed GitHub Apps 設定](https://github.com/settings/installations) を開く
     2. 「Cloudflare Pages」の「Configure」をクリック
     3. 「Repository access」で対象リポジトリ（または「All repositories」）を選択して保存する
+  - **💡【重要メモ】`_worker.js` エラー時の対処法**:
+    - `Uploading a Pages _worker.js file as an asset` エラーが出た場合、`.assetsignore` ファイルに `_worker.js` を記載して除外する（設定済み）
 - [ ] **デプロイ完了確認 & 発行URLのアクセス確認**
   - Cloudflare ダッシュボードで発行された公開URL（`https://antigravity-memo.○○.workers.dev` または `.pages.dev`）を開く
   - メモの追加、ドラッグ＆ドロップ、プロンプトコピーが本番環境で正常動作するか確認
