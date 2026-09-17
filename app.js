@@ -92,6 +92,28 @@ const INITIAL_MEMOS = [
     scope: 'Cloudflare Workers KV / 横展開',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'memo-next-9',
+    category: 'idea',
+    title: '📸 スクリーンショット・画像添付メモ機能',
+    description: '覚えておきたいUI・エラー画面・デザインを画像ごと保存。PCではCtrl+V貼り付け、スマホではカメラ撮影やアルバムから選択。モーダル拡大ビューアー表示対応。',
+    priority: 'high',
+    status: 'todo',
+    scope: '画像添付 / クリップボード / 拡大プレビュー',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'memo-next-10',
+    category: 'idea',
+    title: '📅 Googleカレンダー連携（ワンクリック予定反映）',
+    description: 'メモに予定日時を設定し、ワンタップでスマホやPCのGoogleカレンダー予定作成画面を呼び出して予定登録する機能。OAuth認証不要のURL連携方式。',
+    priority: 'high',
+    status: 'todo',
+    scope: 'Google Calendar URL連携 / 日時設定',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   }
 ];
 
@@ -154,9 +176,14 @@ function loadMemos() {
   if (saved) {
     try {
       memos = JSON.parse(saved);
+      if (!Array.isArray(memos) || memos.length === 0) {
+        memos = [...INITIAL_MEMOS];
+        saveMemos();
+      }
     } catch (e) {
       console.error('Failed to parse saved memos', e);
       memos = [...INITIAL_MEMOS];
+      saveMemos();
     }
   } else {
     memos = [...INITIAL_MEMOS];
