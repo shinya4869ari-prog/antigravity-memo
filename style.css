@@ -160,6 +160,7 @@ body {
 .brand-titles h1 span.highlight {
   background: linear-gradient(135deg, #f38020 0%, #fb923c 50%, #f472b6 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -681,6 +682,7 @@ body {
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   word-break: break-word;
