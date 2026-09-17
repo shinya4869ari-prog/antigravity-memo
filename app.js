@@ -13,6 +13,7 @@ const INITIAL_MEMOS = [
     priority: 'high',
     status: 'todo',
     scope: 'Cloudflare Pages ダッシュボード',
+    dueDate: new Date(Date.now() + 86400000).toISOString(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   },
@@ -164,11 +165,31 @@ const inputMemoDesc = document.getElementById('input-memo-desc');
 const inputMemoPriority = document.getElementById('input-memo-priority');
 const inputMemoStatus = document.getElementById('input-memo-status');
 const inputMemoScope = document.getElementById('input-memo-scope');
+const inputMemoDue = document.getElementById('input-memo-due');
 
 const modalPrompt = document.getElementById('modal-prompt');
 const promptOutputBox = document.getElementById('prompt-output-box');
 const modalGuide = document.getElementById('modal-guide');
 const modalData = document.getElementById('modal-data');
+
+// Voice & Google Calendar Modal Elements
+const modalVoice = document.getElementById('modal-voice');
+const btnVoiceMemo = document.getElementById('btn-voice-memo');
+const fabVoiceMemo = document.getElementById('fab-voice-memo');
+const btnCloseVoiceModal = document.getElementById('btn-close-voice-modal');
+const btnCloseVoiceBtn = document.getElementById('btn-close-voice-btn');
+const btnRestartVoice = document.getElementById('btn-restart-voice');
+const btnStopVoice = document.getElementById('btn-stop-voice');
+const voiceListeningState = document.getElementById('voice-listening-state');
+const voiceResultState = document.getElementById('voice-result-state');
+const voiceStatusText = document.getElementById('voice-status-text');
+const voiceTranscriptBox = document.getElementById('voice-transcript-box');
+const voiceResultMessage = document.getElementById('voice-result-message');
+const parsedTitleInput = document.getElementById('parsed-title-input');
+const parsedDateInput = document.getElementById('parsed-date-input');
+const parsedRelativeTag = document.getElementById('parsed-relative-tag');
+const btnOpenGoogleCal = document.getElementById('btn-open-google-cal');
+const btnSaveVoiceMemo = document.getElementById('btn-save-voice-memo');
 
 // Storage & Cloud Sync Management
 const cloudSyncBadge = document.getElementById('cloud-sync-badge');
@@ -356,6 +377,32 @@ function formatDate(isoStr) {
   return `${date.getMonth() + 1}/${date.getDate()}`;
 }
 
+// Format Due Date for display
+function formatDueDate(isoStr) {
+  if (!isoStr) return '';
+  const due = new Date(isoStr);
+  if (isNaN(due.getTime())) return '';
+  const now = new Date();
+  
+  const m = due.getMonth() + 1;
+  const d = due.getDate();
+  const h = due.getHours();
+  const min = due.getMinutes();
+  const hasTime = !(h === 0 && min === 0);
+  const timePart = hasTime ? ` ${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}` : '';
+
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const dueStart = new Date(due.getFullYear(), due.getMonth(), due.getDate()).getTime();
+  const dayDiff = Math.round((dueStart - todayStart) / (1000 * 60 * 60 * 24));
+
+  if (dayDiff === 0) return `今日${timePart}`;
+  if (dayDiff === 1) return `明日${timePart}`;
+  if (dayDiff === 2) return `明後日${timePart}`;
+  if (dayDiff === -1) return `昨日 (超過)`;
+  if (dayDiff < -1) return `${m}/${d} (超過)`;
+  return `${m}/${d}${timePart}`;
+}
+
 // Stats Calculation
 function updateStats() {
   const total = memos.length;
@@ -472,6 +519,7 @@ function createCardElement(memo) {
         <span class="badge ${pri.badgeClass}">
           ${pri.icon} ${pri.label}
         </span>
+        ${memo.dueDate ? `<span class="badge-due" title="予定日時">📅 ${formatDueDate(memo.dueDate)}</span>` : ''}
       </div>
       <button class="btn-card-action prompt-copy" title="Antigravity用指示をコピー" onclick="copySingleMemoPrompt('${memo.id}', event)">
         ⚡
@@ -485,6 +533,7 @@ function createCardElement(memo) {
     <div class="card-footer">
       <span class="card-meta">${formatDate(memo.createdAt)}</span>
       <div class="card-actions">
+        <button class="btn-card-action" title="Googleカレンダーに登録" onclick="openMemoGoogleCalendar('${memo.id}', event)">📅</button>
         <button class="btn-card-action" title="編集" onclick="openEditMemoModal('${memo.id}', event)">✏️</button>
         <button class="btn-card-action" title="削除" onclick="deleteMemo('${memo.id}', event)">🗑️</button>
       </div>
@@ -531,7 +580,9 @@ function renderList(filteredMemos) {
       </div>
       <div style="display: flex; align-items: center; gap: 10px;">
         <span class="badge ${pri.badgeClass}">${pri.icon} ${pri.label}</span>
+        ${memo.dueDate ? `<span class="badge-due">📅 ${formatDueDate(memo.dueDate)}</span>` : ''}
         <span class="list-item-status-pill">${stat.icon} ${stat.label}</span>
+        <button class="btn-card-action" title="Googleカレンダーに登録" onclick="openMemoGoogleCalendar('${memo.id}', event)">📅</button>
         <button class="btn-card-action prompt-copy" title="Antigravity用指示をコピー" onclick="copySingleMemoPrompt('${memo.id}', event)">⚡</button>
         <button class="btn-card-action" title="編集" onclick="openEditMemoModal('${memo.id}', event)">✏️</button>
         <button class="btn-card-action" title="削除" onclick="deleteMemo('${memo.id}', event)">🗑️</button>
@@ -663,6 +714,7 @@ function generateBatchPrompt() {
 function openNewMemoModal() {
   inputMemoId.value = '';
   formMemo.reset();
+  inputMemoDue.value = '';
   modalMemoTitle.textContent = '新規指示・メモの作成';
   // Default radios
   const fixRadio = formMemo.querySelector('input[value="task"]');
@@ -682,6 +734,7 @@ function openEditMemoModal(id, event) {
   inputMemoPriority.value = memo.priority;
   inputMemoStatus.value = memo.status;
   inputMemoScope.value = memo.scope || '';
+  inputMemoDue.value = memo.dueDate ? memo.dueDate.slice(0, 16) : '';
 
   const catRadio = formMemo.querySelector(`input[value="${memo.category}"]`);
   if (catRadio) catRadio.checked = true;
@@ -717,6 +770,8 @@ formMemo.addEventListener('submit', (e) => {
   const priority = inputMemoPriority.value;
   const status = inputMemoStatus.value;
   const scope = inputMemoScope.value.trim();
+  const dueVal = inputMemoDue.value;
+  const dueDate = dueVal ? new Date(dueVal).toISOString() : null;
   const category = formMemo.querySelector('input[name="memo-category"]:checked')?.value || 'task';
 
   if (!title) return;
@@ -731,6 +786,7 @@ formMemo.addEventListener('submit', (e) => {
       memo.status = status;
       memo.scope = scope;
       memo.category = category;
+      memo.dueDate = dueDate;
       memo.updatedAt = new Date().toISOString();
       showToast('メモを更新しました', '💾');
     }
@@ -744,6 +800,7 @@ formMemo.addEventListener('submit', (e) => {
       priority,
       status,
       scope,
+      dueDate,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -924,6 +981,416 @@ window.addEventListener('click', (e) => {
 window.copySingleMemoPrompt = copySingleMemoPrompt;
 window.openEditMemoModal = openEditMemoModal;
 window.deleteMemo = deleteMemo;
+window.openMemoGoogleCalendar = openMemoGoogleCalendar;
+
+// ==========================================================================
+// Voice Input (Web Speech API) & Google Calendar Integration
+// ==========================================================================
+
+// 1. Japanese Natural Language Date & Task Parser
+function parseVoiceDateAndTitle(text) {
+  if (!text) return { title: '', targetDate: null, relativeLabel: '', targetTime: null, raw: '' };
+  const raw = text.trim();
+  let cleaned = raw;
+  const now = new Date();
+  let targetDate = null;
+  let targetTime = null;
+  let relativeLabel = '';
+
+  // Full-width to half-width numbers
+  cleaned = cleaned.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+
+  // Relative keywords
+  if (/(今日|きょう)/.test(cleaned)) {
+    targetDate = new Date(now);
+    relativeLabel = '今日';
+    cleaned = cleaned.replace(/(今日|きょう)(の)?/, ' ');
+  } else if (/(明日|あした|みょうにち)/.test(cleaned)) {
+    targetDate = new Date(now);
+    targetDate.setDate(targetDate.getDate() + 1);
+    relativeLabel = '明日';
+    cleaned = cleaned.replace(/(明日|あした|みょうにち)(の)?/, ' ');
+  } else if (/(明後日|あさって|みょうごにち)/.test(cleaned)) {
+    targetDate = new Date(now);
+    targetDate.setDate(targetDate.getDate() + 2);
+    relativeLabel = '明後日';
+    cleaned = cleaned.replace(/(明後日|あさって|みょうごにち)(の)?/, ' ');
+  } else if (/(明々後日|しあさって)/.test(cleaned)) {
+    targetDate = new Date(now);
+    targetDate.setDate(targetDate.getDate() + 3);
+    relativeLabel = '3日後';
+    cleaned = cleaned.replace(/(明々後日|しあさって)(の)?/, ' ');
+  }
+
+  // Weekday matches: 来週月曜 / 今週金曜 / 水曜日
+  const weekDayMatch = cleaned.match(/(今週|来週|次の)?\s*([月火水木金土日])曜?(日)?/);
+  if (!targetDate && weekDayMatch) {
+    const isNextWeek = weekDayMatch[1] === '来週';
+    const dayChar = weekDayMatch[2];
+    const dayMap = { '日': 0, '月': 1, '火': 2, '水': 3, '木': 4, '金': 5, '土': 6 };
+    const targetDayOfWeek = dayMap[dayChar];
+    const currentDayOfWeek = now.getDay();
+    let diff = targetDayOfWeek - currentDayOfWeek;
+    if (diff <= 0) diff += 7;
+    if (isNextWeek && diff < 7) diff += 7;
+    targetDate = new Date(now);
+    targetDate.setDate(targetDate.getDate() + diff);
+    relativeLabel = (weekDayMatch[1] || '') + dayChar + '曜';
+    cleaned = cleaned.replace(weekDayMatch[0], ' ');
+  }
+
+  // [X]日後
+  const daysLaterMatch = cleaned.match(/(\d+)\s*日後/);
+  if (!targetDate && daysLaterMatch) {
+    const days = parseInt(daysLaterMatch[1], 10);
+    targetDate = new Date(now);
+    targetDate.setDate(targetDate.getDate() + days);
+    relativeLabel = `${days}日後`;
+    cleaned = cleaned.replace(daysLaterMatch[0], ' ');
+  }
+
+  // [X]月[Y]日
+  const monthDayMatch = cleaned.match(/(\d+)\s*月\s*(\d+)\s*日/);
+  if (!targetDate && monthDayMatch) {
+    const m = parseInt(monthDayMatch[1], 10) - 1;
+    const d = parseInt(monthDayMatch[2], 10);
+    targetDate = new Date(now.getFullYear(), m, d);
+    if (targetDate < now) {
+      targetDate.setFullYear(now.getFullYear() + 1);
+    }
+    relativeLabel = `${m + 1}/${d}`;
+    cleaned = cleaned.replace(monthDayMatch[0], ' ');
+  }
+
+  // [X]日
+  const dayOnlyMatch = cleaned.match(/(\d+)\s*日/);
+  if (!targetDate && dayOnlyMatch) {
+    const d = parseInt(dayOnlyMatch[1], 10);
+    targetDate = new Date(now.getFullYear(), now.getMonth(), d);
+    if (targetDate < now) {
+      targetDate.setMonth(now.getMonth() + 1);
+    }
+    relativeLabel = `${targetDate.getMonth() + 1}/${d}`;
+    cleaned = cleaned.replace(dayOnlyMatch[0], ' ');
+  }
+
+  // Time matches: 午前/午後 + X時(Y分)?
+  const ampmMatch = cleaned.match(/(午前|午後)\s*(\d+)\s*時(\s*半|\s*(\d+)\s*分)?/);
+  if (ampmMatch) {
+    let h = parseInt(ampmMatch[2], 10);
+    if (ampmMatch[1] === '午後' && h < 12) h += 12;
+    if (ampmMatch[1] === '午前' && h === 12) h = 0;
+    let m = 0;
+    if (ampmMatch[3] && ampmMatch[3].includes('半')) m = 30;
+    else if (ampmMatch[4]) m = parseInt(ampmMatch[4], 10);
+    targetTime = { hour: h, minute: m };
+    cleaned = cleaned.replace(ampmMatch[0], ' ');
+  } else {
+    const timeMatch = cleaned.match(/(\d+)\s*時(\s*半|\s*(\d+)\s*分)?/);
+    if (timeMatch) {
+      let h = parseInt(timeMatch[1], 10);
+      let m = 0;
+      if (timeMatch[2] && timeMatch[2].includes('半')) m = 30;
+      else if (timeMatch[3]) m = parseInt(timeMatch[3], 10);
+      targetTime = { hour: h, minute: m };
+      cleaned = cleaned.replace(timeMatch[0], ' ');
+    }
+  }
+
+  // Clean remaining title text (trim particles)
+  cleaned = cleaned.trim()
+    .replace(/^[\sにでへをのからまではが]+/g, '')
+    .replace(/[\sにでへをのからまではが]+$/g, '')
+    .replace(/(よろしく|お願い(します)?)+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (targetDate) {
+    if (targetTime) {
+      targetDate.setHours(targetTime.hour, targetTime.minute, 0, 0);
+    } else {
+      targetDate.setHours(10, 0, 0, 0); // Default daytime 10:00
+    }
+  }
+
+  return {
+    title: cleaned || raw,
+    targetDate,
+    targetTime,
+    relativeLabel: relativeLabel || (targetDate ? `${targetDate.getMonth() + 1}/${targetDate.getDate()}` : ''),
+    raw
+  };
+}
+
+// 2. Google Calendar Direct URL Generator
+function generateGoogleCalendarUrl({ title, targetDate, targetTime, details }) {
+  const baseUrl = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
+  const text = encodeURIComponent(title || 'タスク・予定');
+  const detailsParam = encodeURIComponent(details || 'Antigravity Mission Hub から登録');
+
+  let datesParam = '';
+  if (targetDate) {
+    const y = targetDate.getFullYear();
+    const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const d = String(targetDate.getDate()).padStart(2, '0');
+
+    if (targetTime) {
+      const startH = String(targetTime.hour).padStart(2, '0');
+      const startM = String(targetTime.minute).padStart(2, '0');
+      const endHour = (targetTime.hour + 1) % 24;
+      const endH = String(endHour).padStart(2, '0');
+      const endM = startM;
+      datesParam = `${y}${m}${d}T${startH}${startM}00/${y}${m}${d}T${endH}${endM}00`;
+    } else {
+      const nextDay = new Date(targetDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const ny = nextDay.getFullYear();
+      const nm = String(nextDay.getMonth() + 1).padStart(2, '0');
+      const nd = String(nextDay.getDate()).padStart(2, '0');
+      datesParam = `${y}${m}${d}/${ny}${nm}${nd}`;
+    }
+  } else {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    datesParam = `${y}${m}${d}/${y}${m}${d}`;
+  }
+
+  return `${baseUrl}&text=${text}&dates=${datesParam}&details=${detailsParam}`;
+}
+
+// Open existing memo directly in Google Calendar
+function openMemoGoogleCalendar(id, event) {
+  if (event) event.stopPropagation();
+  const memo = memos.find(m => m.id === id);
+  if (!memo) return;
+
+  let targetDate = null;
+  let targetTime = null;
+
+  if (memo.dueDate) {
+    const d = new Date(memo.dueDate);
+    if (!isNaN(d.getTime())) {
+      targetDate = d;
+      if (!(d.getHours() === 0 && d.getMinutes() === 0)) {
+        targetTime = { hour: d.getHours(), minute: d.getMinutes() };
+      }
+    }
+  }
+
+  if (!targetDate) {
+    targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + 1);
+    targetDate.setHours(10, 0, 0, 0);
+    targetTime = { hour: 10, minute: 0 };
+  }
+
+  const url = generateGoogleCalendarUrl({
+    title: memo.title,
+    targetDate,
+    targetTime,
+    details: memo.description || (memo.scope ? `スコープ: ${memo.scope}` : 'Antigravity Mission Hub から登録')
+  });
+
+  window.open(url, '_blank');
+  showToast(`「${memo.title}」をGoogleカレンダーで開きます`, '📅');
+}
+
+// 3. Web Speech API Voice Controller
+let speechRecog = null;
+let isVoiceActive = false;
+
+function initVoiceRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) return null;
+
+  const recog = new SpeechRecognition();
+  recog.lang = 'ja-JP';
+  recog.continuous = false;
+  recog.interimResults = true;
+  recog.maxAlternatives = 1;
+
+  recog.onstart = () => {
+    isVoiceActive = true;
+    voiceStatusText.textContent = '音声を聴き取っています... 喋ってください';
+    voiceStatusText.style.color = '#f43f5e';
+    voiceListeningState.style.display = 'flex';
+    voiceResultState.style.display = 'none';
+  };
+
+  recog.onresult = (event) => {
+    let interim = '';
+    let finalTranscript = '';
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      if (event.results[i].isFinal) {
+        finalTranscript += event.results[i][0].transcript;
+      } else {
+        interim += event.results[i][0].transcript;
+      }
+    }
+
+    const currentText = finalTranscript || interim;
+    if (currentText) {
+      voiceTranscriptBox.innerHTML = `<strong>「${escapeHtml(currentText)}」</strong>`;
+    }
+
+    if (finalTranscript) {
+      handleVoiceFinalResult(finalTranscript);
+    }
+  };
+
+  recog.onerror = (event) => {
+    console.warn('Speech recognition error:', event.error);
+    isVoiceActive = false;
+    if (event.error === 'not-allowed') {
+      voiceStatusText.textContent = 'マイクの使用が許可されていません。ブラウザのアドレスバーでマイクを許可してください。';
+      voiceStatusText.style.color = '#f43f5e';
+    } else if (event.error === 'no-speech') {
+      voiceStatusText.textContent = '音声が検出されませんでした。「もう一度喋る」を押してください。';
+      voiceStatusText.style.color = 'var(--text-muted)';
+    } else {
+      voiceStatusText.textContent = `認識エラー: ${event.error}`;
+    }
+  };
+
+  recog.onend = () => {
+    isVoiceActive = false;
+  };
+
+  return recog;
+}
+
+function startVoiceInput() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert('お使いのブラウザは音声入力（Web Speech API）に対応していません。\nGoogle Chrome、Safari、Edge、またはスマホの標準ブラウザをご利用ください。');
+    return;
+  }
+
+  modalVoice.classList.add('active');
+  voiceListeningState.style.display = 'flex';
+  voiceResultState.style.display = 'none';
+  voiceTranscriptBox.innerHTML = '<span class="placeholder-tip">「明日 配車予約」「来週金曜 14時に点検」と喋ってください</span>';
+  voiceStatusText.textContent = 'マイクを起動中...';
+
+  if (!speechRecog) {
+    speechRecog = initVoiceRecognition();
+  }
+
+  try {
+    speechRecog.start();
+  } catch (err) {
+    try {
+      speechRecog.stop();
+      setTimeout(() => speechRecog.start(), 200);
+    } catch (e) {
+      console.error('Voice restart failed:', e);
+    }
+  }
+}
+
+function stopVoiceInput() {
+  if (speechRecog && isVoiceActive) {
+    speechRecog.stop();
+  }
+}
+
+function handleVoiceFinalResult(transcript) {
+  const parsed = parseVoiceDateAndTitle(transcript);
+
+  voiceListeningState.style.display = 'none';
+  voiceResultState.style.display = 'flex';
+
+  parsedTitleInput.value = parsed.title;
+  parsedRelativeTag.textContent = parsed.relativeLabel || '今日';
+
+  if (parsed.targetDate) {
+    const y = parsed.targetDate.getFullYear();
+    const m = String(parsed.targetDate.getMonth() + 1).padStart(2, '0');
+    const d = String(parsed.targetDate.getDate()).padStart(2, '0');
+    const hh = String(parsed.targetDate.getHours()).padStart(2, '0');
+    const mm = String(parsed.targetDate.getMinutes()).padStart(2, '0');
+    parsedDateInput.value = `${y}-${m}-${d}T${hh}:${mm}`;
+  } else {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(10, 0, 0, 0);
+    const y = tomorrow.getFullYear();
+    const m = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const d = String(tomorrow.getDate()).padStart(2, '0');
+    parsedDateInput.value = `${y}-${m}-${d}T10:00`;
+  }
+
+  voiceResultMessage.textContent = `「${parsed.title}」(${parsed.relativeLabel || '日時解析済'}) を検出しました！`;
+}
+
+function saveParsedVoiceMemo(title, dueVal) {
+  const newMemo = {
+    id: 'memo-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    category: 'task',
+    title: title || '音声入力タスク',
+    description: '🎙️ 音声入力より自動作成',
+    priority: 'high',
+    status: 'todo',
+    scope: 'カレンダー連携タスク',
+    dueDate: dueVal ? new Date(dueVal).toISOString() : null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  memos.unshift(newMemo);
+  saveMemos(true);
+  modalVoice.classList.remove('active');
+}
+
+// Voice Modal Action Listeners
+if (btnVoiceMemo) btnVoiceMemo.addEventListener('click', startVoiceInput);
+if (fabVoiceMemo) fabVoiceMemo.addEventListener('click', startVoiceInput);
+if (btnCloseVoiceModal) btnCloseVoiceModal.addEventListener('click', () => modalVoice.classList.remove('active'));
+if (btnCloseVoiceBtn) btnCloseVoiceBtn.addEventListener('click', () => modalVoice.classList.remove('active'));
+if (btnRestartVoice) btnRestartVoice.addEventListener('click', startVoiceInput);
+
+if (btnStopVoice) {
+  btnStopVoice.addEventListener('click', () => {
+    stopVoiceInput();
+    const text = voiceTranscriptBox.textContent.replace(/^[「\s]+|[」\s]+$/g, '').trim();
+    if (text && !text.includes('と喋ってください')) {
+      handleVoiceFinalResult(text);
+    }
+  });
+}
+
+if (btnOpenGoogleCal) {
+  btnOpenGoogleCal.addEventListener('click', () => {
+    const title = parsedTitleInput.value.trim() || '予定・タスク';
+    const dueVal = parsedDateInput.value;
+    let targetDate = dueVal ? new Date(dueVal) : null;
+    let targetTime = null;
+    if (targetDate && !isNaN(targetDate.getTime())) {
+      targetTime = { hour: targetDate.getHours(), minute: targetDate.getMinutes() };
+    }
+
+    const calUrl = generateGoogleCalendarUrl({
+      title,
+      targetDate,
+      targetTime,
+      details: 'Antigravity Mission Hub 音声メモから登録'
+    });
+    window.open(calUrl, '_blank');
+
+    saveParsedVoiceMemo(title, dueVal);
+    showToast(`「${title}」のGoogleカレンダーを開きました！`, '📅');
+  });
+}
+
+if (btnSaveVoiceMemo) {
+  btnSaveVoiceMemo.addEventListener('click', () => {
+    const title = parsedTitleInput.value.trim() || '音声入力タスク';
+    const dueVal = parsedDateInput.value;
+    saveParsedVoiceMemo(title, dueVal);
+    showToast(`「${title}」をメモカードに追加しました！`, '✨');
+  });
+}
 
 // Auto-sync when switching back to this tab / waking phone
 window.addEventListener('focus', () => {

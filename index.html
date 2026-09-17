@@ -70,6 +70,11 @@
           Antigravity用プロンプト生成
         </button>
 
+        <button id="btn-voice-memo" class="btn btn-voice" title="音声で喋って予定＆メモ自動作成 (例: 明日 配車予約)">
+          <span class="mic-pulse-dot">🎙️</span>
+          <span>音声で予定追加</span>
+        </button>
+
         <button id="btn-new-memo" class="btn btn-primary" title="新しい指示・メモを追加">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -229,6 +234,12 @@
     </div>
   </div>
 
+  <!-- Floating Voice Action Button (Mobile & Quick Access) -->
+  <button id="fab-voice-memo" class="fab-voice-btn" title="音声で予定・タスク追加 (例: 明日 配車予約)">
+    <span class="fab-mic-icon">🎙️</span>
+    <span class="fab-pulse-ring"></span>
+  </button>
+
   <!-- Modal 1: Create / Edit Memo -->
   <div class="modal-overlay" id="modal-memo">
     <div class="modal-content">
@@ -308,6 +319,13 @@
           <div class="form-group">
             <label class="form-label" for="input-memo-scope">対象ファイル / コンポーネント (任意)</label>
             <input type="text" id="input-memo-scope" class="form-input" placeholder="例: src/components/Header.vue, style.css, 認証機能">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="input-memo-due">
+              <span>📅 予定日・期限 (任意 / カレンダー連携)</span>
+            </label>
+            <input type="datetime-local" id="input-memo-due" class="form-input">
           </div>
         </div>
         <div class="modal-footer">
@@ -440,6 +458,72 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" id="btn-close-data-btn">閉じる</button>
+      </div>
+    </div>
+  <!-- Modal 5: Voice Recognition & Calendar Auto-Link -->
+  <div class="modal-overlay" id="modal-voice">
+    <div class="modal-content modal-voice-content">
+      <div class="modal-header">
+        <h2>
+          <span class="mic-modal-badge">🎙️</span>
+          音声入力 &amp; カレンダー即時連携
+        </h2>
+        <button class="modal-close" id="btn-close-voice-modal">&times;</button>
+      </div>
+      <div class="modal-body modal-voice-body">
+        <!-- Listening state -->
+        <div id="voice-listening-state" class="voice-state">
+          <div class="pulse-ring-container">
+            <div class="pulse-ring"></div>
+            <div class="pulse-ring delay-1"></div>
+            <div class="pulse-ring delay-2"></div>
+            <div class="pulse-core">🎙️</div>
+          </div>
+          <div class="voice-listening-text" id="voice-status-text">音声を待機中...</div>
+          <div class="voice-transcript-box" id="voice-transcript-box">
+            <span class="placeholder-tip">「明日 配車予約」「来週金曜 14時に点検」と喋ってください</span>
+          </div>
+          <div class="voice-controls">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-stop-voice">■ 録音停止 / 確定</button>
+          </div>
+        </div>
+
+        <!-- Result & Calendar Action State -->
+        <div id="voice-result-state" class="voice-state" style="display: none;">
+          <div class="voice-result-banner">
+            <span class="banner-icon">✨</span>
+            <span id="voice-result-message">音声を解析しました！</span>
+          </div>
+
+          <div class="voice-parsed-card">
+            <div class="parsed-row">
+              <span class="parsed-label">🎯 タスク名</span>
+              <input type="text" id="parsed-title-input" class="form-input parsed-val-input" placeholder="タスク名">
+            </div>
+            <div class="parsed-row">
+              <span class="parsed-label">📅 予定日時</span>
+              <div class="parsed-date-group">
+                <span id="parsed-relative-tag" class="parsed-tag">明日</span>
+                <input type="datetime-local" id="parsed-date-input" class="form-input parsed-val-input">
+              </div>
+            </div>
+          </div>
+
+          <div class="voice-action-grid">
+            <button type="button" class="btn btn-google-cal" id="btn-open-google-cal">
+              <span style="font-size: 1.15rem;">📅</span>
+              <span>Googleカレンダーに登録</span>
+            </button>
+            <button type="button" class="btn btn-primary" id="btn-save-voice-memo">
+              <span>💾</span>
+              <span>メモカードに保存</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-restart-voice">🔄 もう一度喋る</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-close-voice-btn">閉じる</button>
       </div>
     </div>
   </div>

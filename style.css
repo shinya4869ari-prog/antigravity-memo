@@ -1101,3 +1101,300 @@ body {
   display: inline-block;
   margin-top: 4px;
 }
+
+/* ==========================================================================
+   Voice Input & Google Calendar Integration Styles
+   ========================================================================== */
+
+/* Header Voice Button */
+.btn-voice {
+  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 50%, #f38020 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 15px rgba(244, 63, 94, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-voice:hover {
+  background: linear-gradient(135deg, #fb7185 0%, #f43f5e 50%, #fb923c 100%);
+  box-shadow: 0 6px 22px rgba(244, 63, 94, 0.6);
+  transform: translateY(-1px);
+}
+
+.mic-pulse-dot {
+  display: inline-block;
+  animation: mic-pulse 1.8s infinite ease-in-out;
+}
+
+@keyframes mic-pulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(244, 63, 94, 0)); }
+  50% { transform: scale(1.18); filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8)); }
+}
+
+/* Floating Action Button (FAB) for Mobile & Quick Access */
+.fab-voice-btn {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f43f5e 0%, #f38020 100%);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  cursor: pointer;
+  z-index: 990;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(244, 63, 94, 0.5), 0 0 20px rgba(243, 128, 32, 0.35);
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.fab-voice-btn:hover {
+  transform: scale(1.08) translateY(-2px);
+  box-shadow: 0 12px 30px rgba(244, 63, 94, 0.7), 0 0 25px rgba(243, 128, 32, 0.5);
+}
+
+.fab-voice-btn:active {
+  transform: scale(0.95);
+}
+
+.fab-mic-icon {
+  font-size: 1.65rem;
+  z-index: 2;
+}
+
+.fab-pulse-ring {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border-radius: 50%;
+  border: 2px solid #f43f5e;
+  opacity: 0.8;
+  animation: fab-ring-pulse 2s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+@keyframes fab-ring-pulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+/* Card Date & Calendar Badges */
+.badge-due {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+}
+
+.badge-due.is-urgent {
+  background: rgba(244, 63, 94, 0.15);
+  border-color: rgba(244, 63, 94, 0.45);
+  color: #fb7185;
+}
+
+/* Voice Recognition Modal */
+.modal-voice-content {
+  max-width: 520px;
+}
+
+.modal-voice-body {
+  padding: 24px 20px;
+}
+
+.mic-modal-badge {
+  font-size: 1.3rem;
+  margin-right: 6px;
+}
+
+.voice-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+/* Pulse waves animation */
+.pulse-ring-container {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 10px 0;
+}
+
+.pulse-core {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f43f5e 0%, #f38020 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  box-shadow: 0 0 25px rgba(244, 63, 94, 0.6);
+  z-index: 3;
+}
+
+.pulse-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(244, 63, 94, 0.25);
+  animation: pulse-wave 2.2s infinite cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  z-index: 1;
+}
+
+.pulse-ring.delay-1 {
+  animation-delay: 0.6s;
+}
+
+.pulse-ring.delay-2 {
+  animation-delay: 1.2s;
+}
+
+@keyframes pulse-wave {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+
+.voice-listening-text {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f43f5e;
+  letter-spacing: 0.04em;
+  animation: text-pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes text-pulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+.voice-transcript-box {
+  width: 100%;
+  min-height: 72px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  line-height: 1.5;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  word-break: break-word;
+}
+
+.voice-transcript-box .placeholder-tip {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* Result Card */
+.voice-result-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: var(--radius-sm);
+  color: #34d399;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.voice-parsed-card {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.parsed-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.parsed-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.parsed-date-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.parsed-tag {
+  background: rgba(243, 128, 32, 0.15);
+  border: 1px solid rgba(243, 128, 32, 0.4);
+  color: var(--cf-orange);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.parsed-val-input {
+  flex: 1;
+}
+
+.voice-action-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 12px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+/* Google Calendar Action Button */
+.btn-google-cal {
+  background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-weight: 700;
+}
+
+.btn-google-cal:hover {
+  background: linear-gradient(135deg, #4285f4 0%, #1a73e8 100%);
+  box-shadow: 0 6px 20px rgba(26, 115, 232, 0.6);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .voice-action-grid {
+    grid-template-columns: 1fr;
+  }
+  .fab-voice-btn {
+    bottom: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+  }
+}
