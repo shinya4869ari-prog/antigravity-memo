@@ -6,6 +6,12 @@
   "assets": {
     "directory": "./"
   },
+  "kv_namespaces": [
+    {
+      "binding": "MEMO_KV",
+      "id": "fcca76d0c5814fc79c278d3f4574e3f1"
+    }
+  ],
   "observability": {
     "enabled": true
   }
