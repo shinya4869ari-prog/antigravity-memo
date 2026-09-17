@@ -1,0 +1,22 @@
+{
+  "name": "Antigravity Mission Hub",
+  "short_name": "MissionHub",
+  "description": "AI協働メモ・訂正・やりたいこと整理 & プロンプト自動生成",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07090e",
+  "theme_color": "#f38020",
+  "icons": [
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
