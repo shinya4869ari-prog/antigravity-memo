@@ -45,15 +45,15 @@
 
 ## 💡 次に進める機能拡張・アイデアリスト (Phase 3: 実用性＆神機能強化)
 
-- [ ] **🔥【最重要】Cloudflare Workers KV によるクラウド完全永続化 & リアルタイム同期** 🚨
+- [x] **🔥【最重要】Cloudflare Workers KV によるクラウド完全永続化 & リアルタイム同期** ✅
   - [x] **プログラム側実装完了**:
     - `_worker.js`: KVエンドポイント（`/api/memos`）実装
     - `app.js`: 双方向クラウド同期、LocalStorage二重バックアップ、タブ復帰時自動同期
     - `index.html` & `style.css`: ヘッダーに「☁️ クラウド同期ステータス」バッジを追加
-  - [ ] **Cloudflare ダッシュボードでの KV 作成 & バインド（作業中・あと1分）**:
-    1. Cloudflare で KV Namespace（`antigravity-memo-kv`）を作成
-    2. `antigravity-memo` の「Settings」>「Bindings」で `MEMO_KV` として紐付け
-  - **実現されること**:
+  - [x] **Cloudflare ダッシュボードでの KV 作成 & バインド完了**:
+    - KV Namespace: `antigravity-memo-kv`
+    - バインディング変数名: `MEMO_KV`
+  - **🎉 達成されたこと**:
     1. ページを何回更新（リロード）してもデータが絶対に消えない
     2. PCで書いたメモがスマホに、スマホで書いたメモがPCに即時同期される
     3. アプリをアップデート（デプロイ）してもクラウド上に安全にデータが残り続ける
