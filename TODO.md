@@ -18,19 +18,25 @@
   - 単体メモの構造化プロンプトワンクリックコピー
   - 未完了タスク一括まとめプロンプトの生成
 - [x] **Cloudflare & Git 対応**
-  - `_worker.js`（Pages Functions / Workers 兼用エッジAPI）
-  - `wrangler.json`（最新設定ファイル）
-  - GitHub リポジトリ（`shinya4869ari-prog/antigravity-memo`）への初期プッシュ完了
+  - `_worker.js`（Workers / Pages 兼用エッジAPI・静的ファイル配信）
+  - `wrangler.json`（最新 Workers CI & Assets 設定）
+  - GitHub リポジトリ（`shinya4869ari-prog/antigravity-memo`）への初期プッシュおよびCI設定完了
 
 ---
 
-## 🚀 次にやること (Phase 2: Cloudflare Pages への本番公開)
-- [ ] **Cloudflare Pages と GitHub の連携設定**
-  - Cloudflare ダッシュボード（Workers & Pages）で「Pages」>「Gitに接続」を選択
-  - `antigravity-memo` リポジトリを選択してデプロイ
-  - これにより、GitHub にプッシュするたびに自動で全世界に最新版が反映される
+## 🚀 次にやること (Phase 2: Cloudflare への本番公開 & モバイル最適化)
+- [x] **Cloudflare と GitHub の連携設定**
+  - Cloudflare「Workers & Pages」>「Create application」> GitHubから `antigravity-memo` を選択
+  - 自動ビルド・デプロイパイプライン（`npx wrangler deploy`）構築完了
+  - **💡【重要メモ】リポジトリが選択一覧に出てこない時の対処法**:
+    1. GitHub の [Installed GitHub Apps 設定](https://github.com/settings/installations) を開く
+    2. 「Cloudflare Pages」の「Configure」をクリック
+    3. 「Repository access」で対象リポジトリ（または「All repositories」）を選択して保存する
+- [ ] **デプロイ完了確認 & 発行URLのアクセス確認**
+  - Cloudflare ダッシュボードで発行された公開URL（`https://antigravity-memo.○○.workers.dev` または `.pages.dev`）を開く
+  - メモの追加、ドラッグ＆ドロップ、プロンプトコピーが本番環境で正常動作するか確認
 - [ ] **スマートフォンからのアクセス確認**
-  - 発行された URL（例: `https://antigravity-memo.pages.dev`）をスマホのブラウザで開く
+  - 発行されたURLをスマホのブラウザ（Safari / Chrome）で開く
   - スマホの画面サイズでの操作感・ボタンの押しやすさを確認
 - [ ] **スマホのホーム画面に追加 (PWAライクな利用)**
   - スマホの「ホーム画面に追加」を押し、アプリのようにサッと起動できるかテスト
