@@ -170,7 +170,17 @@ const promptOutputBox = document.getElementById('prompt-output-box');
 const modalGuide = document.getElementById('modal-guide');
 const modalData = document.getElementById('modal-data');
 
-// Storage Management
+// Storage & Cloud Sync Management
+const cloudSyncBadge = document.getElementById('cloud-sync-badge');
+const cloudSyncText = document.getElementById('cloud-sync-text');
+
+function setCloudStatus(status, text) {
+  if (!cloudSyncBadge || !cloudSyncText) return;
+  cloudSyncBadge.className = `cloud-badge status-${status}`;
+  cloudSyncText.textContent = text;
+}
+
+// 1. Initial Local Load (Instant rendering, zero waiting)
 function loadMemos() {
   const saved = localStorage.getItem('agy_mission_memos');
   if (saved) {
@@ -178,23 +188,94 @@ function loadMemos() {
       memos = JSON.parse(saved);
       if (!Array.isArray(memos) || memos.length === 0) {
         memos = [...INITIAL_MEMOS];
-        saveMemos();
+        localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
       }
     } catch (e) {
       console.error('Failed to parse saved memos', e);
       memos = [...INITIAL_MEMOS];
-      saveMemos();
+      localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
     }
   } else {
     memos = [...INITIAL_MEMOS];
-    saveMemos();
+    localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
+  }
+  updateStats();
+  render();
+
+  // 2. Immediately sync with Cloudflare Workers KV
+  fetchMemosFromCloud();
+}
+
+// 3. Fetch data from Cloudflare Workers KV
+let isSyncing = false;
+async function fetchMemosFromCloud(quiet = false) {
+  if (isSyncing) return;
+  isSyncing = true;
+  if (!quiet) setCloudStatus('syncing', 'クラウド確認中...');
+
+  try {
+    const res = await fetch('/api/memos');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    if (Array.isArray(data)) {
+      if (data.length > 0) {
+        // KV has persistent data: update local state & cache
+        memos = data;
+        localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
+        updateStats();
+        render();
+        setCloudStatus('synced', '☁️ クラウド同期完了 (KV)');
+      } else {
+        // KV is bound but empty: seed initial memos to cloud
+        setCloudStatus('syncing', 'クラウド初期投入中...');
+        await saveMemosToCloud();
+      }
+    } else if (data && data.mode === 'local') {
+      setCloudStatus('local', '📱 ローカル保存中 (KV未接続)');
+    }
+  } catch (err) {
+    console.warn('Cloud sync offline / error:', err);
+    setCloudStatus('local', '📱 ローカル保存中 (オフライン)');
+  } finally {
+    isSyncing = false;
   }
 }
 
+// 4. Save data to Cloudflare Workers KV
+let cloudSaveTimer = null;
+async function saveMemosToCloud() {
+  setCloudStatus('syncing', 'クラウド保存中...');
+  try {
+    const res = await fetch('/api/memos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(memos)
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const result = await res.json();
+
+    if (result.mode === 'kv') {
+      setCloudStatus('synced', '☁️ クラウド同期完了 (KV)');
+    } else {
+      setCloudStatus('local', '📱 ローカル保存中 (KV未接続)');
+    }
+  } catch (err) {
+    console.warn('Failed to save to cloud:', err);
+    setCloudStatus('local', '📱 ローカル保存中 (オフライン)');
+  }
+}
+
+// Main save dispatcher (local first + debounced cloud upload)
 function saveMemos() {
   localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
   updateStats();
   render();
+
+  if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = setTimeout(() => {
+    saveMemosToCloud();
+  }, 300);
 }
 
 // Toast System
@@ -802,5 +883,24 @@ window.copySingleMemoPrompt = copySingleMemoPrompt;
 window.openEditMemoModal = openEditMemoModal;
 window.deleteMemo = deleteMemo;
 
+// Auto-sync when switching back to this tab / waking phone
+window.addEventListener('focus', () => {
+  fetchMemosFromCloud(true);
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    fetchMemosFromCloud(true);
+  }
+});
+
+// Periodic background sync (every 25 seconds)
+setInterval(() => {
+  if (document.visibilityState === 'visible') {
+    fetchMemosFromCloud(true);
+  }
+}, 25000);
+
 // Initialization
 loadMemos();
+

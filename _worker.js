@@ -22,38 +22,63 @@ export default {
       });
     }
 
-    // API Route: Memos Endpoint (Ready for KV / D1 binding if configured in wrangler)
+    // API Route: Memos Endpoint (Cloudflare KV Cloud Storage)
     if (url.pathname === '/api/memos') {
+      const corsHeaders = {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      };
+
+      if (request.method === 'OPTIONS') {
+        return new Response(null, { headers: corsHeaders });
+      }
+
       if (request.method === 'GET') {
-        // If KV bound (e.g., env.MEMO_KV), retrieve from KV, else return status
         if (env && env.MEMO_KV) {
-          const data = await env.MEMO_KV.get('memos');
-          return new Response(data || '[]', {
-            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-          });
+          try {
+            const data = await env.MEMO_KV.get('memos');
+            return new Response(data || '[]', {
+              headers: { ...corsHeaders, 'X-Storage-Mode': 'kv' }
+            });
+          } catch (err) {
+            return new Response(JSON.stringify({ error: err.message }), {
+              status: 500,
+              headers: corsHeaders
+            });
+          }
         }
         return new Response(JSON.stringify({
-          info: 'Client-side LocalStorage active. To enable Cloudflare KV sync, bind MEMO_KV in wrangler.json.'
+          mode: 'local',
+          info: 'Cloudflare KV is not bound yet. Using LocalStorage fallback.'
         }), {
-          headers: { 'Content-Type': 'application/json' }
+          headers: corsHeaders
         });
       }
 
       if (request.method === 'POST') {
         if (env && env.MEMO_KV) {
-          const body = await request.text();
-          await env.MEMO_KV.put('memos', body);
-          return new Response(JSON.stringify({ success: true }), {
-            headers: { 'Content-Type': 'application/json' }
-          });
+          try {
+            const body = await request.text();
+            await env.MEMO_KV.put('memos', body);
+            return new Response(JSON.stringify({ success: true, mode: 'kv' }), {
+              headers: corsHeaders
+            });
+          } catch (err) {
+            return new Response(JSON.stringify({ error: err.message }), {
+              status: 500,
+              headers: corsHeaders
+            });
+          }
         }
         return new Response(JSON.stringify({ success: true, mode: 'local' }), {
-          headers: { 'Content-Type': 'application/json' }
+          headers: corsHeaders
         });
       }
     }
 
-    // Fallback: serve static assets via Cloudflare Pages
+    // Fallback: serve static assets via Cloudflare Pages / Workers Assets
     return env.ASSETS ? env.ASSETS.fetch(request) : new Response('Not found', { status: 404 });
   }
 };
