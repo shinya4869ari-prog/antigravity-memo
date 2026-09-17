@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Antigravity Mission Hub - Antigravity (AI) との協働を円滑にするメモ＆指示共有アプリ。訂正・タスク・アイデアをワンクリックでプロンプト化し、Cloudflare Workers & Pages ですぐに世界中へ公開できます。">
+  <title>Antigravity Mission Hub | Cloudflare Workers & Pages Ready</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand-section">
+        <div class="logo-badge" title="Antigravity x Cloudflare Hub">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #f38020;">
+            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+          </svg>
+        </div>
+        <div class="brand-titles">
+          <h1>Antigravity <span class="highlight">Mission Hub</span></h1>
+          <p>AI協働メモ・訂正・やりたいこと整理 & プロンプト自動生成</p>
+        </div>
+        <div class="header-badges">
+          <span class="cf-badge" title="Cloudflare Workers & Pages にそのままデプロイ可能">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
+            </svg>
+            Workers & Pages Ready
+          </span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button id="btn-deploy-guide" class="btn btn-secondary btn-sm" title="Cloudflareへのデプロイ方法を見る">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          Cloudflareデプロイガイド
+        </button>
+
+        <button id="btn-export-json" class="btn btn-secondary btn-sm" title="データをJSONとしてエクスポート / インポート">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          データ管理
+        </button>
+
+        <button id="btn-gen-batch-prompt" class="btn btn-prompt" title="未完了のメモをまとめてAntigravity用指示として出力">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+          Antigravity用プロンプト生成
+        </button>
+
+        <button id="btn-new-memo" class="btn btn-primary" title="新しい指示・メモを追加">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          新規指示・メモ
+        </button>
+      </div>
+    </header>
+
+    <!-- Stats Ribbon -->
+    <section class="stats-ribbon" id="stats-container">
+      <div class="stat-chip active" data-filter="all" id="stat-total">
+        <div class="stat-info">
+          <span class="stat-icon">📑</span>
+          <span class="stat-label">すべてのメモ</span>
+        </div>
+        <span class="stat-count" id="count-all">0</span>
+      </div>
+
+      <div class="stat-chip" data-filter="fix" id="stat-fix">
+        <div class="stat-info">
+          <span class="stat-icon">🔧</span>
+          <span class="stat-label">訂正・バグ修正</span>
+        </div>
+        <span class="stat-count" id="count-fix">0</span>
+      </div>
+
+      <div class="stat-chip" data-filter="idea" id="stat-idea">
+        <div class="stat-info">
+          <span class="stat-icon">💡</span>
+          <span class="stat-label">やりたいこと・構想</span>
+        </div>
+        <span class="stat-count" id="count-idea">0</span>
+      </div>
+
+      <div class="stat-chip" data-filter="task" id="stat-task">
+        <div class="stat-info">
+          <span class="stat-icon">📋</span>
+          <span class="stat-label">指示・タスク</span>
+        </div>
+        <span class="stat-count" id="count-task">0</span>
+      </div>
+
+      <div class="stat-chip" data-filter="rule" id="stat-rule">
+        <div class="stat-info">
+          <span class="stat-icon">⚙️</span>
+          <span class="stat-label">ルール・前提指示</span>
+        </div>
+        <span class="stat-count" id="count-rule">0</span>
+      </div>
+    </section>
+
+    <!-- Toolbar & Filters -->
+    <section class="toolbar-section">
+      <div class="search-box">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="search-input" placeholder="タイトル、内容、対象ファイルで検索...">
+      </div>
+
+      <div class="filters-group">
+        <select id="filter-category" class="select-filter" aria-label="カテゴリー絞り込み">
+          <option value="all">すべてのカテゴリー</option>
+          <option value="fix">🔧 訂正・バグ修正</option>
+          <option value="idea">💡 やりたいこと・構想</option>
+          <option value="task">📋 指示・タスク</option>
+          <option value="rule">⚙️ ルール・前提指示</option>
+        </select>
+
+        <select id="filter-priority" class="select-filter" aria-label="優先度絞り込み">
+          <option value="all">すべての優先度</option>
+          <option value="high">🔥 優先度: 高</option>
+          <option value="med">⚡ 優先度: 中</option>
+          <option value="low">☕ 優先度: 低</option>
+        </select>
+
+        <div class="view-toggle">
+          <button id="view-kanban-btn" class="view-btn active" title="カンバン表示">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="18" rx="1"></rect>
+              <rect x="14" y="3" width="7" height="18" rx="1"></rect>
+            </svg>
+            カンバン
+          </button>
+          <button id="view-list-btn" class="view-btn" title="リスト表示">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+            リスト
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Workspace: Kanban Board -->
+    <main id="kanban-view" class="kanban-board">
+      <!-- Backlog -->
+      <div class="kanban-column" data-status="backlog" id="col-backlog">
+        <div class="column-header">
+          <div class="column-title">
+            <span style="color: #94a3b8;">📌</span>
+            <span>アイデアスプール (Backlog)</span>
+          </div>
+          <span class="column-badge" id="badge-count-backlog">0</span>
+        </div>
+        <div class="column-cards" id="cards-backlog"></div>
+      </div>
+
+      <!-- Todo -->
+      <div class="kanban-column" data-status="todo" id="col-todo">
+        <div class="column-header">
+          <div class="column-title">
+            <span style="color: #38bdf8;">⏳</span>
+            <span>Antigravity指示待ち (Todo)</span>
+          </div>
+          <span class="column-badge" id="badge-count-todo">0</span>
+        </div>
+        <div class="column-cards" id="cards-todo"></div>
+      </div>
+
+      <!-- In Progress -->
+      <div class="kanban-column" data-status="in_progress" id="col-in_progress">
+        <div class="column-header">
+          <div class="column-title">
+            <span style="color: #f59e0b;">🚀</span>
+            <span>作業中・進行中 (In Progress)</span>
+          </div>
+          <span class="column-badge" id="badge-count-in_progress">0</span>
+        </div>
+        <div class="column-cards" id="cards-in_progress"></div>
+      </div>
+
+      <!-- Done -->
+      <div class="kanban-column" data-status="done" id="col-done">
+        <div class="column-header">
+          <div class="column-title">
+            <span style="color: #10b981;">✅</span>
+            <span>完了・反映済 (Done)</span>
+          </div>
+          <span class="column-badge" id="badge-count-done">0</span>
+        </div>
+        <div class="column-cards" id="cards-done"></div>
+      </div>
+    </main>
+
+    <!-- Main Workspace: List View (Initially hidden) -->
+    <div id="list-view" class="list-view-container" style="display: none;">
+      <!-- List items rendered via JS -->
+    </div>
+  </div>
+
+  <!-- Modal 1: Create / Edit Memo -->
+  <div class="modal-overlay" id="modal-memo">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-memo-title">新規指示・メモの作成</h2>
+        <button class="modal-close" id="btn-close-memo-modal">&times;</button>
+      </div>
+      <form id="form-memo">
+        <div class="modal-body">
+          <input type="hidden" id="input-memo-id">
+
+          <div class="form-group">
+            <label class="form-label">カテゴリー</label>
+            <div class="category-selector">
+              <label class="cat-option">
+                <input type="radio" name="memo-category" value="fix" checked>
+                <div class="cat-option-box">
+                  <span class="cat-option-icon">🔧</span>
+                  <span class="cat-option-text" style="color: var(--cat-fix);">訂正・バグ修正</span>
+                </div>
+              </label>
+              <label class="cat-option">
+                <input type="radio" name="memo-category" value="idea">
+                <div class="cat-option-box">
+                  <span class="cat-option-icon">💡</span>
+                  <span class="cat-option-text" style="color: var(--cat-idea);">やりたいこと・構想</span>
+                </div>
+              </label>
+              <label class="cat-option">
+                <input type="radio" name="memo-category" value="task">
+                <div class="cat-option-box">
+                  <span class="cat-option-icon">📋</span>
+                  <span class="cat-option-text" style="color: var(--cat-task);">指示・タスク</span>
+                </div>
+              </label>
+              <label class="cat-option">
+                <input type="radio" name="memo-category" value="rule">
+                <div class="cat-option-box">
+                  <span class="cat-option-icon">⚙️</span>
+                  <span class="cat-option-text" style="color: var(--cat-rule);">ルール・前提指示</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="input-memo-title">タイトル / 要約 <span style="color: var(--cf-orange);">&ast;</span></label>
+            <input type="text" id="input-memo-title" class="form-input" placeholder="例: ヘッダーのボタン配色をオレンジに変更してほしい" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="input-memo-desc">詳細・やってほしいこと・期待する結果</label>
+            <textarea id="input-memo-desc" class="form-textarea" placeholder="Antigravityに伝えてほしい具体的な内容、現状の課題、期待する挙動などを自由に記入してください。コードやURLも記述可能です。"></textarea>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div class="form-group">
+              <label class="form-label" for="input-memo-priority">優先度</label>
+              <select id="input-memo-priority" class="form-select">
+                <option value="high">🔥 高 (最優先)</option>
+                <option value="med" selected>⚡ 中 (通常)</option>
+                <option value="low">☕ 低 (余裕があれば)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-memo-status">初期ステータス</label>
+              <select id="input-memo-status" class="form-select">
+                <option value="todo" selected>⏳ 指示待ち (Todo)</option>
+                <option value="backlog">📌 アイデアスプール (Backlog)</option>
+                <option value="in_progress">🚀 作業中 (In Progress)</option>
+                <option value="done">✅ 完了 (Done)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="input-memo-scope">対象ファイル / コンポーネント (任意)</label>
+            <input type="text" id="input-memo-scope" class="form-input" placeholder="例: src/components/Header.vue, style.css, 認証機能">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-memo">キャンセル</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-memo">保存する</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Batch Prompt Generator -->
+  <div class="modal-overlay" id="modal-prompt">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+          Antigravity向け指示プロンプト
+        </h2>
+        <button class="modal-close" id="btn-close-prompt-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-secondary);">
+          以下のプロンプトをコピーして Antigravity のチャットにそのまま送信してください。Antigravity が文脈を理解して迅速に作業を実行します。
+        </p>
+        <div class="prompt-preview-box" id="prompt-output-box"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btn-close-prompt-btn">閉じる</button>
+        <button type="button" class="btn btn-prompt" id="btn-copy-generated-prompt">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          プロンプトをコピー
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Cloudflare Deploy Guide -->
+  <div class="modal-overlay" id="modal-guide">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#f38020">
+            <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
+          </svg>
+          Cloudflare Workers & Pages への公開手順
+        </h2>
+        <button class="modal-close" id="btn-close-guide-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="guide-step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h4>Workers & Pages ダッシュボードを開く</h4>
+            <p>ご提示いただいた Cloudflare のダッシュボード画面から <strong>「Workers & Pages」&gt;「作成」&gt;「Pages」</strong> を選択します。</p>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h4>直接アップロード (Direct Upload) を選択</h4>
+            <p>「アセットを直接アップロード」をクリックし、プロジェクト名（例: <code>antigravity-memo</code>）を入力します。</p>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h4>フォルダをドラッグ＆ドロップ</h4>
+            <p>このプロジェクトフォルダ（<code>antigravity-memo-app</code>）のファイル群（<code>index.html</code>, <code>style.css</code>, <code>app.js</code>, <code>_worker.js</code>）をそのままブラウザにドロップしてデプロイ完了！</p>
+            <span class="code-snippet">npx wrangler pages deploy .</span>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h4>スマホ・PCどちらからでもアクセス可能！</h4>
+            <p><code>https://antigravity-memo.pages.dev</code> のような高速・安全なURLが無料で発行され、外出先やスマホからでも指示・メモを登録できます。</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="btn-close-guide-btn">理解しました</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Backup / Export / Import -->
+  <div class="modal-overlay" id="modal-data">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          データ管理 & バックアップ
+        </h2>
+        <button class="modal-close" id="btn-close-data-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-secondary);">
+          登録したすべてのメモや指示データをJSON形式でバックアップ・復元できます。
+        </p>
+        <div style="display: flex; gap: 12px; flex-direction: column;">
+          <button id="btn-download-json" class="btn btn-secondary" style="justify-content: flex-start;">
+            📥 JSON形式でダウンロード保存 (バックアップ)
+          </button>
+          
+          <label class="btn btn-secondary" style="justify-content: flex-start; cursor: pointer;">
+            📤 JSONファイルを読み込んで復元
+            <input type="file" id="input-import-file" accept=".json" style="display: none;">
+          </label>
+
+          <button id="btn-load-sample" class="btn btn-secondary" style="justify-content: flex-start; color: #38bdf8;">
+            ✨ サンプル指示データを読み込む
+          </button>
+
+          <button id="btn-clear-all" class="btn btn-secondary" style="justify-content: flex-start; color: #f43f5e;">
+            ⚠️ すべてのメモを初期化する
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btn-close-data-btn">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>

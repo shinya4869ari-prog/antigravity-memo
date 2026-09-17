@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "antigravity-mission-hub",
+  "compatibility_date": "2024-09-01",
+  "pages_build_output_dir": "./",
+  "observability": {
+    "enabled": true
+  }
+}
