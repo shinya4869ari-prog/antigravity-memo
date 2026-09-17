@@ -180,25 +180,37 @@ function setCloudStatus(status, text) {
   cloudSyncText.textContent = text;
 }
 
+// Utility: Deduplicate memos by id
+function deduplicateMemos(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  return list.filter(item => {
+    if (!item || !item.id) return false;
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+}
+
 // 1. Initial Local Load (Instant rendering, zero waiting)
 function loadMemos() {
   const saved = localStorage.getItem('agy_mission_memos');
-  if (saved) {
+  if (saved !== null) {
     try {
-      memos = JSON.parse(saved);
-      if (!Array.isArray(memos) || memos.length === 0) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        memos = deduplicateMemos(parsed);
+      } else {
         memos = [...INITIAL_MEMOS];
-        localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
       }
     } catch (e) {
       console.error('Failed to parse saved memos', e);
       memos = [...INITIAL_MEMOS];
-      localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
     }
   } else {
     memos = [...INITIAL_MEMOS];
-    localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
   }
+  localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
   updateStats();
   render();
 
@@ -208,8 +220,15 @@ function loadMemos() {
 
 // 3. Fetch data from Cloudflare Workers KV
 let isSyncing = false;
+let localVersion = 0;
+let lastLocalSaveTime = 0;
+
 async function fetchMemosFromCloud(quiet = false) {
   if (isSyncing) return;
+  // Guard: If user recently modified/deleted memos locally (< 4000ms), don't overwrite with stale cloud data
+  if (Date.now() - lastLocalSaveTime < 4000) return;
+
+  const currentVersion = localVersion;
   isSyncing = true;
   if (!quiet) setCloudStatus('syncing', '同期中...');
 
@@ -218,19 +237,20 @@ async function fetchMemosFromCloud(quiet = false) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
-    if (Array.isArray(data)) {
-      if (data.length > 0) {
-        // KV has persistent data: update local state & cache
-        memos = data;
-        localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
-        updateStats();
-        render();
-        setCloudStatus('synced', 'Cloud KV 同期済');
-      } else {
-        // KV is bound but empty: seed initial memos to cloud
-        setCloudStatus('syncing', '初期同期中...');
-        await saveMemosToCloud();
-      }
+    // Guard: If local state was mutated while fetch was in-flight, discard stale response
+    if (localVersion !== currentVersion) return;
+    if (Date.now() - lastLocalSaveTime < 4000) return;
+
+    if (data && data.uninitialized) {
+      // KV is bound but empty: seed initial memos to cloud
+      setCloudStatus('syncing', '初期同期中...');
+      await saveMemosToCloud();
+    } else if (Array.isArray(data)) {
+      memos = deduplicateMemos(data);
+      localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
+      updateStats();
+      render();
+      setCloudStatus('synced', 'Cloud KV 同期済');
     } else if (data && data.mode === 'local') {
       setCloudStatus('local', 'ローカル保存 (KV未接続)');
     }
@@ -245,6 +265,7 @@ async function fetchMemosFromCloud(quiet = false) {
 // 4. Save data to Cloudflare Workers KV
 let cloudSaveTimer = null;
 async function saveMemosToCloud() {
+  lastLocalSaveTime = Date.now();
   setCloudStatus('syncing', 'クラウド保存中...');
   try {
     const res = await fetch('/api/memos', {
@@ -266,16 +287,27 @@ async function saveMemosToCloud() {
   }
 }
 
-// Main save dispatcher (local first + debounced cloud upload)
-function saveMemos() {
+// Main save dispatcher (local first + cloud upload)
+function saveMemos(immediate = false) {
+  localVersion++;
+  lastLocalSaveTime = Date.now();
+  memos = deduplicateMemos(memos);
   localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
   updateStats();
   render();
 
-  if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
-  cloudSaveTimer = setTimeout(() => {
+  if (cloudSaveTimer) {
+    clearTimeout(cloudSaveTimer);
+    cloudSaveTimer = null;
+  }
+
+  if (immediate) {
     saveMemosToCloud();
-  }, 300);
+  } else {
+    cloudSaveTimer = setTimeout(() => {
+      saveMemosToCloud();
+    }, 400);
+  }
 }
 
 // Toast System
@@ -558,7 +590,7 @@ function updateMemoStatus(id, newStatus) {
   if (memo && memo.status !== newStatus) {
     memo.status = newStatus;
     memo.updatedAt = new Date().toISOString();
-    saveMemos();
+    saveMemos(true);
     const statName = STATUS_MAP[newStatus]?.label || newStatus;
     showToast(`「${memo.title}」を ${statName} に移動しました`, '🔄');
   }
@@ -668,8 +700,10 @@ function deleteMemo(id, event) {
   if (!memo) return;
 
   if (confirm(`「${memo.title}」を削除してもよろしいですか？`)) {
+    lastLocalSaveTime = Date.now();
+    localVersion++;
     memos = memos.filter(m => m.id !== id);
-    saveMemos();
+    saveMemos(true);
     showToast('メモを削除しました', '🗑️');
   }
 }
@@ -703,7 +737,7 @@ formMemo.addEventListener('submit', (e) => {
   } else {
     // New memo
     const newMemo = {
-      id: 'memo-' + Date.now(),
+      id: 'memo-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
       category,
       title,
       description: desc,
@@ -717,7 +751,7 @@ formMemo.addEventListener('submit', (e) => {
     showToast('新しい指示・メモを追加しました', '✨');
   }
 
-  saveMemos();
+  saveMemos(true);
   closeMemoModal();
 });
 
@@ -780,8 +814,8 @@ document.getElementById('input-import-file').addEventListener('change', (e) => {
     try {
       const imported = JSON.parse(event.target.result);
       if (Array.isArray(imported)) {
-        memos = imported;
-        saveMemos();
+        memos = deduplicateMemos(imported);
+        saveMemos(true);
         showToast('データを正常にインポートしました', '📥');
         modalData.classList.remove('active');
       } else {
@@ -797,8 +831,15 @@ document.getElementById('input-import-file').addEventListener('change', (e) => {
 // Load Samples
 document.getElementById('btn-load-sample').addEventListener('click', () => {
   if (confirm('サンプル指示データを読み込みますか？（既存のメモに追加されます）')) {
-    memos = [...INITIAL_MEMOS, ...memos];
-    saveMemos();
+    lastLocalSaveTime = Date.now();
+    const samplesWithNewIds = INITIAL_MEMOS.map(sample => ({
+      ...sample,
+      id: 'memo-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }));
+    memos = deduplicateMemos([...samplesWithNewIds, ...memos]);
+    saveMemos(true);
     showToast('サンプルデータを読み込みました', '✨');
     modalData.classList.remove('active');
   }
@@ -807,8 +848,9 @@ document.getElementById('btn-load-sample').addEventListener('click', () => {
 // Clear All
 document.getElementById('btn-clear-all').addEventListener('click', () => {
   if (confirm('本当にすべてのメモを消去しますか？この操作は元に戻せません。')) {
+    lastLocalSaveTime = Date.now();
     memos = [];
-    saveMemos();
+    saveMemos(true);
     showToast('すべてのメモをクリアしました', '⚠️');
     modalData.classList.remove('active');
   }

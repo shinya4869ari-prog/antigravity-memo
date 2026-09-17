@@ -39,7 +39,12 @@ export default {
         if (env && env.MEMO_KV) {
           try {
             const data = await env.MEMO_KV.get('memos');
-            return new Response(data || '[]', {
+            if (data === null) {
+              return new Response(JSON.stringify({ uninitialized: true }), {
+                headers: { ...corsHeaders, 'X-Storage-Mode': 'kv' }
+              });
+            }
+            return new Response(data, {
               headers: { ...corsHeaders, 'X-Storage-Mode': 'kv' }
             });
           } catch (err) {
