@@ -85,8 +85,8 @@ const INITIAL_MEMOS = [
   {
     id: 'memo-next-8',
     category: 'idea',
-    title: '他アプリ3件へのKVリアルタイム同期パターンの横展開',
-    description: 'このアプリでCloudflare KV同期の仕組みを確立後、運用中の他3アプリ（seesaw-portfolio、kokkanotenbin-map、korean-learner）にも必要に応じてKV同期を横展開し、スマホ・PC間で設定や履歴を共有できるようにする。',
+    title: '他アプリ（ポートフォリオ・学習アプリ）へのKV同期横展開',
+    description: 'このアプリでCloudflare KV同期の仕組みを確立後、運用中の他アプリ（seesaw-portfolio、korean-learnerなど）にも必要に応じてKV同期を横展開し、スマホ・PC間で設定や履歴を共有できるようにする。',
     priority: 'low',
     status: 'backlog',
     scope: 'Cloudflare Workers KV / 横展開',
