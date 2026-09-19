@@ -1398,3 +1398,146 @@ body {
     height: 56px;
   }
 }
+
+/* ==========================================================================
+   PWA Installation & Guide Styles
+   ========================================================================== */
+
+/* PWA Install Button in Header */
+.btn-install {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 182, 212, 0.2) 100%);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  color: #6ee7b7;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+  font-weight: 600;
+  transition: all var(--transition-normal);
+}
+
+.btn-install:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(6, 182, 212, 0.35) 100%);
+  border-color: #34d399;
+  color: #ffffff;
+  box-shadow: 0 0 20px rgba(52, 211, 153, 0.35);
+  transform: translateY(-1px);
+}
+
+/* PWA Modal Content */
+.modal-pwa-content {
+  max-width: 560px;
+  border-color: rgba(52, 211, 153, 0.3);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 35px rgba(16, 185, 129, 0.15);
+}
+
+.pwa-guide-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(16, 185, 129, 0.2);
+  border-radius: var(--radius-sm);
+  margin-right: 8px;
+}
+
+.pwa-hero-box {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  margin-bottom: 20px;
+}
+
+.pwa-hero-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(243, 128, 32, 0.25);
+  flex-shrink: 0;
+}
+
+.pwa-hero-info h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.pwa-hero-info p {
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.pwa-native-trigger-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 14px 20px;
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.pwa-native-trigger-btn:hover {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  box-shadow: 0 6px 25px rgba(16, 185, 129, 0.6);
+  transform: translateY(-2px);
+}
+
+.pwa-instructions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pwa-step-card {
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+}
+
+.pwa-step-header {
+  margin-bottom: 10px;
+}
+
+.platform-tag {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+}
+
+.platform-tag.ios {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.platform-tag.chrome {
+  background: rgba(243, 128, 32, 0.15);
+  color: var(--cf-orange);
+  border: 1px solid rgba(243, 128, 32, 0.3);
+}
+
+.pwa-step-list {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pwa-step-list li {
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.pwa-step-list strong {
+  color: var(--text-primary);
+}

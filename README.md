@@ -48,18 +48,26 @@ Antigravity（AIアシスタント）とユーザーの間で、**「訂正し�
 
 ```
 antigravity-memo-app/
-├── index.html       # メイン画面（セマンティックHTML5）
-├── style.css        # デザインシステム（Cloudflare Amber × Cyber Dark）
-├── app.js           # アプリロジック、LocalStorage、プロンプト生成、D&D
-├── _worker.js       # Cloudflare Pages Functions / Workers エッジAPI
-├── wrangler.json    # Cloudflare デプロイ設定ファイル
-├── TODO.md          # 開発ロードマップ・次やることリスト
-└── README.md        # 本ドキュメント
+├── index.html          # メイン画面（セマンティックHTML5 & PWA UI）
+├── style.css           # デザインシステム（Cyber Dark × Amber & Emerald PWA）
+├── app.js              # アプリロジック、KV同期、音声解析、PWA制御
+├── sw.js               # Service Worker（PWAオフラインキャッシュ＆高速起動）
+├── manifest.json       # Web App Manifest（アプリアイコン・ショートカット定義）
+├── icon-192.png        # PWA標準アプリアイコン (192x192)
+├── icon-512.png        # 高解像度アプリアイコン (512x512)
+├── apple-touch-icon.png# iOS Safari用アプリアイコン
+├── favicon.svg         # 高精細ベクターファビコン
+├── _worker.js          # Cloudflare Pages Functions / Workers KV エッジAPI
+├── wrangler.json       # Cloudflare デプロイ設定ファイル
+├── .assetsignore       # Cloudflare Pages アセット除外設定
+├── .gitignore          # Git除外設定
+├── TODO.md             # 開発ロードマップ・次やることリスト
+└── README.md           # 本ドキュメント
 ```
 
 ---
 
 ## 📋 開発ロードマップ (次やること)
 今後の機能拡張や改善タスクは [TODO.md](TODO.md) に整理されています。
-Cloudflare KVによる端末間同期やPWA対応、音声入力などの実装予定が含まれています。
+Cloudflare KVによる端末間リアルタイム同期、PWA完全アプリ化、音声入力×カレンダー連携は完了済みです。
 

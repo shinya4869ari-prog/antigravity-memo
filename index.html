@@ -54,6 +54,14 @@
           Cloudflareデプロイガイド
         </button>
 
+        <button id="btn-install-pwa" class="btn btn-install btn-sm" style="display: none;" title="このアプリをPCやスマホにインストールして独立起動">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect width="16" height="20" x="4" y="2" rx="2" ry="2"/>
+            <line x1="12" y1="18" x2="12.01" y2="18"/>
+          </svg>
+          <span>📲 アプリ化 / インストール</span>
+        </button>
+
         <button id="btn-export-json" class="btn btn-secondary btn-sm" title="データをJSONとしてエクスポート / インポート">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -524,6 +532,60 @@
       <div class="modal-footer" style="justify-content: space-between;">
         <button type="button" class="btn btn-secondary btn-sm" id="btn-restart-voice">🔄 もう一度喋る</button>
         <button type="button" class="btn btn-secondary btn-sm" id="btn-close-voice-btn">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 6: PWA Install Guide (iOS / Desktop) -->
+  <div class="modal-overlay" id="modal-pwa-install">
+    <div class="modal-content modal-pwa-content">
+      <div class="modal-header">
+        <h2>
+          <span class="pwa-guide-badge">📲</span>
+          ホーム画面に追加・アプリ化
+        </h2>
+        <button class="modal-close" id="btn-close-pwa-modal">&times;</button>
+      </div>
+      <div class="modal-body modal-pwa-body">
+        <div class="pwa-hero-box">
+          <img src="icon-192.png" alt="App Icon" class="pwa-hero-icon">
+          <div class="pwa-hero-info">
+            <h3>Antigravity Mission Hub</h3>
+            <p>ブラウザの枠なしでサクサク動くネイティブアプリとして使えます</p>
+          </div>
+        </div>
+
+        <div id="pwa-prompt-native-section" style="display: none; margin-bottom: 1.25rem;">
+          <button type="button" class="btn btn-primary btn-block pwa-native-trigger-btn" id="btn-trigger-native-install">
+            📲 今すぐ端末にインストールする
+          </button>
+        </div>
+
+        <div class="pwa-instructions">
+          <div class="pwa-step-card">
+            <div class="pwa-step-header">
+              <span class="platform-tag ios">🍎 iPhone / iPad (Safari)</span>
+            </div>
+            <ol class="pwa-step-list">
+              <li>Safari 画面下部の <strong>共有ボタン</strong>（四角に上矢印アイコン）をタップ</li>
+              <li>メニュー内の <strong>「ホーム画面に追加」</strong> を選択</li>
+              <li>右上の <strong>「追加」</strong> をタップすると、ホーム画面に専用アイコンが配置されます</li>
+            </ol>
+          </div>
+
+          <div class="pwa-step-card">
+            <div class="pwa-step-header">
+              <span class="platform-tag chrome">🤖 Android / PC (Chrome &amp; Edge)</span>
+            </div>
+            <ol class="pwa-step-list">
+              <li>ブラウザのURL欄右端にある <strong>「インストール」アイコン</strong>（または上部の「📲 アプリ化」ボタン）をクリック</li>
+              <li>「インストール」を承認すると、デスクトップやアプリ一覧に登録されます</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btn-close-pwa-btn">閉じる</button>
       </div>
     </div>
   </div>

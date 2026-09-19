@@ -1413,3 +1413,120 @@ setInterval(() => {
 // Initialization
 loadMemos();
 
+// ==========================================================================
+// PWA (Progressive Web Apps) & Service Worker Integration
+// ==========================================================================
+
+// 1. Register Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((reg) => {
+        console.log('[PWA] Service Worker active with scope:', reg.scope);
+      })
+      .catch((err) => {
+        console.warn('[PWA] Service Worker registration failed:', err);
+      });
+  });
+}
+
+// 2. PWA Installation & Modal Handling
+let deferredInstallPrompt = null;
+const btnInstallPwa = document.getElementById('btn-install-pwa');
+const modalPwaInstall = document.getElementById('modal-pwa-install');
+const btnClosePwaModal = document.getElementById('btn-close-pwa-modal');
+const btnClosePwaBtn = document.getElementById('btn-close-pwa-btn');
+const btnTriggerNativeInstall = document.getElementById('btn-trigger-native-install');
+const pwaPromptNativeSection = document.getElementById('pwa-prompt-native-section');
+
+// Check standalone mode (already installed or full-screen app)
+const isRunningStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                            window.navigator.standalone === true;
+
+// Listen for browser install prompt (Chrome, Edge, Android)
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  if (!isRunningStandalone && btnInstallPwa) {
+    btnInstallPwa.style.display = 'inline-flex';
+  }
+  if (pwaPromptNativeSection) {
+    pwaPromptNativeSection.style.display = 'block';
+  }
+});
+
+// Always provide install access if not standalone
+if (!isRunningStandalone && btnInstallPwa) {
+  setTimeout(() => {
+    btnInstallPwa.style.display = 'inline-flex';
+  }, 1000);
+}
+
+// Install button click handler
+if (btnInstallPwa) {
+  btnInstallPwa.addEventListener('click', async () => {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      const choiceResult = await deferredInstallPrompt.userChoice;
+      if (choiceResult && choiceResult.outcome === 'accepted') {
+        showToast('アプリのインストールを開始しました！', '📲');
+        btnInstallPwa.style.display = 'none';
+      }
+      deferredInstallPrompt = null;
+    } else {
+      if (modalPwaInstall) {
+        if (pwaPromptNativeSection) {
+          pwaPromptNativeSection.style.display = deferredInstallPrompt ? 'block' : 'none';
+        }
+        modalPwaInstall.classList.add('active');
+      }
+    }
+  });
+}
+
+// Modal native trigger button click handler
+if (btnTriggerNativeInstall) {
+  btnTriggerNativeInstall.addEventListener('click', async () => {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      const choiceResult = await deferredInstallPrompt.userChoice;
+      if (choiceResult && choiceResult.outcome === 'accepted') {
+        showToast('アプリをインストールしました！', '📲');
+        if (btnInstallPwa) btnInstallPwa.style.display = 'none';
+      }
+      deferredInstallPrompt = null;
+      if (modalPwaInstall) modalPwaInstall.classList.remove('active');
+    }
+  });
+}
+
+// Close PWA modal buttons
+if (btnClosePwaModal) {
+  btnClosePwaModal.addEventListener('click', () => modalPwaInstall.classList.remove('active'));
+}
+if (btnClosePwaBtn) {
+  btnClosePwaBtn.addEventListener('click', () => modalPwaInstall.classList.remove('active'));
+}
+
+// Handle successful installation
+window.addEventListener('appinstalled', () => {
+  if (btnInstallPwa) btnInstallPwa.style.display = 'none';
+  if (modalPwaInstall) modalPwaInstall.classList.remove('active');
+  showToast('🎉 アプリが正常にインストールされました！', '🚀');
+  console.log('[PWA] Installed successfully');
+});
+
+// 3. PWA Shortcuts & Deep Linking (#new, #voice)
+window.addEventListener('DOMContentLoaded', () => {
+  const hash = window.location.hash;
+  if (hash === '#new') {
+    setTimeout(() => {
+      if (btnNewMemo) btnNewMemo.click();
+    }, 500);
+  } else if (hash === '#voice') {
+    setTimeout(() => {
+      if (btnVoiceMemo) btnVoiceMemo.click();
+    }, 500);
+  }
+});
+
