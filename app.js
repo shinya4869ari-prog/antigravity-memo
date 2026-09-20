@@ -201,16 +201,18 @@ function setCloudStatus(status, text) {
   cloudSyncText.textContent = text;
 }
 
-// Utility: Deduplicate memos by id
+// Utility: Deduplicate memos by id and sort newest first
 function deduplicateMemos(list) {
   if (!Array.isArray(list)) return [];
   const seen = new Set();
-  return list.filter(item => {
+  const deduped = list.filter(item => {
     if (!item || !item.id) return false;
     if (seen.has(item.id)) return false;
     seen.add(item.id);
     return true;
   });
+  // Always keep newest memos at the very front/top
+  return deduped.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 }
 
 // 1. Initial Local Load (Instant rendering, zero waiting)
@@ -428,9 +430,9 @@ function updateStats() {
   document.getElementById('badge-count-done').textContent = countDone;
 }
 
-// Filter Memos
+// Filter Memos (Always sorted newest first)
 function getFilteredMemos() {
-  return memos.filter(memo => {
+  const filtered = memos.filter(memo => {
     // Category filter
     if (activeCategoryFilter !== 'all' && memo.category !== activeCategoryFilter) {
       return false;
@@ -451,6 +453,8 @@ function getFilteredMemos() {
     }
     return true;
   });
+
+  return filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 }
 
 // Render Functions
@@ -499,6 +503,7 @@ function renderKanban(filteredMemos) {
 function createCardElement(memo) {
   const cat = CATEGORY_MAP[memo.category] || CATEGORY_MAP.task;
   const pri = PRIORITY_MAP[memo.priority] || PRIORITY_MAP.med;
+  const isRecentNew = memo.createdAt && (Date.now() - new Date(memo.createdAt).getTime() < 86400000);
 
   const card = document.createElement('div');
   card.className = 'memo-card';
@@ -513,6 +518,7 @@ function createCardElement(memo) {
   card.innerHTML = `
     <div class="card-top">
       <div class="card-badges">
+        ${isRecentNew ? '<span class="badge-new" title="新着メモ">✨ NEW</span>' : ''}
         <span class="badge ${cat.badgeClass}">
           ${cat.icon} ${cat.label}
         </span>
@@ -567,11 +573,13 @@ function renderList(filteredMemos) {
     const cat = CATEGORY_MAP[memo.category] || CATEGORY_MAP.task;
     const pri = PRIORITY_MAP[memo.priority] || PRIORITY_MAP.med;
     const stat = STATUS_MAP[memo.status] || STATUS_MAP.todo;
+    const isRecentNew = memo.createdAt && (Date.now() - new Date(memo.createdAt).getTime() < 86400000);
 
     const item = document.createElement('div');
     item.className = 'list-item';
     item.innerHTML = `
       <div class="list-item-left">
+        ${isRecentNew ? '<span class="badge-new" title="新着メモ">✨ NEW</span>' : ''}
         <span class="badge ${cat.badgeClass}">${cat.icon} ${cat.label}</span>
         <div class="list-item-body">
           <div class="list-item-title">${escapeHtml(memo.title)}</div>

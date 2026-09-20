@@ -116,19 +116,23 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 18px 24px;
+  flex-wrap: wrap;
+  gap: 14px 20px;
+  padding: 16px 22px;
   background: var(--bg-glass);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
+  max-width: 100%;
 }
 
 .brand-section {
   display: flex;
   align-items: center;
   gap: 16px;
+  flex-shrink: 0;
 }
 
 .logo-badge {
@@ -259,7 +263,31 @@ body {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.header-action-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border-subtle);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.header-utility-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-text-short {
+  display: none;
+}
+.btn-text-full {
+  display: inline;
 }
 
 /* Buttons */
@@ -283,13 +311,17 @@ body {
 .btn-primary {
   background: linear-gradient(135deg, var(--cf-orange) 0%, #ea580c 100%);
   color: white;
-  box-shadow: 0 4px 14px rgba(243, 128, 32, 0.35);
+  box-shadow: 0 4px 16px rgba(243, 128, 32, 0.45);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  flex-shrink: 0;
 }
 
 .btn-primary:hover {
   background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
-  box-shadow: 0 6px 20px rgba(243, 128, 32, 0.5);
-  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(243, 128, 32, 0.65);
+  transform: translateY(-2px);
 }
 
 .btn-secondary {
@@ -1541,3 +1573,109 @@ body {
 .pwa-step-list strong {
   color: var(--text-primary);
 }
+
+/* ==========================================================================
+   Responsive & Overflow Prevention Rules
+   ========================================================================== */
+
+/* Badge for newly created memos to highlight them at the front */
+.badge-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(243, 128, 32, 0.22);
+  color: #fdba74;
+  border: 1px solid rgba(243, 128, 32, 0.5);
+  box-shadow: 0 0 10px rgba(243, 128, 32, 0.35);
+  letter-spacing: 0.02em;
+  animation: pulse-new 2.2s infinite ease-in-out;
+}
+
+@keyframes pulse-new {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(243, 128, 32, 0.3)); }
+  50% { transform: scale(1.06); filter: drop-shadow(0 0 6px rgba(243, 128, 32, 0.6)); }
+}
+
+/* On standard screens (up to 1350px): switch to compact labels and tighter gaps to prevent overflow */
+@media (max-width: 1350px) {
+  .btn-text-full {
+    display: none;
+  }
+  .btn-text-short {
+    display: inline;
+  }
+  .header-actions {
+    gap: 7px;
+  }
+  .btn {
+    padding: 9px 13px;
+    font-size: 0.83rem;
+  }
+  .btn-sm {
+    padding: 6px 9px;
+    font-size: 0.78rem;
+  }
+}
+
+/* Tablet & split-screen (up to 1024px): 2-row clean wrap layout */
+@media (max-width: 1024px) {
+  .app-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    padding: 16px 18px;
+  }
+
+  .brand-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .header-actions {
+    justify-content: flex-start;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .header-action-divider {
+    display: none;
+  }
+}
+
+/* Mobile screens (up to 640px) */
+@media (max-width: 640px) {
+  .app-container {
+    padding: 14px 10px;
+    gap: 16px;
+  }
+
+  .brand-titles p {
+    display: none;
+  }
+
+  .brand-titles h1 {
+    font-size: 1.15rem;
+  }
+
+  .header-actions {
+    gap: 6px;
+  }
+
+  .btn {
+    padding: 8px 11px;
+    font-size: 0.79rem;
+    gap: 5px;
+  }
+
+  .btn-sm {
+    padding: 5px 8px;
+    font-size: 0.74rem;
+  }
+}
+

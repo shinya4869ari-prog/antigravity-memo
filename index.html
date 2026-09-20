@@ -45,51 +45,63 @@
       </div>
 
       <div class="header-actions">
-        <button id="btn-deploy-guide" class="btn btn-secondary btn-sm" title="Cloudflareへのデプロイ方法を見る">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="16" x2="12" y2="12"></line>
-            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        <!-- 1. 新規指示・メモ (最重要メインボタン: 一番前・先頭) -->
+        <button id="btn-new-memo" class="btn btn-primary" title="新しい指示・メモを追加">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
-          Cloudflareデプロイガイド
+          <span>＋ 新規指示・メモ</span>
         </button>
 
-        <button id="btn-install-pwa" class="btn btn-install btn-sm" style="display: none;" title="このアプリをPCやスマホにインストールして独立起動">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect width="16" height="20" x="4" y="2" rx="2" ry="2"/>
-            <line x1="12" y1="18" x2="12.01" y2="18"/>
-          </svg>
-          <span>📲 アプリ化 / インストール</span>
+        <!-- 2. 音声で予定追加 (第2メインCTA) -->
+        <button id="btn-voice-memo" class="btn btn-voice" title="音声で喋って予定＆メモ自動作成 (例: 明日 配車予約)">
+          <span class="mic-pulse-dot">🎙️</span>
+          <span class="btn-text-full">音声で予定追加</span>
+          <span class="btn-text-short">音声入力</span>
         </button>
 
-        <button id="btn-export-json" class="btn btn-secondary btn-sm" title="データをJSONとしてエクスポート / インポート">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
-          </svg>
-          データ管理
-        </button>
-
+        <!-- 3. プロンプト生成 (第3メインCTA) -->
         <button id="btn-gen-batch-prompt" class="btn btn-prompt" title="未完了のメモをまとめてAntigravity用指示として出力">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
           </svg>
-          Antigravity用プロンプト生成
+          <span class="btn-text-full">プロンプト生成</span>
+          <span class="btn-text-short">生成</span>
         </button>
 
-        <button id="btn-voice-memo" class="btn btn-voice" title="音声で喋って予定＆メモ自動作成 (例: 明日 配車予約)">
-          <span class="mic-pulse-dot">🎙️</span>
-          <span>音声で予定追加</span>
-        </button>
+        <div class="header-action-divider"></div>
 
-        <button id="btn-new-memo" class="btn btn-primary" title="新しい指示・メモを追加">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-          新規指示・メモ
-        </button>
+        <!-- 4. サブ管理ツール (データ管理・デプロイガイド・アプリ化) -->
+        <div class="header-utility-group">
+          <button id="btn-export-json" class="btn btn-secondary btn-sm" title="データをJSONとしてエクスポート / インポート">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span class="btn-text-full">データ管理</span>
+            <span class="btn-text-short">データ</span>
+          </button>
+
+          <button id="btn-deploy-guide" class="btn btn-secondary btn-sm" title="Cloudflareへのデプロイ方法を見る">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span class="btn-text-full">デプロイガイド</span>
+            <span class="btn-text-short">ガイド</span>
+          </button>
+
+          <button id="btn-install-pwa" class="btn btn-install btn-sm" style="display: none;" title="このアプリをPCやスマホにインストールして独立起動">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="16" height="20" x="4" y="2" rx="2" ry="2"/>
+              <line x1="12" y1="18" x2="12.01" y2="18"/>
+            </svg>
+            <span>📲 アプリ化</span>
+          </button>
+        </div>
       </div>
     </header>
 
