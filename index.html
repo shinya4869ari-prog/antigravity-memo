@@ -18,34 +18,67 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MissionHub">
 
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20260920_v3">
 </head>
 <body>
   <div class="app-container">
     <!-- Header -->
     <header class="app-header">
-      <div class="brand-section">
-        <div class="logo-badge" title="Antigravity x Cloudflare Hub">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #f38020;">
-            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
-          </svg>
-        </div>
-        <div class="brand-titles">
-          <h1>Antigravity <span class="highlight">Mission Hub</span></h1>
-          <p>AI協働メモ・訂正・やりたいこと整理 & プロンプト自動生成</p>
-        </div>
-        <div class="header-badges">
-          <span id="cloud-sync-badge" class="cloud-badge status-synced" title="Cloudflare Workers KV リアルタイムクラウド同期">
-            <svg class="cloud-svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Top Bar: Brand, Cloud Status, and Secondary Tools -->
+      <div class="header-top-bar">
+        <div class="brand-section">
+          <div class="logo-badge" title="Antigravity x Cloudflare Hub">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #f38020;">
               <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
             </svg>
-            <span id="cloud-sync-text">Cloud KV 同期済</span>
-          </span>
+          </div>
+          <div class="brand-titles">
+            <h1>Antigravity <span class="highlight">Mission Hub</span></h1>
+            <p>AI協働メモ・訂正・やりたいこと整理 & プロンプト自動生成</p>
+          </div>
+          <div class="header-badges">
+            <span id="cloud-sync-badge" class="cloud-badge status-synced" title="Cloudflare Workers KV リアルタイムクラウド同期">
+              <svg class="cloud-svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+              </svg>
+              <span id="cloud-sync-text">Cloud KV 同期済</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Secondary Utility Tools (Right side: Data, Guide, PWA) -->
+        <div class="header-utility-actions">
+          <button id="btn-export-json" class="btn btn-secondary btn-sm" title="データをJSONとしてエクスポート / インポート">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>データ管理</span>
+          </button>
+
+          <button id="btn-deploy-guide" class="btn btn-secondary btn-sm" title="Cloudflareへのデプロイ方法を見る">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span>デプロイガイド</span>
+          </button>
+
+          <button id="btn-install-pwa" class="btn btn-install btn-sm" style="display: none;" title="このアプリをPCやスマホにインストールして独立起動">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="16" height="20" x="4" y="2" rx="2" ry="2"/>
+              <line x1="12" y1="18" x2="12.01" y2="18"/>
+            </svg>
+            <span>📲 アプリ化</span>
+          </button>
         </div>
       </div>
 
-      <div class="header-actions">
-        <!-- 1. 新規指示・メモ (最重要メインボタン: 一番前・先頭) -->
+      <!-- Action Bar: 3 Core Operations (Always First, Never Overflowing) -->
+      <div class="header-action-bar">
+        <!-- 1. 新規指示・メモ (最重要メイン操作: 一番前・先頭) -->
         <button id="btn-new-memo" class="btn btn-primary" title="新しい指示・メモを追加">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -54,11 +87,14 @@
           <span>＋ 新規指示・メモ</span>
         </button>
 
-        <!-- 2. 音声で予定追加 (第2メインCTA) -->
+        <!-- 2. 音声入力 (静的マイクアイコン・スタンバイ感ゼロ) -->
         <button id="btn-voice-memo" class="btn btn-voice" title="音声で喋って予定＆メモ自動作成 (例: 明日 配車予約)">
-          <span class="mic-pulse-dot">🎙️</span>
-          <span class="btn-text-full">音声で予定追加</span>
-          <span class="btn-text-short">音声入力</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="22"/>
+          </svg>
+          <span>音声入力</span>
         </button>
 
         <!-- 3. プロンプト生成 (第3メインCTA) -->
@@ -66,42 +102,8 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
           </svg>
-          <span class="btn-text-full">プロンプト生成</span>
-          <span class="btn-text-short">生成</span>
+          <span>プロンプト生成</span>
         </button>
-
-        <div class="header-action-divider"></div>
-
-        <!-- 4. サブ管理ツール (データ管理・デプロイガイド・アプリ化) -->
-        <div class="header-utility-group">
-          <button id="btn-export-json" class="btn btn-secondary btn-sm" title="データをJSONとしてエクスポート / インポート">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            <span class="btn-text-full">データ管理</span>
-            <span class="btn-text-short">データ</span>
-          </button>
-
-          <button id="btn-deploy-guide" class="btn btn-secondary btn-sm" title="Cloudflareへのデプロイ方法を見る">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="16" x2="12" y2="12"></line>
-              <line x1="12" y1="8" x2="12.01" y2="8"></line>
-            </svg>
-            <span class="btn-text-full">デプロイガイド</span>
-            <span class="btn-text-short">ガイド</span>
-          </button>
-
-          <button id="btn-install-pwa" class="btn btn-install btn-sm" style="display: none;" title="このアプリをPCやスマホにインストールして独立起動">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect width="16" height="20" x="4" y="2" rx="2" ry="2"/>
-              <line x1="12" y1="18" x2="12.01" y2="18"/>
-            </svg>
-            <span>📲 アプリ化</span>
-          </button>
-        </div>
       </div>
     </header>
 
@@ -254,11 +256,6 @@
     </div>
   </div>
 
-  <!-- Floating Voice Action Button (Mobile & Quick Access) -->
-  <button id="fab-voice-memo" class="fab-voice-btn" title="音声で予定・タスク追加 (例: 明日 配車予約)">
-    <span class="fab-mic-icon">🎙️</span>
-    <span class="fab-pulse-ring"></span>
-  </button>
 
   <!-- Modal 1: Create / Edit Memo -->
   <div class="modal-overlay" id="modal-memo">
@@ -606,6 +603,6 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Application Logic -->
-  <script src="app.js"></script>
+  <script src="app.js?v=20260920_v3"></script>
 </body>
 </html>

@@ -175,7 +175,6 @@ const modalData = document.getElementById('modal-data');
 // Voice & Google Calendar Modal Elements
 const modalVoice = document.getElementById('modal-voice');
 const btnVoiceMemo = document.getElementById('btn-voice-memo');
-const fabVoiceMemo = document.getElementById('fab-voice-memo');
 const btnCloseVoiceModal = document.getElementById('btn-close-voice-modal');
 const btnCloseVoiceBtn = document.getElementById('btn-close-voice-btn');
 const btnRestartVoice = document.getElementById('btn-restart-voice');
@@ -1353,7 +1352,6 @@ function saveParsedVoiceMemo(title, dueVal) {
 
 // Voice Modal Action Listeners
 if (btnVoiceMemo) btnVoiceMemo.addEventListener('click', startVoiceInput);
-if (fabVoiceMemo) fabVoiceMemo.addEventListener('click', startVoiceInput);
 if (btnCloseVoiceModal) btnCloseVoiceModal.addEventListener('click', () => modalVoice.classList.remove('active'));
 if (btnCloseVoiceBtn) btnCloseVoiceBtn.addEventListener('click', () => modalVoice.classList.remove('active'));
 if (btnRestartVoice) btnRestartVoice.addEventListener('click', startVoiceInput);
