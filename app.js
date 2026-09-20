@@ -1449,6 +1449,9 @@ const pwaPromptNativeSection = document.getElementById('pwa-prompt-native-sectio
 const isRunningStandalone = window.matchMedia('(display-mode: standalone)').matches ||
                             window.navigator.standalone === true;
 
+// Detect iOS device
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
 // Listen for browser install prompt (Chrome, Edge, Android)
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
@@ -1461,16 +1464,43 @@ window.addEventListener('beforeinstallprompt', (e) => {
   }
 });
 
-// Always provide install access if not standalone
+// Always provide install access if not standalone (for iOS and other platforms)
 if (!isRunningStandalone && btnInstallPwa) {
   setTimeout(() => {
     btnInstallPwa.style.display = 'inline-flex';
   }, 1000);
 }
 
+// Function to open PWA guide modal
+function openPwaModal() {
+  if (!modalPwaInstall) return;
+
+  // On iOS, native trigger button cannot work due to Apple restrictions
+  if (isIOS) {
+    if (pwaPromptNativeSection) {
+      pwaPromptNativeSection.style.display = 'none';
+    }
+    showToast('📱 画面下の「共有(↑)」➔「ホーム画面に追加」でアプリ化できます！', '💡');
+    
+    // Highlight iOS instruction card
+    const iosCard = modalPwaInstall.querySelector('.platform-tag.ios')?.closest('.pwa-step-card');
+    if (iosCard) {
+      iosCard.style.border = '2px solid #f38020';
+      iosCard.style.boxShadow = '0 0 20px rgba(243, 128, 32, 0.4)';
+    }
+  } else {
+    if (pwaPromptNativeSection) {
+      pwaPromptNativeSection.style.display = deferredInstallPrompt ? 'block' : 'none';
+    }
+  }
+
+  modalPwaInstall.classList.add('active');
+}
+
 // Install button click handler
 if (btnInstallPwa) {
-  btnInstallPwa.addEventListener('click', async () => {
+  btnInstallPwa.addEventListener('click', async (e) => {
+    e.preventDefault();
     if (deferredInstallPrompt) {
       deferredInstallPrompt.prompt();
       const choiceResult = await deferredInstallPrompt.userChoice;
@@ -1480,12 +1510,7 @@ if (btnInstallPwa) {
       }
       deferredInstallPrompt = null;
     } else {
-      if (modalPwaInstall) {
-        if (pwaPromptNativeSection) {
-          pwaPromptNativeSection.style.display = deferredInstallPrompt ? 'block' : 'none';
-        }
-        modalPwaInstall.classList.add('active');
-      }
+      openPwaModal();
     }
   });
 }
@@ -1502,6 +1527,10 @@ if (btnTriggerNativeInstall) {
       }
       deferredInstallPrompt = null;
       if (modalPwaInstall) modalPwaInstall.classList.remove('active');
+    } else if (isIOS) {
+      showToast('iPhoneは画面下の共有ボタン(↑) ➔「ホーム画面に追加」をタップしてください', '🍎');
+    } else {
+      showToast('ブラウザのURLバー右側の「インストール」アイコンから追加できます', 'ℹ️');
     }
   });
 }
