@@ -1169,6 +1169,155 @@ document.getElementById('input-import-file').addEventListener('change', (e) => {
   reader.readAsText(file);
 });
 
+// Categorized Memos (Organized by Project / Target)
+const ORGANIZED_MEMOS = [
+  {
+    id: "memo-korean-learner",
+    title: "【韓国語学習・歌詞/ニュース】ワークフロー改善 & 活用形DB自律育成",
+    description: "### 1. 歌詞生成ワークフローの分離\n- 検索と歌詞生成を分離し、特定されたIDで確実に歌詞を生成（検索ミス時の無駄な実行を防止）。\n\n### 2. ニュースアプリと歌詞の機能分離\n- アドレス貼り付けで好きな記事から語学学習できる仕組み。\n- n8nを使わずアプリ単体で完結できるか、将来の販売設計を含めて検討。\n- 普段は無料アカウント、本番稼働時に本アカウントを使い分ける運用。\n\n### 3. D1データベースの自律育成（活用形対応）\n- 原形（食べる）だけでなく「食べました」「食べた」等の活用形をDBに保持。\n- n8nでニュース処理時に文節・日本語訳ペアをD1へ自動INSERTし、辞書を自律成長させる（案B）。\n- 画面上で対応する日本語が綺麗に光るよう完全一致率を向上させる。",
+    category: "task",
+    priority: "high",
+    status: "todo",
+    scope: "korean-learner / n8n / D1",
+    dueDate: "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "memo-blog-factcheck",
+    title: "【国家の天秤ブログ】記事ファクトチェック修正 & ワークフロー最適化",
+    description: "### 1. 記事コンテンツの最優先修正\n- [ ] **映画メタデータの修正**: ナ・ホンジン監督のコピペ重複バグ（『もしもの愛』『鬼胎』『しあわせな選択』）を正しい監督・キャストに修正。\n- [ ] **成人向け2作品の削除/差し替え**: 『姉の友達4』『債務者の妻』を丸ごと削除し、著名な一般韓国映画に差し替え（AdSense審査・サイト信頼性のため）。\n- [ ] **音楽メタデータの修正**: チョン・スラ表記の重複削除、ホ・ガク/ナ・ユングォンの曲名重複（『Stay with Me』）の解消。\n- [ ] **数値の統一**: GDP成長率の表（1.0%）とエラー猫の台詞（1.007%）の表記ズレを統一。\n\n### 2. n8nワークフローのコードスリム化\n- 各セクションのエラー猫の一言の増量＆抜けチェック。\n- 映像作品・おすすめ映画に加え「最新公開映画」を追加（日本版ブログも最新仕組みに刷新）。\n- ノード名をきっちり確定し、無駄なフォールバックを排除（止まるべき場所で止めて直せる設計にする）。",
+    category: "fix",
+    priority: "high",
+    status: "todo",
+    scope: "blog / n8n / 韓国記事",
+    dueDate: "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "memo-ai-workspace-rules",
+    title: "【AI開発環境】RULES.md & PROGRESS.md の共通テンプレート運用",
+    description: "### 概要\nどのワークスペースでも使えるように、AI協働用の2つの基本ファイルを共通テンプレート化して保存しておく。\n\n### 2ファイル運用の構成\n1. **RULES.md**: 絶対に守ってほしい禁止ルール・方針（ずっと保持）\n   - 専門用語を使わず分かりやすく説明する\n   - 勝手にファイルを消したり大幅に書き換えない\n   - 各コードブロックに簡単な説明を入れる\n   - 適当な推測で答えず、調べてから回答する\n2. **PROGRESS.md**: 今日の進捗と次回やること（AIが作業終了時に自動更新）\n\n### 運用ルール\n- 開始時: 「RULES.md と PROGRESS.md を読んで状況とルールを把握してから、次の作業を教えて」\n- 終了時: 「今日やったことと次回のTODOを PROGRESS.md に更新して、Gitコミット・プッシュして」\n- Antigravityの無料枠と有料枠の使い分け方針の策定\n- Oracle Cloudサーバーへの agy CLI導入\n- Anthropic APIキーの管理",
+    category: "task",
+    priority: "med",
+    status: "todo",
+    scope: "workspace / rules / cli",
+    dueDate: "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "memo-new-apps",
+    title: "【新規アプリ構想】詐欺撲滅・握力トレーニング・推し巡回",
+    description: "### 1. 詐欺撲滅アプリ\n- スマホの通話音声をリアルタイムでAI解析し、詐欺特有のキーワードやパターンを検出したら強制シャットダウン/警告する防犯機能。\n\n### 2. 握力100kg達成管理アプリ\n- トレーニングセット内容の簡単編集機能。\n- インターバルタイマー、握力計の記録保存・記録更新機能。\n- ローカルまたはCloudflare Workersで作成。\n\n### 3. 推し巡回管理シート\n- 手動入力の手間を減らすため、SNSや更新情報のスクレイピング・自動収集ワークフローの検討。\n\n### 4. アプリマネタイズ構想\n- 開発した自作アプリ（韓国語学習、握力管理など）を一般向けに改良してお金を稼ぐビジネス展開の検討。",
+    category: "idea",
+    priority: "med",
+    status: "backlog",
+    scope: "new-apps / idea",
+    dueDate: "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "memo-mission-hub-improvements",
+    title: "【Mission Hub機能改善】対象アプリ選択ドロップダウン & クイック登録",
+    description: "### 課題・要望\n思いついたことをどんどんコピペして保存したいが、毎回アプリ名（タイトル）を手打ちするのが面倒。\n\n### 実装アイデア\n- メモ作成時に、よく使う対象（「歌詞アプリ」「ブログ」「開発環境」など）をドロップダウンでワンクリック選択できるようにする。\n- 自分でよく使う対象（アプリ名）をカスタム登録・管理できる機能。\n\n※大画面フルスクリーンエディタ、音声入力、Googleカレンダー連携は本日対応完了済！",
+    category: "idea",
+    priority: "med",
+    status: "todo",
+    scope: "antigravity-memo",
+    dueDate: "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "memo-hardware-infra",
+    title: "【インフラ・ハード】GPU搭載サブPC活用 & KV同期の他アプリ横展開",
+    description: "### 1. GPU搭載サブPCの有効活用\n- Ollama（ローカルLLM）以外でのグラボの使い道を検討（ローカル画像生成、Whisper文字起こし高速化、常時稼働AIワーカーなど）。\n\n### 2. 他アプリへのCloudflare KV同期の横展開\n- `antigravity-memo` で成功した「LocalStorage ＋ Cloudflare KV」の同期基盤を、`seesaw-portfolio` や `korean-learner` にも適用して複数端末間での同期を実現する。",
+    category: "idea",
+    priority: "low",
+    status: "backlog",
+    scope: "hardware / cloudflare-kv",
+    dueDate: "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "memo-movie-list",
+    title: "【永久保存】見たい映画・ドラマリスト",
+    description: "### 見たい映画・ドラマ\n- [ ] Life is beautiful\n- [ ] 子宮に沈める\n- [ ] Wild Things\n- [ ] グランドイリュージョン\n- [ ] 閉ざされた森 (Basic)\n- [ ] Promising Young Woman\n- [ ] シャッター アイランド\n- [ ] カインとアベル（ドラマ）",
+    category: "rule",
+    priority: "low",
+    status: "backlog",
+    scope: "personal / movies",
+    dueDate: "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
+
+// Load Categorized & Organized Memos (One-click update)
+const btnLoadCategorizedMemos = document.getElementById('btn-load-categorized-memos');
+if (btnLoadCategorizedMemos) {
+  btnLoadCategorizedMemos.addEventListener('click', () => {
+    if (confirm('散らばったメモを【韓国語学習】【ブログ】【AI開発環境】【新規アプリ構想】など7つの対象別メモに自動整理・統合しますか？\n\n※元の古い散在メモは綺麗に整理・上書きされ、スッキリまとまります。')) {
+      lastLocalSaveTime = Date.now();
+      localVersion++;
+      memos = [...ORGANIZED_MEMOS];
+      saveMemos(true);
+      showToast('🎉 対象別に整理された7件のメモに更新しました！', '✨');
+      modalData.classList.remove('active');
+    }
+  });
+}
+
+// Toggle JSON Paste Area
+const btnToggleJsonPaste = document.getElementById('btn-toggle-json-paste');
+const jsonPasteBox = document.getElementById('json-paste-box');
+const textareaJsonImport = document.getElementById('textarea-json-import');
+const btnApplyJsonPaste = document.getElementById('btn-apply-json-paste');
+
+if (btnToggleJsonPaste && jsonPasteBox) {
+  btnToggleJsonPaste.addEventListener('click', () => {
+    const isShown = jsonPasteBox.style.display === 'flex';
+    jsonPasteBox.style.display = isShown ? 'none' : 'flex';
+    if (!isShown && textareaJsonImport) {
+      textareaJsonImport.focus();
+    }
+  });
+}
+
+// Apply Pasted JSON
+if (btnApplyJsonPaste && textareaJsonImport) {
+  btnApplyJsonPaste.addEventListener('click', () => {
+    const rawText = textareaJsonImport.value.trim();
+    if (!rawText) {
+      alert('JSONテキストを貼り付けてください。');
+      return;
+    }
+    try {
+      const imported = JSON.parse(rawText);
+      if (Array.isArray(imported)) {
+        if (confirm('貼り付けたJSONデータでメモを上書き・復元しますか？')) {
+          lastLocalSaveTime = Date.now();
+          localVersion++;
+          memos = deduplicateMemos(imported);
+          saveMemos(true);
+          showToast('JSONテキストからデータをインポートしました！', '📥');
+          textareaJsonImport.value = '';
+          jsonPasteBox.style.display = 'none';
+          modalData.classList.remove('active');
+        }
+      } else {
+        alert('無効なデータ形式です。配列形式（[ ... ]）のJSONを貼り付けてください。');
+      }
+    } catch (err) {
+      alert('JSONの解析に失敗しました: ' + err.message);
+    }
+  });
+}
+
 // Load Samples
 document.getElementById('btn-load-sample').addEventListener('click', () => {
   if (confirm('サンプル指示データを読み込みますか？（既存のメモに追加されます）')) {
@@ -1190,6 +1339,7 @@ document.getElementById('btn-load-sample').addEventListener('click', () => {
 document.getElementById('btn-clear-all').addEventListener('click', () => {
   if (confirm('本当にすべてのメモを消去しますか？この操作は元に戻せません。')) {
     lastLocalSaveTime = Date.now();
+    localVersion++;
     memos = [];
     saveMemos(true);
     showToast('すべてのメモをクリアしました', '⚠️');

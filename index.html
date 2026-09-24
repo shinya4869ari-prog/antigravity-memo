@@ -18,7 +18,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MissionHub">
 
-  <link rel="stylesheet" href="style.css?v=20260924_v2">
+  <link rel="stylesheet" href="style.css?v=20260924_v3">
 </head>
 <body>
   <div class="app-container">
@@ -520,17 +520,34 @@
           登録したすべてのメモや指示データをJSON形式でバックアップ・復元できます。
         </p>
         <div style="display: flex; gap: 12px; flex-direction: column;">
+          <!-- Special Action: Auto-organize into categorized memos -->
+          <button id="btn-load-categorized-memos" class="btn" style="justify-content: flex-start; background: linear-gradient(135deg, #f38020 0%, #d97706 100%); color: #fff; font-weight: 700; box-shadow: 0 4px 15px rgba(243, 128, 32, 0.4);">
+            ✨ 対象別に整理統合したメモに一括更新 (推奨)
+          </button>
+          
           <button id="btn-download-json" class="btn btn-secondary" style="justify-content: flex-start;">
             📥 JSON形式でダウンロード保存 (バックアップ)
           </button>
           
+          <button id="btn-toggle-json-paste" class="btn btn-secondary" style="justify-content: flex-start;">
+            📋 JSONテキストを直接貼り付けて復元
+          </button>
+
+          <!-- Hidden JSON Paste Box -->
+          <div id="json-paste-box" style="display: none; flex-direction: column; gap: 8px; background: rgba(0, 0, 0, 0.35); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+            <textarea id="textarea-json-import" class="form-input" style="width: 100%; min-height: 120px; font-family: var(--font-mono); font-size: 0.8rem; box-sizing: border-box;" placeholder="ここにコピーしたJSONテキストを貼り付けてください..."></textarea>
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+              <button type="button" id="btn-apply-json-paste" class="btn btn-primary btn-sm">インポート実行</button>
+            </div>
+          </div>
+
           <label class="btn btn-secondary" style="justify-content: flex-start; cursor: pointer;">
             📤 JSONファイルを読み込んで復元
             <input type="file" id="input-import-file" accept=".json" style="display: none;">
           </label>
 
           <button id="btn-load-sample" class="btn btn-secondary" style="justify-content: flex-start; color: #38bdf8;">
-            ✨ サンプル指示データを読み込む
+            ✨ 初期サンプル指示データを読み込む
           </button>
 
           <button id="btn-clear-all" class="btn btn-secondary" style="justify-content: flex-start; color: #f43f5e;">
@@ -668,6 +685,6 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=20260924_v2"></script>
+  <script src="app.js?v=20260924_v3"></script>
 </body>
 </html>
