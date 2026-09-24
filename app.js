@@ -157,6 +157,7 @@ const filterPrioritySelect = document.getElementById('filter-priority');
 
 // Modals
 const modalMemo = document.getElementById('modal-memo');
+const modalMemoContent = document.getElementById('modal-memo-content');
 const formMemo = document.getElementById('form-memo');
 const modalMemoTitle = document.getElementById('modal-memo-title');
 const inputMemoId = document.getElementById('input-memo-id');
@@ -166,6 +167,12 @@ const inputMemoPriority = document.getElementById('input-memo-priority');
 const inputMemoStatus = document.getElementById('input-memo-status');
 const inputMemoScope = document.getElementById('input-memo-scope');
 const inputMemoDue = document.getElementById('input-memo-due');
+const memoDescPreview = document.getElementById('memo-desc-preview');
+const editorCharCount = document.getElementById('editor-char-count');
+const editorWorkspace = document.getElementById('editor-workspace');
+const btnToggleMemoFullscreen = document.getElementById('btn-toggle-memo-fullscreen');
+const fullscreenIcon = document.getElementById('fullscreen-icon');
+const btnCopyEditorPrompt = document.getElementById('btn-copy-editor-prompt');
 
 const modalPrompt = document.getElementById('modal-prompt');
 const promptOutputBox = document.getElementById('prompt-output-box');
@@ -717,6 +724,175 @@ function generateBatchPrompt() {
   return prompt;
 }
 
+// ========================================================
+// Fullscreen Live Markdown Editor Handlers & Helpers
+// ========================================================
+
+// Safe Regex Markdown Formatter (HTML-escaped input first to prevent XSS)
+function renderSafeMarkdown(text) {
+  if (!text || !text.trim()) {
+    return '<div class="preview-empty-placeholder">詳細を入力すると、ここにリアルタイムでMarkdownプレビューが表示されます。</div>';
+  }
+
+  // 1. Escape HTML to prevent XSS
+  let safe = escapeHtml(text);
+
+  // 2. Fenced code blocks ```lang ... ```
+  safe = safe.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
+    return `<div class="preview-code-block"><div class="preview-code-header">${lang || 'code'}</div><pre><code>${code.trim()}</code></pre></div>`;
+  });
+
+  // 3. Inline code `...`
+  safe = safe.replace(/`([^`\n]+)`/g, '<code class="preview-inline-code">$1</code>');
+
+  // 4. Headers: #, ##, ###, ####
+  safe = safe.replace(/^#### (.*?)$/gm, '<h4>$1</h4>');
+  safe = safe.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
+  safe = safe.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
+  safe = safe.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
+
+  // 5. Blockquotes >
+  safe = safe.replace(/^> (.*?)$/gm, '<blockquote>$1</blockquote>');
+
+  // 6. Checkboxes: - [ ] or - [x]
+  safe = safe.replace(/^- \[x\] (.*?)$/gim, '<div class="preview-task-item checked"><input type="checkbox" checked disabled> <span>$1</span></div>');
+  safe = safe.replace(/^- \[ \] (.*?)$/gim, '<div class="preview-task-item"><input type="checkbox" disabled> <span>$1</span></div>');
+
+  // 7. Unordered lists: - item or * item
+  safe = safe.replace(/^[-*] (.*?)$/gm, '<li>$1</li>');
+  safe = safe.replace(/(<li>.*?<\/li>\n?)+/g, '<ul>$&</ul>');
+
+  // 8. Bold, Italic, Strikethrough
+  safe = safe.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  safe = safe.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  safe = safe.replace(/~~([^~]+)~~/g, '<del>$1</del>');
+
+  // 9. Links: [text](https://url)
+  safe = safe.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+  // 10. Antigravity Prompt Highlight
+  safe = safe.replace(/【Antigravityへの依頼】/g, '<span class="preview-agy-badge">⚡ Antigravityへの依頼</span>');
+
+  // 11. Paragraphs & Line Breaks
+  const blocks = safe.split(/\n{2,}/);
+  safe = blocks.map(block => {
+    block = block.trim();
+    if (!block) return '';
+    if (
+      block.startsWith('<h') ||
+      block.startsWith('<ul') ||
+      block.startsWith('<blockquote') ||
+      block.startsWith('<div class="preview-code-block"') ||
+      block.startsWith('<div class="preview-task-item"')
+    ) {
+      return block;
+    }
+    return `<p>${block.replace(/\n/g, '<br>')}</p>`;
+  }).join('\n');
+
+  return safe;
+}
+
+// Update Live Preview & Stats
+function updateMemoEditorPreview() {
+  if (!memoDescPreview) return;
+  const text = inputMemoDesc ? (inputMemoDesc.value || '') : '';
+  const title = inputMemoTitle && inputMemoTitle.value.trim() ? inputMemoTitle.value.trim() : '（タイトル未設定）';
+  const cat = formMemo ? (formMemo.querySelector('input[name="memo-category"]:checked')?.value || 'task') : 'task';
+  const catInfo = CATEGORY_MAP[cat] || CATEGORY_MAP.task;
+  const priInfo = PRIORITY_MAP[inputMemoPriority ? inputMemoPriority.value : 'med'] || PRIORITY_MAP.med;
+  const scopeVal = inputMemoScope ? inputMemoScope.value.trim() : '';
+
+  let headerHtml = `<div class="preview-memo-top">`;
+  headerHtml += `<div class="preview-meta-badges">`;
+  headerHtml += `<span class="badge ${catInfo.badgeClass}">${catInfo.icon} ${catInfo.label}</span>`;
+  headerHtml += `<span class="badge ${priInfo.badgeClass}">${priInfo.icon} ${priInfo.label}</span>`;
+  if (scopeVal) {
+    headerHtml += `<span class="card-scope">🎯 ${escapeHtml(scopeVal)}</span>`;
+  }
+  headerHtml += `</div>`;
+  headerHtml += `<h1 class="preview-memo-title">${escapeHtml(title)}</h1>`;
+  headerHtml += `</div>`;
+
+  memoDescPreview.innerHTML = headerHtml + renderSafeMarkdown(text);
+
+  // Character and line count
+  if (editorCharCount) {
+    const charCount = text.length;
+    const lineCount = text ? text.split('\n').length : 0;
+    editorCharCount.textContent = `${charCount} 文字 / ${lineCount} 行`;
+  }
+}
+
+// Markdown formatting helper
+function applyEditorFormat(action) {
+  if (!inputMemoDesc) return;
+  const textarea = inputMemoDesc;
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const selectedText = textarea.value.substring(start, end);
+  let replacement = '';
+
+  switch (action) {
+    case 'bold':
+      replacement = selectedText ? `**${selectedText}**` : '**太字**';
+      break;
+    case 'italic':
+      replacement = selectedText ? `*${selectedText}*` : '*斜体*';
+      break;
+    case 'h2':
+      replacement = selectedText ? `\n## ${selectedText}\n` : '\n## 見出し2\n';
+      break;
+    case 'h3':
+      replacement = selectedText ? `\n### ${selectedText}\n` : '\n### 見出し3\n';
+      break;
+    case 'checklist':
+      if (selectedText) {
+        replacement = selectedText.split('\n').map(l => l.startsWith('- [ ] ') ? l : `- [ ] ${l}`).join('\n');
+      } else {
+        replacement = '\n- [ ] 完了条件・チェック項目';
+      }
+      break;
+    case 'bullet':
+      if (selectedText) {
+        replacement = selectedText.split('\n').map(l => l.startsWith('- ') ? l : `- ${l}`).join('\n');
+      } else {
+        replacement = '\n- 箇条書き項目';
+      }
+      break;
+    case 'inline-code':
+      replacement = selectedText ? `\`${selectedText}\`` : '`コード`';
+      break;
+    case 'code-block':
+      replacement = selectedText ? `\n\`\`\`\n${selectedText}\n\`\`\`\n` : '\n```\n// コードを記述\n```\n';
+      break;
+    case 'insert-template':
+      const tpl = `### 依頼内容・詳細\n具体的に行ってほしい修正や実装内容を記入してください。\n\n### 期待する結果・完了条件\n- [ ] 要件を満たすコードを反映\n- [ ] 関連ファイルに不整合がないか確認\n- [ ] 変更内容と動作確認結果を報告\n`;
+      replacement = textarea.value.trim() ? `\n\n${tpl}` : tpl;
+      break;
+    default:
+      return;
+  }
+
+  textarea.setRangeText(replacement, start, end, 'end');
+  textarea.focus();
+  updateMemoEditorPreview();
+}
+
+// Fullscreen / Windowed toggle
+function toggleMemoFullscreen() {
+  if (!modalMemo) return;
+  modalMemo.classList.toggle('is-maximized');
+  const isMax = modalMemo.classList.contains('is-maximized');
+  if (fullscreenIcon) {
+    fullscreenIcon.textContent = isMax ? '🗗' : '🗖';
+  }
+  if (btnToggleMemoFullscreen) {
+    btnToggleMemoFullscreen.title = isMax ? '通常ウィンドウに戻す' : '全画面に最大化';
+  }
+  localStorage.setItem('antigravity_memo_maximized', isMax ? 'true' : 'false');
+}
+
 // Modal Handlers
 function openNewMemoModal() {
   inputMemoId.value = '';
@@ -726,6 +902,8 @@ function openNewMemoModal() {
   // Default radios
   const fixRadio = formMemo.querySelector('input[value="task"]');
   if (fixRadio) fixRadio.checked = true;
+
+  updateMemoEditorPreview();
   modalMemo.classList.add('active');
   inputMemoTitle.focus();
 }
@@ -747,6 +925,7 @@ function openEditMemoModal(id, event) {
   if (catRadio) catRadio.checked = true;
 
   modalMemoTitle.textContent = '指示・メモの編集';
+  updateMemoEditorPreview();
   modalMemo.classList.add('active');
 }
 
@@ -819,10 +998,108 @@ formMemo.addEventListener('submit', (e) => {
   closeMemoModal();
 });
 
-// Event Listeners: Header Buttons
+// Event Listeners: Header Buttons & Editor Controls
 document.getElementById('btn-new-memo').addEventListener('click', openNewMemoModal);
 document.getElementById('btn-close-memo-modal').addEventListener('click', closeMemoModal);
 document.getElementById('btn-cancel-memo').addEventListener('click', closeMemoModal);
+
+// Toolbar button clicks
+document.querySelectorAll('.editor-toolbar .btn-tool').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const action = btn.getAttribute('data-action');
+    if (action) applyEditorFormat(action);
+  });
+});
+
+// View mode tabs (edit, split, preview)
+document.querySelectorAll('#editor-view-tabs .btn-view-tab').forEach(tabBtn => {
+  tabBtn.addEventListener('click', () => {
+    const mode = tabBtn.getAttribute('data-mode');
+    document.querySelectorAll('#editor-view-tabs .btn-view-tab').forEach(b => b.classList.remove('active'));
+    tabBtn.classList.add('active');
+
+    if (editorWorkspace) {
+      editorWorkspace.classList.remove('mode-edit', 'mode-split', 'mode-preview');
+      editorWorkspace.classList.add(`mode-${mode}`);
+    }
+    if (mode !== 'edit') {
+      updateMemoEditorPreview();
+    }
+  });
+});
+
+// Fullscreen toggle button
+if (btnToggleMemoFullscreen) {
+  btnToggleMemoFullscreen.addEventListener('click', toggleMemoFullscreen);
+}
+
+// Restore saved fullscreen preference
+if (localStorage.getItem('antigravity_memo_maximized') === 'true' && modalMemo) {
+  modalMemo.classList.add('is-maximized');
+  if (fullscreenIcon) fullscreenIcon.textContent = '🗗';
+  if (btnToggleMemoFullscreen) btnToggleMemoFullscreen.title = '通常ウィンドウに戻す';
+}
+
+// Live typing updates for preview & textarea shortcuts
+if (inputMemoDesc) {
+  inputMemoDesc.addEventListener('input', updateMemoEditorPreview);
+  inputMemoDesc.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const start = inputMemoDesc.selectionStart;
+      const end = inputMemoDesc.selectionEnd;
+      inputMemoDesc.setRangeText('  ', start, end, 'end');
+      updateMemoEditorPreview();
+    } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      formMemo.requestSubmit();
+    }
+  });
+}
+
+if (inputMemoTitle) {
+  inputMemoTitle.addEventListener('input', updateMemoEditorPreview);
+}
+if (inputMemoScope) {
+  inputMemoScope.addEventListener('input', updateMemoEditorPreview);
+}
+if (inputMemoPriority) {
+  inputMemoPriority.addEventListener('change', updateMemoEditorPreview);
+}
+if (formMemo) {
+  formMemo.querySelectorAll('input[name="memo-category"]').forEach(r => {
+    r.addEventListener('change', updateMemoEditorPreview);
+  });
+}
+
+// Global keydown: Esc to close modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && modalMemo && modalMemo.classList.contains('active')) {
+    closeMemoModal();
+  }
+});
+
+// Copy prompt directly from editor
+if (btnCopyEditorPrompt) {
+  btnCopyEditorPrompt.addEventListener('click', () => {
+    const cat = formMemo.querySelector('input[name="memo-category"]:checked')?.value || 'task';
+    const tempMemo = {
+      title: inputMemoTitle.value.trim() || '無題の指示',
+      category: cat,
+      priority: inputMemoPriority.value,
+      status: inputMemoStatus.value,
+      scope: inputMemoScope.value.trim(),
+      description: inputMemoDesc.value.trim()
+    };
+    const prompt = generateSinglePrompt(tempMemo);
+    navigator.clipboard.writeText(prompt).then(() => {
+      showToast(`「${tempMemo.title}」のAntigravity指示プロンプトをコピーしました！`, '⚡');
+    }).catch(err => {
+      console.error('Copy failed', err);
+      showToast('クリップボードへのコピーに失敗しました', '❌');
+    });
+  });
+}
 
 // Batch Prompt Modal
 document.getElementById('btn-gen-batch-prompt').addEventListener('click', () => {

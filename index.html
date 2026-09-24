@@ -257,97 +257,162 @@
   </div>
 
 
-  <!-- Modal 1: Create / Edit Memo -->
-  <div class="modal-overlay" id="modal-memo">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 id="modal-memo-title">新規指示・メモの作成</h2>
-        <button class="modal-close" id="btn-close-memo-modal">&times;</button>
+  <!-- Modal 1: Create / Edit Memo (Fullscreen Live Markdown Editor) -->
+  <div class="modal-overlay modal-overlay-fullscreen" id="modal-memo">
+    <div class="modal-content modal-editor-fullscreen" id="modal-memo-content">
+      <!-- Editor Header -->
+      <div class="modal-header modal-editor-header">
+        <div class="modal-header-left">
+          <span class="editor-header-badge">⚡ Antigravity 指示エディタ</span>
+          <h2 id="modal-memo-title">指示・メモの編集</h2>
+        </div>
+        <div class="modal-header-actions">
+          <!-- View mode switch -->
+          <div class="editor-view-tabs" id="editor-view-tabs" role="tablist">
+            <button type="button" class="btn-view-tab" data-mode="edit" title="エディタのみ表示">✏️ 編集</button>
+            <button type="button" class="btn-view-tab active" data-mode="split" title="エディタとプレビューを並べて表示">🌓 分割</button>
+            <button type="button" class="btn-view-tab" data-mode="preview" title="プレビューのみ表示">👁️ プレビュー</button>
+          </div>
+          <!-- Maximize / Normal Toggle -->
+          <button type="button" class="btn-editor-action" id="btn-toggle-memo-fullscreen" title="全画面 / 通常ウィンドウ切替">
+            <span id="fullscreen-icon">🗖</span>
+          </button>
+          <!-- Close Button -->
+          <button type="button" class="modal-close" id="btn-close-memo-modal" title="閉じる">&times;</button>
+        </div>
       </div>
-      <form id="form-memo">
-        <div class="modal-body">
-          <input type="hidden" id="input-memo-id">
 
-          <div class="form-group">
-            <label class="form-label">カテゴリー</label>
-            <div class="category-selector">
-              <label class="cat-option">
-                <input type="radio" name="memo-category" value="fix" checked>
-                <div class="cat-option-box">
-                  <span class="cat-option-icon">🔧</span>
-                  <span class="cat-option-text" style="color: var(--cat-fix);">訂正・バグ修正</span>
-                </div>
-              </label>
-              <label class="cat-option">
-                <input type="radio" name="memo-category" value="idea">
-                <div class="cat-option-box">
-                  <span class="cat-option-icon">💡</span>
-                  <span class="cat-option-text" style="color: var(--cat-idea);">やりたいこと・構想</span>
-                </div>
-              </label>
-              <label class="cat-option">
-                <input type="radio" name="memo-category" value="task">
-                <div class="cat-option-box">
-                  <span class="cat-option-icon">📋</span>
-                  <span class="cat-option-text" style="color: var(--cat-task);">指示・タスク</span>
-                </div>
-              </label>
-              <label class="cat-option">
-                <input type="radio" name="memo-category" value="rule">
-                <div class="cat-option-box">
-                  <span class="cat-option-icon">⚙️</span>
-                  <span class="cat-option-text" style="color: var(--cat-rule);">ルール・前提指示</span>
-                </div>
-              </label>
-            </div>
+      <form id="form-memo" class="editor-form">
+        <input type="hidden" id="input-memo-id">
+
+        <!-- Top Title & Metadata Bar -->
+        <div class="editor-top-bar">
+          <!-- Title Input -->
+          <div class="editor-title-container">
+            <input type="text" id="input-memo-title" class="form-input editor-title-input" placeholder="タイトル / 要約（例: ヘッダーのボタン配色をオレンジに変更してほしい）" required autocomplete="off">
           </div>
 
-          <div class="form-group">
-            <label class="form-label" for="input-memo-title">タイトル / 要約 <span style="color: var(--cf-orange);">&ast;</span></label>
-            <input type="text" id="input-memo-title" class="form-input" placeholder="例: ヘッダーのボタン配色をオレンジに変更してほしい" required>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="input-memo-desc">詳細・やってほしいこと・期待する結果</label>
-            <textarea id="input-memo-desc" class="form-textarea" placeholder="Antigravityに伝えてほしい具体的な内容、現状の課題、期待する挙動などを自由に記入してください。コードやURLも記述可能です。"></textarea>
-          </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-            <div class="form-group">
-              <label class="form-label" for="input-memo-priority">優先度</label>
-              <select id="input-memo-priority" class="form-select">
-                <option value="high">🔥 高 (最優先)</option>
-                <option value="med" selected>⚡ 中 (通常)</option>
-                <option value="low">☕ 低 (余裕があれば)</option>
-              </select>
+          <!-- Compact Meta Options -->
+          <div class="editor-meta-strip">
+            <!-- Category Pills -->
+            <div class="meta-field-category">
+              <label class="meta-field-label">区分</label>
+              <div class="category-pills">
+                <label class="cat-pill-opt">
+                  <input type="radio" name="memo-category" value="fix" checked>
+                  <span class="cat-pill-badge cat-fix">🔧 訂正・修正</span>
+                </label>
+                <label class="cat-pill-opt">
+                  <input type="radio" name="memo-category" value="idea">
+                  <span class="cat-pill-badge cat-idea">💡 アイデア</span>
+                </label>
+                <label class="cat-pill-opt">
+                  <input type="radio" name="memo-category" value="task">
+                  <span class="cat-pill-badge cat-task">📋 指示・タスク</span>
+                </label>
+                <label class="cat-pill-opt">
+                  <input type="radio" name="memo-category" value="rule">
+                  <span class="cat-pill-badge cat-rule">⚙️ 前提ルール</span>
+                </label>
+              </div>
             </div>
 
-            <div class="form-group">
-              <label class="form-label" for="input-memo-status">初期ステータス</label>
-              <select id="input-memo-status" class="form-select">
-                <option value="todo" selected>⏳ 指示待ち (Todo)</option>
-                <option value="backlog">📌 アイデアスプール (Backlog)</option>
-                <option value="in_progress">🚀 作業中 (In Progress)</option>
-                <option value="done">✅ 完了 (Done)</option>
-              </select>
+            <!-- Priority, Status, Scope, Due Date in a responsive row -->
+            <div class="meta-fields-row">
+              <div class="meta-field-item">
+                <label class="meta-field-label" for="input-memo-priority">優先度</label>
+                <select id="input-memo-priority" class="form-select form-select-compact">
+                  <option value="high">🔥 高 (最優先)</option>
+                  <option value="med" selected>⚡ 中 (通常)</option>
+                  <option value="low">☕ 低 (余裕)</option>
+                </select>
+              </div>
+
+              <div class="meta-field-item">
+                <label class="meta-field-label" for="input-memo-status">ステータス</label>
+                <select id="input-memo-status" class="form-select form-select-compact">
+                  <option value="todo" selected>⏳ 指示待ち</option>
+                  <option value="backlog">📌 アイデア</option>
+                  <option value="in_progress">🚀 作業中</option>
+                  <option value="done">✅ 完了</option>
+                </select>
+              </div>
+
+              <div class="meta-field-item meta-field-scope">
+                <label class="meta-field-label" for="input-memo-scope">対象スコープ</label>
+                <input type="text" id="input-memo-scope" class="form-input form-input-compact" placeholder="例: src/App.vue, style.css">
+              </div>
+
+              <div class="meta-field-item meta-field-due">
+                <label class="meta-field-label" for="input-memo-due">期限・予定日</label>
+                <input type="datetime-local" id="input-memo-due" class="form-input form-input-compact">
+              </div>
             </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="input-memo-scope">対象ファイル / コンポーネント (任意)</label>
-            <input type="text" id="input-memo-scope" class="form-input" placeholder="例: src/components/Header.vue, style.css, 認証機能">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="input-memo-due">
-              <span>📅 予定日・期限 (任意 / カレンダー連携)</span>
-            </label>
-            <input type="datetime-local" id="input-memo-due" class="form-input">
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" id="btn-cancel-memo">キャンセル</button>
-          <button type="submit" class="btn btn-primary" id="btn-save-memo">保存する</button>
+
+        <!-- Editor Toolbar (Markdown formatting & helpers) -->
+        <div class="editor-toolbar">
+          <div class="toolbar-tools">
+            <button type="button" class="btn-tool" data-action="bold" title="太字 (Ctrl+B)"><b>B</b></button>
+            <button type="button" class="btn-tool" data-action="italic" title="斜体 (Ctrl+I)"><i>I</i></button>
+            <button type="button" class="btn-tool" data-action="h2" title="大見出し (## )">H2</button>
+            <button type="button" class="btn-tool" data-action="h3" title="中見出し (### )">H3</button>
+            <span class="tool-sep"></span>
+            <button type="button" class="btn-tool" data-action="checklist" title="チェックボックス (- [ ])">☑ チェック</button>
+            <button type="button" class="btn-tool" data-action="bullet" title="箇条書きリスト (- )">• 箇条書き</button>
+            <button type="button" class="btn-tool" data-action="inline-code" title="インラインコード (`コード`)">`コード`</button>
+            <button type="button" class="btn-tool" data-action="code-block" title="コードブロック (```)">``` ブロック</button>
+            <span class="tool-sep"></span>
+            <button type="button" class="btn-tool btn-tool-template" data-action="insert-template" title="Antigravity標準テンプレートを詳細欄に挿入">
+              ✨ AGYテンプレート挿入
+            </button>
+          </div>
+          <div class="toolbar-status">
+            <span id="editor-char-count">0 文字 / 0 行</span>
+          </div>
+        </div>
+
+        <!-- Editor Workspace: Split Panes -->
+        <div class="editor-workspace mode-split" id="editor-workspace">
+          <!-- Left: Input Area -->
+          <div class="editor-pane editor-pane-input" id="editor-pane-input">
+            <div class="pane-header">
+              <span class="pane-title">📝 Markdown / 指示詳細入力</span>
+              <span class="pane-shortcut-tip"><kbd>Tab</kbd> インデント | <kbd>Ctrl+Enter</kbd> 保存</span>
+            </div>
+            <div class="pane-body">
+              <textarea id="input-memo-desc" class="editor-textarea" placeholder="Antigravityに伝えてほしい具体的な内容、現状の課題、期待する挙動などを自由に記入してください。&#10;&#10;例:&#10;### 依頼内容・詳細&#10;ボタンの配色をCloudflareオレンジに変更してほしい。&#10;&#10;### 期待する結果・完了条件&#10;- [ ] 該当ボタンのスタイルを調整&#10;- [ ] ホバー時のアニメーションも確認"></textarea>
+            </div>
+          </div>
+
+          <!-- Right: Live Preview Area -->
+          <div class="editor-pane editor-pane-preview" id="editor-pane-preview">
+            <div class="pane-header">
+              <span class="pane-title">👁️ リアルタイム・プレビュー (Markdown)</span>
+              <span class="pane-badge-live">LIVE</span>
+            </div>
+            <div class="pane-body editor-preview-scroll">
+              <div class="editor-preview-container" id="memo-desc-preview">
+                <!-- Live preview rendered here -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="modal-footer editor-footer">
+          <div class="footer-info">
+            <span class="shortcut-tag"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> で即時保存</span>
+            <span class="shortcut-tag"><kbd>Esc</kbd> で閉じる</span>
+          </div>
+          <div class="footer-actions">
+            <button type="button" class="btn btn-secondary" id="btn-copy-editor-prompt" title="このメモをAntigravity用プロンプトとして即時コピー">
+              📋 プロンプトをコピー
+            </button>
+            <button type="button" class="btn btn-secondary" id="btn-cancel-memo">キャンセル</button>
+            <button type="submit" class="btn btn-primary" id="btn-save-memo">💾 保存する</button>
+          </div>
         </div>
       </form>
     </div>
