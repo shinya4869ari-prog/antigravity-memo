@@ -1,5 +1,5 @@
 // Antigravity Mission Hub - Progressive Web App Service Worker
-const CACHE_NAME = 'antigravity-hub-v4';
+const CACHE_NAME = 'antigravity-hub-v6';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

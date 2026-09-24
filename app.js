@@ -1588,7 +1588,11 @@ if (selectPresetApp) {
 
 // App Presets Manager Modal Handlers
 if (btnOpenAppManager && modalAppManager) {
-  btnOpenAppManager.addEventListener('click', () => {
+  btnOpenAppManager.addEventListener('click', (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     renderCustomAppsList();
     modalAppManager.classList.add('active');
   });

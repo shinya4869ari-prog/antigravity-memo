@@ -18,7 +18,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MissionHub">
 
-  <link rel="stylesheet" href="style.css?v=20260924_v4">
+  <link rel="stylesheet" href="style.css?v=20260924_v6">
 </head>
 <body>
   <div class="app-container">
@@ -695,9 +695,12 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" id="btn-close-pwa-btn">閉じる</button>
       </div>
-  <!-- Modal 6: Custom Apps Presets Manager -->
-  <div class="modal-overlay" id="modal-app-manager">
-    <div class="modal-content" style="max-width: 520px;">
+    </div>
+  </div>
+
+  <!-- Modal 7: Custom Apps Presets Manager -->
+  <div class="modal-overlay" id="modal-app-manager" style="z-index: 99999;">
+    <div class="modal-content" style="max-width: 520px; z-index: 100000; position: relative;">
       <div class="modal-header">
         <h2>
           <span>📱</span>
@@ -744,6 +747,6 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=20260924_v4"></script>
+  <script src="app.js?v=20260924_v6"></script>
 </body>
 </html>

@@ -2352,6 +2352,16 @@ body {
    App Presets Selector & Manager Modal Styles
    ========================================================================== */
 
+#modal-app-manager {
+  z-index: 99999 !important;
+}
+
+#modal-app-manager .modal-content {
+  z-index: 100000 !important;
+  border: 1px solid rgba(243, 128, 32, 0.5);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.95), 0 0 40px rgba(243, 128, 32, 0.35);
+}
+
 .editor-app-selector-bar {
   display: flex;
   align-items: center;
