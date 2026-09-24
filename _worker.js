@@ -83,6 +83,59 @@ export default {
       }
     }
 
+    // API Route: Custom Apps Presets Endpoint (Cloudflare KV)
+    if (url.pathname === '/api/apps') {
+      const corsHeaders = {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      };
+
+      if (request.method === 'OPTIONS') {
+        return new Response(null, { headers: corsHeaders });
+      }
+
+      if (request.method === 'GET') {
+        if (env && env.MEMO_KV) {
+          try {
+            const data = await env.MEMO_KV.get('custom_apps');
+            return new Response(data || 'null', {
+              headers: { ...corsHeaders, 'X-Storage-Mode': 'kv' }
+            });
+          } catch (err) {
+            return new Response(JSON.stringify({ error: err.message }), {
+              status: 500,
+              headers: corsHeaders
+            });
+          }
+        }
+        return new Response(JSON.stringify({ mode: 'local' }), {
+          headers: corsHeaders
+        });
+      }
+
+      if (request.method === 'POST') {
+        if (env && env.MEMO_KV) {
+          try {
+            const body = await request.text();
+            await env.MEMO_KV.put('custom_apps', body);
+            return new Response(JSON.stringify({ success: true, mode: 'kv' }), {
+              headers: corsHeaders
+            });
+          } catch (err) {
+            return new Response(JSON.stringify({ error: err.message }), {
+              status: 500,
+              headers: corsHeaders
+            });
+          }
+        }
+        return new Response(JSON.stringify({ success: true, mode: 'local' }), {
+          headers: corsHeaders
+        });
+      }
+    }
+
     // Fallback: serve static assets via Cloudflare Pages / Workers Assets
     return env.ASSETS ? env.ASSETS.fetch(request) : new Response('Not found', { status: 404 });
   }

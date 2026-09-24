@@ -18,7 +18,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MissionHub">
 
-  <link rel="stylesheet" href="style.css?v=20260924_v3">
+  <link rel="stylesheet" href="style.css?v=20260924_v4">
 </head>
 <body>
   <div class="app-container">
@@ -169,6 +169,10 @@
           <option value="rule">⚙️ ルール・前提指示</option>
         </select>
 
+        <select id="filter-app" class="select-filter" aria-label="対象アプリ絞り込み">
+          <option value="all">すべての対象アプリ</option>
+        </select>
+
         <select id="filter-priority" class="select-filter" aria-label="優先度絞り込み">
           <option value="all">すべての優先度</option>
           <option value="high">🔥 優先度: 高</option>
@@ -287,9 +291,22 @@
 
         <!-- Top Title & Metadata Bar -->
         <div class="editor-top-bar">
-          <!-- Title Input -->
-          <div class="editor-title-container" style="width: 100%;">
-            <input type="text" id="input-memo-title" class="form-input editor-title-input" placeholder="タイトル / 要約（例: ヘッダーのボタン配色をオレンジに変更してほしい）" required autocomplete="off" style="width: 100%; box-sizing: border-box;">
+          <!-- Title Input with App Preset Selector -->
+          <div class="editor-title-container" style="width: 100%; display: flex; flex-direction: column; gap: 8px;">
+            <div class="editor-app-selector-bar" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 240px;">
+                <span style="font-size: 0.8rem; font-weight: 700; color: var(--cf-orange); white-space: nowrap; display: flex; align-items: center; gap: 4px;">
+                  📱 対象アプリ:
+                </span>
+                <select id="select-preset-app" class="form-select form-select-compact" style="flex: 1; font-weight: 600; padding: 6px 12px; background: rgba(243, 128, 32, 0.12); border: 1px solid rgba(243, 128, 32, 0.45); color: #fff; border-radius: var(--radius-sm); cursor: pointer;">
+                  <option value="">▼ よく使うアプリ・対象を選択...</option>
+                </select>
+              </div>
+              <button type="button" id="btn-open-app-manager" class="btn btn-secondary btn-sm" title="よく使うアプリ名をカスタム登録・編集" style="white-space: nowrap; padding: 5px 10px; font-size: 0.78rem;">
+                ⚙️ アプリ名管理
+              </button>
+            </div>
+            <input type="text" id="input-memo-title" class="form-input editor-title-input" placeholder="タイトル / 要約（例: 【韓国語学習】ヘッダーのボタン配色をオレンジに変更してほしい）" required autocomplete="off" style="width: 100%; box-sizing: border-box;">
           </div>
 
           <!-- Compact Meta Options -->
@@ -678,6 +695,48 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" id="btn-close-pwa-btn">閉じる</button>
       </div>
+  <!-- Modal 6: Custom Apps Presets Manager -->
+  <div class="modal-overlay" id="modal-app-manager">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h2>
+          <span>📱</span>
+          対象アプリ（プリセット）の管理
+        </h2>
+        <button type="button" class="modal-close" id="btn-close-app-manager">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+        <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+          よく使うアプリ名やプロジェクト名を登録しておくと、新規メモ作成時にドロップダウンからワンクリックで選択できます。（※Cloudflare KVでスマホとPCに自動同期されます）
+        </p>
+
+        <!-- Add New Preset Form -->
+        <div style="display: flex; flex-direction: column; gap: 8px; background: rgba(255, 255, 255, 0.03); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+          <span style="font-size: 0.82rem; font-weight: 700; color: var(--cf-orange);">＋ 新しい対象アプリを追加</span>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <input type="text" id="input-new-app-name" class="form-input form-input-compact" placeholder="表示名（例: 【握力アプリ】）" style="flex: 1.4; min-width: 150px;">
+            <input type="text" id="input-new-app-scope" class="form-input form-input-compact" placeholder="スコープタグ（例: grip-training）" style="flex: 1; min-width: 120px;">
+            <button type="button" id="btn-add-custom-app" class="btn btn-primary btn-sm" style="white-space: nowrap;">追加</button>
+          </div>
+        </div>
+
+        <!-- Presets List -->
+        <div>
+          <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; display: block;">登録中の対象アプリ一覧</span>
+          <div id="custom-apps-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow-y: auto;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+          <button type="button" id="btn-reset-default-apps" class="btn btn-secondary btn-sm" style="font-size: 0.76rem; color: var(--text-muted);">
+            🔄 初期プリセットに戻す
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="btn-save-app-manager">完了</button>
+      </div>
     </div>
   </div>
 
@@ -685,6 +744,6 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=20260924_v3"></script>
+  <script src="app.js?v=20260924_v4"></script>
 </body>
 </html>

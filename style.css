@@ -2348,4 +2348,64 @@ body {
   }
 }
 
+/* ==========================================================================
+   App Presets Selector & Manager Modal Styles
+   ========================================================================== */
+
+.editor-app-selector-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+
+#select-preset-app {
+  min-height: 36px;
+  font-size: 0.88rem;
+  color: #fdba74;
+  border: 1px solid rgba(243, 128, 32, 0.45);
+  background: rgba(243, 128, 32, 0.12);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+#select-preset-app:focus {
+  border-color: var(--cf-orange);
+  box-shadow: 0 0 0 3px rgba(243, 128, 32, 0.25);
+  outline: none;
+}
+
+#filter-app {
+  max-width: 200px;
+  font-weight: 600;
+  color: #fdba74;
+  background: rgba(243, 128, 32, 0.1);
+  border-color: rgba(243, 128, 32, 0.35);
+}
+
+@media (max-width: 640px) {
+  .editor-app-selector-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  #select-preset-app {
+    min-height: 42px;
+    font-size: 0.95rem;
+    width: 100%;
+  }
+
+  #btn-open-app-manager {
+    align-self: flex-end;
+  }
+
+  #filter-app {
+    max-width: 100%;
+    width: 100%;
+  }
+}
+
 

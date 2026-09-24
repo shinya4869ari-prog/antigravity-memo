@@ -121,9 +121,22 @@ const INITIAL_MEMOS = [
 // Application State
 let memos = [];
 let activeCategoryFilter = 'all';
+let activeAppFilter = 'all';
 let activePriorityFilter = 'all';
 let searchQuery = '';
 let currentView = 'kanban'; // 'kanban' | 'list'
+
+// Default Custom Apps Presets
+const DEFAULT_APP_PRESETS = [
+  { id: "app-1", name: "【韓国語学習・歌詞/ニュース】", scope: "korean-learner / n8n" },
+  { id: "app-2", name: "【国家の天秤ブログ】", scope: "blog / n8n" },
+  { id: "app-3", name: "【AI開発環境・ルール】", scope: "workspace / rules" },
+  { id: "app-4", name: "【新規アプリ構想】", scope: "new-apps" },
+  { id: "app-5", name: "【Mission Hub改善】", scope: "antigravity-memo" },
+  { id: "app-6", name: "【インフラ・ハード】", scope: "infrastructure / pc" },
+  { id: "app-7", name: "【映画・ドラマ】", scope: "personal / movies" }
+];
+let customApps = [];
 
 const CATEGORY_MAP = {
   fix: { label: '訂正・修正', icon: '🔧', color: 'var(--cat-fix)', badgeClass: 'badge-fix' },
@@ -153,6 +166,7 @@ const viewListBtn = document.getElementById('view-list-btn');
 
 const searchInput = document.getElementById('search-input');
 const filterCategorySelect = document.getElementById('filter-category');
+const filterAppSelect = document.getElementById('filter-app');
 const filterPrioritySelect = document.getElementById('filter-priority');
 
 // Modals
@@ -162,6 +176,8 @@ const formMemo = document.getElementById('form-memo');
 const modalMemoTitle = document.getElementById('modal-memo-title');
 const inputMemoId = document.getElementById('input-memo-id');
 const inputMemoTitle = document.getElementById('input-memo-title');
+const selectPresetApp = document.getElementById('select-preset-app');
+const btnOpenAppManager = document.getElementById('btn-open-app-manager');
 const inputMemoDesc = document.getElementById('input-memo-desc');
 const inputMemoPriority = document.getElementById('input-memo-priority');
 const inputMemoStatus = document.getElementById('input-memo-status');
@@ -178,6 +194,16 @@ const modalPrompt = document.getElementById('modal-prompt');
 const promptOutputBox = document.getElementById('prompt-output-box');
 const modalGuide = document.getElementById('modal-guide');
 const modalData = document.getElementById('modal-data');
+
+// Custom Apps Presets Manager Modal
+const modalAppManager = document.getElementById('modal-app-manager');
+const btnCloseAppManager = document.getElementById('btn-close-app-manager');
+const btnSaveAppManager = document.getElementById('btn-save-app-manager');
+const inputNewAppName = document.getElementById('input-new-app-name');
+const inputNewAppScope = document.getElementById('input-new-app-scope');
+const btnAddCustomApp = document.getElementById('btn-add-custom-app');
+const customAppsList = document.getElementById('custom-apps-list');
+const btnResetDefaultApps = document.getElementById('btn-reset-default-apps');
 
 // Voice & Google Calendar Modal Elements
 const modalVoice = document.getElementById('modal-voice');
@@ -243,8 +269,12 @@ function loadMemos() {
   updateStats();
   render();
 
+  // 1.5 Load custom apps presets
+  loadCustomAppsFromStorage();
+
   // 2. Immediately sync with Cloudflare Workers KV
   fetchMemosFromCloud();
+  syncCustomAppsWithCloud();
 }
 
 // 3. Fetch data from Cloudflare Workers KV
@@ -337,6 +367,124 @@ function saveMemos(immediate = false) {
       saveMemosToCloud();
     }, 400);
   }
+}
+
+// ==========================================================================
+// Custom Apps Presets Management (PC & Smartphone KV Synchronization)
+// ==========================================================================
+
+function loadCustomAppsFromStorage() {
+  try {
+    const raw = localStorage.getItem('agy_custom_apps');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        customApps = parsed;
+        populateAppDropdowns();
+        renderCustomAppsList();
+        return;
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to parse agy_custom_apps:', e);
+  }
+  customApps = [...DEFAULT_APP_PRESETS];
+  populateAppDropdowns();
+  renderCustomAppsList();
+}
+
+async function syncCustomAppsWithCloud() {
+  try {
+    const res = await fetch('/api/apps');
+    if (res.ok) {
+      const cloudData = await res.json();
+      if (Array.isArray(cloudData) && cloudData.length > 0) {
+        customApps = cloudData;
+        localStorage.setItem('agy_custom_apps', JSON.stringify(customApps));
+        populateAppDropdowns();
+        renderCustomAppsList();
+        console.log('[Apps Sync] Custom apps synchronized from Cloudflare KV');
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to sync custom apps from cloud:', e);
+  }
+}
+
+async function saveCustomApps(syncCloud = true) {
+  localStorage.setItem('agy_custom_apps', JSON.stringify(customApps));
+  populateAppDropdowns();
+  renderCustomAppsList();
+  if (syncCloud) {
+    try {
+      await fetch('/api/apps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(customApps)
+      });
+    } catch (e) {
+      console.warn('Failed to save custom apps to cloud:', e);
+    }
+  }
+}
+
+function populateAppDropdowns() {
+  if (selectPresetApp) {
+    const currentVal = selectPresetApp.value;
+    selectPresetApp.innerHTML = '<option value="">▼ よく使うアプリ・対象を選択...</option>';
+    customApps.forEach(app => {
+      const opt = document.createElement('option');
+      opt.value = app.id;
+      opt.textContent = `${app.name} (${app.scope || '全般'})`;
+      selectPresetApp.appendChild(opt);
+    });
+    selectPresetApp.value = currentVal;
+  }
+
+  if (filterAppSelect) {
+    const currentFilterVal = filterAppSelect.value;
+    filterAppSelect.innerHTML = '<option value="all">すべての対象アプリ</option>';
+    customApps.forEach(app => {
+      const opt = document.createElement('option');
+      opt.value = app.id;
+      opt.textContent = app.name;
+      filterAppSelect.appendChild(opt);
+    });
+    filterAppSelect.value = currentFilterVal || 'all';
+  }
+}
+
+function renderCustomAppsList() {
+  if (!customAppsList) return;
+  customAppsList.innerHTML = '';
+  if (customApps.length === 0) {
+    customAppsList.innerHTML = '<div style="color: var(--text-muted); font-size: 0.8rem; padding: 10px; text-align: center;">登録中のアプリがありません。「初期プリセットに戻す」か、上から追加してください。</div>';
+    return;
+  }
+
+  customApps.forEach(app => {
+    const item = document.createElement('div');
+    item.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);';
+    item.innerHTML = `
+      <div style="display: flex; flex-direction: column; min-width: 0; flex: 1;">
+        <span style="font-size: 0.85rem; font-weight: 700; color: #fff; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${app.name}</span>
+        <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">${app.scope || 'スコープなし'}</span>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" data-delete-app="${app.id}" title="削除" style="padding: 3px 8px; color: #f43f5e; font-size: 0.75rem;">
+        🗑️
+      </button>
+    `;
+
+    item.querySelector('[data-delete-app]').addEventListener('click', () => {
+      if (confirm(`「${app.name}」をリストから削除しますか？`)) {
+        customApps = customApps.filter(a => a.id !== app.id);
+        saveCustomApps(true);
+        showToast(`「${app.name}」を削除しました`, '🗑️');
+      }
+    });
+
+    customAppsList.appendChild(item);
+  });
 }
 
 // Toast System
@@ -442,6 +590,17 @@ function getFilteredMemos() {
     // Category filter
     if (activeCategoryFilter !== 'all' && memo.category !== activeCategoryFilter) {
       return false;
+    }
+    // App preset filter
+    if (activeAppFilter !== 'all') {
+      const targetApp = customApps.find(a => a.id === activeAppFilter);
+      if (targetApp) {
+        const inTitle = (memo.title || '').includes(targetApp.name);
+        const inScope = targetApp.scope && (memo.scope || '').includes(targetApp.scope);
+        if (!inTitle && !inScope) {
+          return false;
+        }
+      }
     }
     // Priority filter
     if (activePriorityFilter !== 'all' && memo.priority !== activePriorityFilter) {
@@ -898,6 +1057,7 @@ function openNewMemoModal() {
   inputMemoId.value = '';
   formMemo.reset();
   inputMemoDue.value = '';
+  if (selectPresetApp) selectPresetApp.value = '';
   modalMemoTitle.textContent = '新規指示・メモの作成';
   // Default radios
   const fixRadio = formMemo.querySelector('input[value="task"]');
@@ -920,6 +1080,15 @@ function openEditMemoModal(id, event) {
   inputMemoStatus.value = memo.status;
   inputMemoScope.value = memo.scope || '';
   inputMemoDue.value = memo.dueDate ? memo.dueDate.slice(0, 16) : '';
+
+  // Match title or scope to app preset dropdown
+  if (selectPresetApp) {
+    selectPresetApp.value = '';
+    const matchingApp = customApps.find(app => (memo.title || '').includes(app.name) || (app.scope && (memo.scope || '') === app.scope));
+    if (matchingApp) {
+      selectPresetApp.value = matchingApp.id;
+    }
+  }
 
   const catRadio = formMemo.querySelector(`input[value="${memo.category}"]`);
   if (catRadio) catRadio.checked = true;
@@ -1378,10 +1547,102 @@ filterCategorySelect.addEventListener('change', (e) => {
   render();
 });
 
+if (filterAppSelect) {
+  filterAppSelect.addEventListener('change', (e) => {
+    activeAppFilter = e.target.value;
+    render();
+  });
+}
+
 filterPrioritySelect.addEventListener('change', (e) => {
   activePriorityFilter = e.target.value;
   render();
 });
+
+// App Preset Selection Handler (Insert prefix into Title & Scope)
+if (selectPresetApp) {
+  selectPresetApp.addEventListener('change', () => {
+    const selectedId = selectPresetApp.value;
+    if (!selectedId) return;
+    const app = customApps.find(a => a.id === selectedId);
+    if (!app) return;
+
+    // Smart replace or prefix: if already starts with 【...】, replace it
+    let currentTitle = inputMemoTitle.value.trim();
+    if (currentTitle.startsWith('【') && currentTitle.includes('】')) {
+      const endIdx = currentTitle.indexOf('】');
+      currentTitle = currentTitle.slice(endIdx + 1).trim();
+    }
+    inputMemoTitle.value = `${app.name} ${currentTitle}`.trim() + (currentTitle ? '' : ' ');
+
+    // Auto set scope if currently empty
+    if (app.scope && !inputMemoScope.value.trim()) {
+      inputMemoScope.value = app.scope;
+    }
+
+    inputMemoTitle.focus();
+    updateMemoEditorPreview();
+    showToast(`「${app.name}」を選択しました`, '📱');
+  });
+}
+
+// App Presets Manager Modal Handlers
+if (btnOpenAppManager && modalAppManager) {
+  btnOpenAppManager.addEventListener('click', () => {
+    renderCustomAppsList();
+    modalAppManager.classList.add('active');
+  });
+}
+
+if (btnCloseAppManager && modalAppManager) {
+  btnCloseAppManager.addEventListener('click', () => {
+    modalAppManager.classList.remove('active');
+  });
+}
+
+if (btnSaveAppManager && modalAppManager) {
+  btnSaveAppManager.addEventListener('click', () => {
+    modalAppManager.classList.remove('active');
+  });
+}
+
+// Add New Custom App
+if (btnAddCustomApp && inputNewAppName) {
+  btnAddCustomApp.addEventListener('click', () => {
+    const name = inputNewAppName.value.trim();
+    if (!name) {
+      alert('アプリ・対象の表示名を入力してください（例: 【握力アプリ】）');
+      inputNewAppName.focus();
+      return;
+    }
+
+    const formattedName = name.startsWith('【') && name.endsWith('】') ? name : `【${name}】`;
+    const scope = (inputNewAppScope ? inputNewAppScope.value.trim() : '');
+    const newId = 'app-' + Date.now();
+
+    customApps.push({
+      id: newId,
+      name: formattedName,
+      scope: scope
+    });
+
+    saveCustomApps(true);
+    inputNewAppName.value = '';
+    if (inputNewAppScope) inputNewAppScope.value = '';
+    showToast(`「${formattedName}」を追加・KV同期しました`, '✨');
+  });
+}
+
+// Reset Default Presets
+if (btnResetDefaultApps) {
+  btnResetDefaultApps.addEventListener('click', () => {
+    if (confirm('登録中のアプリ名を初期プリセット（7種類）に戻しますか？')) {
+      customApps = [...DEFAULT_APP_PRESETS];
+      saveCustomApps(true);
+      showToast('初期プリセットに戻しました', '🔄');
+    }
+  });
+}
 
 // Stat Chips Clickable Filter
 document.querySelectorAll('.stat-chip').forEach(chip => {
@@ -1828,11 +2089,13 @@ if (btnSaveVoiceMemo) {
 // Auto-sync when switching back to this tab / waking phone
 window.addEventListener('focus', () => {
   fetchMemosFromCloud(true);
+  syncCustomAppsWithCloud();
 });
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     fetchMemosFromCloud(true);
+    syncCustomAppsWithCloud();
   }
 });
 
@@ -1840,6 +2103,7 @@ document.addEventListener('visibilitychange', () => {
 setInterval(() => {
   if (document.visibilityState === 'visible') {
     fetchMemosFromCloud(true);
+    syncCustomAppsWithCloud();
   }
 }, 25000);
 
