@@ -1700,12 +1700,27 @@ loadMemos();
 // PWA (Progressive Web Apps) & Service Worker Integration
 // ==========================================================================
 
-// 1. Register Service Worker
+// 1. Register Service Worker with Auto Update & Cache Refresh
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then((reg) => {
         console.log('[PWA] Service Worker active with scope:', reg.scope);
+        // Force check for sw updates
+        reg.update();
+
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('[PWA] New version detected, reloading to apply latest UI assets...');
+                // Automatically reload if a new SW version is activated
+                window.location.reload();
+              }
+            });
+          }
+        });
       })
       .catch((err) => {
         console.warn('[PWA] Service Worker registration failed:', err);

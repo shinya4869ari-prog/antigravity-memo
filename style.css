@@ -1038,17 +1038,18 @@ body {
   padding: 12px;
 }
 
+#modal-memo-content.modal-content,
 .modal-content.modal-editor-fullscreen {
-  max-width: min(1500px, 98vw);
-  width: 98vw;
-  height: 94vh;
-  max-height: 96vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  background: rgba(13, 17, 28, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(243, 128, 32, 0.25);
+  max-width: min(1600px, 98vw) !important;
+  width: 98vw !important;
+  height: 94vh !important;
+  max-height: 96vh !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: rgba(13, 17, 28, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(243, 128, 32, 0.35);
   transition: all var(--transition-normal);
 }
 
@@ -1057,13 +1058,14 @@ body {
   padding: 0;
 }
 
+#modal-memo.is-maximized #modal-memo-content,
 .modal-overlay.is-maximized .modal-editor-fullscreen {
-  width: 100vw;
-  height: 100vh;
-  max-width: 100vw;
-  max-height: 100vh;
-  border-radius: 0;
-  border: none;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  border-radius: 0 !important;
+  border: none !important;
 }
 
 /* Editor Header */
@@ -1394,12 +1396,23 @@ body {
   white-space: nowrap;
 }
 
-/* Workspace (Panes) */
+#form-memo.editor-form,
+.editor-form {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  width: 100% !important;
+}
+
+#editor-workspace.editor-workspace,
 .editor-workspace {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
+  display: flex !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  overflow: hidden !important;
   background: rgba(4, 7, 13, 0.4);
 }
 
@@ -1472,10 +1485,12 @@ body {
   position: relative;
 }
 
+#input-memo-desc.editor-textarea,
 .editor-textarea {
-  width: 100%;
-  height: 100%;
-  flex: 1;
+  width: 100% !important;
+  height: 100% !important;
+  flex: 1 !important;
+  min-height: 280px;
   padding: 16px 20px;
   background: transparent;
   border: none;
@@ -1483,10 +1498,10 @@ body {
   font-family: var(--font-mono, monospace), ui-monospace, Menlo, Monaco, Consolas;
   font-size: 0.95rem;
   line-height: 1.65;
-  resize: none;
+  resize: none !important;
   outline: none;
   overflow-y: auto;
-  box-sizing: border-box;
+  box-sizing: border-box !important;
 }
 
 .editor-textarea:focus {

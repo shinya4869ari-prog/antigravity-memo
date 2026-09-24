@@ -18,7 +18,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MissionHub">
 
-  <link rel="stylesheet" href="style.css?v=20260920_v4">
+  <link rel="stylesheet" href="style.css?v=20260924_v2">
 </head>
 <body>
   <div class="app-container">
@@ -259,7 +259,7 @@
 
   <!-- Modal 1: Create / Edit Memo (Fullscreen Live Markdown Editor) -->
   <div class="modal-overlay modal-overlay-fullscreen" id="modal-memo">
-    <div class="modal-content modal-editor-fullscreen" id="modal-memo-content">
+    <div class="modal-content modal-editor-fullscreen" id="modal-memo-content" style="width: 98vw; max-width: min(1500px, 98vw); height: 94vh; max-height: 96vh; display: flex; flex-direction: column;">
       <!-- Editor Header -->
       <div class="modal-header modal-editor-header">
         <div class="modal-header-left">
@@ -282,14 +282,14 @@
         </div>
       </div>
 
-      <form id="form-memo" class="editor-form">
+      <form id="form-memo" class="editor-form" style="display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden;">
         <input type="hidden" id="input-memo-id">
 
         <!-- Top Title & Metadata Bar -->
         <div class="editor-top-bar">
           <!-- Title Input -->
-          <div class="editor-title-container">
-            <input type="text" id="input-memo-title" class="form-input editor-title-input" placeholder="タイトル / 要約（例: ヘッダーのボタン配色をオレンジに変更してほしい）" required autocomplete="off">
+          <div class="editor-title-container" style="width: 100%;">
+            <input type="text" id="input-memo-title" class="form-input editor-title-input" placeholder="タイトル / 要約（例: ヘッダーのボタン配色をオレンジに変更してほしい）" required autocomplete="off" style="width: 100%; box-sizing: border-box;">
           </div>
 
           <!-- Compact Meta Options -->
@@ -374,25 +374,25 @@
         </div>
 
         <!-- Editor Workspace: Split Panes -->
-        <div class="editor-workspace mode-split" id="editor-workspace">
+        <div class="editor-workspace mode-split" id="editor-workspace" style="display: flex; flex: 1; min-height: 380px; width: 100%; overflow: hidden;">
           <!-- Left: Input Area -->
-          <div class="editor-pane editor-pane-input" id="editor-pane-input">
+          <div class="editor-pane editor-pane-input" id="editor-pane-input" style="flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0;">
             <div class="pane-header">
               <span class="pane-title">📝 Markdown / 指示詳細入力</span>
               <span class="pane-shortcut-tip"><kbd>Tab</kbd> インデント | <kbd>Ctrl+Enter</kbd> 保存</span>
             </div>
-            <div class="pane-body">
-              <textarea id="input-memo-desc" class="editor-textarea" placeholder="Antigravityに伝えてほしい具体的な内容、現状の課題、期待する挙動などを自由に記入してください。&#10;&#10;例:&#10;### 依頼内容・詳細&#10;ボタンの配色をCloudflareオレンジに変更してほしい。&#10;&#10;### 期待する結果・完了条件&#10;- [ ] 該当ボタンのスタイルを調整&#10;- [ ] ホバー時のアニメーションも確認"></textarea>
+            <div class="pane-body" style="flex: 1; display: flex; flex-direction: column; min-height: 0; position: relative;">
+              <textarea id="input-memo-desc" class="editor-textarea" placeholder="Antigravityに伝えてほしい具体的な内容、現状の課題、期待する挙動などを自由に記入してください。&#10;&#10;例:&#10;### 依頼内容・詳細&#10;ボタンの配色をCloudflareオレンジに変更してほしい。&#10;&#10;### 期待する結果・完了条件&#10;- [ ] 該当ボタンのスタイルを調整&#10;- [ ] ホバー時のアニメーションも確認" style="width: 100%; height: 100%; min-height: 300px; flex: 1; box-sizing: border-box; resize: none;"></textarea>
             </div>
           </div>
 
           <!-- Right: Live Preview Area -->
-          <div class="editor-pane editor-pane-preview" id="editor-pane-preview">
+          <div class="editor-pane editor-pane-preview" id="editor-pane-preview" style="flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0;">
             <div class="pane-header">
               <span class="pane-title">👁️ リアルタイム・プレビュー (Markdown)</span>
               <span class="pane-badge-live">LIVE</span>
             </div>
-            <div class="pane-body editor-preview-scroll">
+            <div class="pane-body editor-preview-scroll" style="flex: 1; overflow-y: auto;">
               <div class="editor-preview-container" id="memo-desc-preview">
                 <!-- Live preview rendered here -->
               </div>
@@ -668,6 +668,6 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=20260920_v5"></script>
+  <script src="app.js?v=20260924_v2"></script>
 </body>
 </html>
