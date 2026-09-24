@@ -177,7 +177,6 @@ const modalMemoTitle = document.getElementById('modal-memo-title');
 const inputMemoId = document.getElementById('input-memo-id');
 const inputMemoTitle = document.getElementById('input-memo-title');
 const selectPresetApp = document.getElementById('select-preset-app');
-const btnOpenAppManager = document.getElementById('btn-open-app-manager');
 const inputMemoDesc = document.getElementById('input-memo-desc');
 const inputMemoPriority = document.getElementById('input-memo-priority');
 const inputMemoStatus = document.getElementById('input-memo-status');
@@ -194,16 +193,6 @@ const modalPrompt = document.getElementById('modal-prompt');
 const promptOutputBox = document.getElementById('prompt-output-box');
 const modalGuide = document.getElementById('modal-guide');
 const modalData = document.getElementById('modal-data');
-
-// Custom Apps Presets Manager Modal
-const modalAppManager = document.getElementById('modal-app-manager');
-const btnCloseAppManager = document.getElementById('btn-close-app-manager');
-const btnSaveAppManager = document.getElementById('btn-save-app-manager');
-const inputNewAppName = document.getElementById('input-new-app-name');
-const inputNewAppScope = document.getElementById('input-new-app-scope');
-const btnAddCustomApp = document.getElementById('btn-add-custom-app');
-const customAppsList = document.getElementById('custom-apps-list');
-const btnResetDefaultApps = document.getElementById('btn-reset-default-apps');
 
 // Voice & Google Calendar Modal Elements
 const modalVoice = document.getElementById('modal-voice');
@@ -414,7 +403,6 @@ async function syncCustomAppsWithCloud() {
 async function saveCustomApps(syncCloud = true) {
   localStorage.setItem('agy_custom_apps', JSON.stringify(customApps));
   populateAppDropdowns();
-  renderCustomAppsList();
   if (syncCloud) {
     try {
       await fetch('/api/apps', {
@@ -452,39 +440,6 @@ function populateAppDropdowns() {
     });
     filterAppSelect.value = currentFilterVal || 'all';
   }
-}
-
-function renderCustomAppsList() {
-  if (!customAppsList) return;
-  customAppsList.innerHTML = '';
-  if (customApps.length === 0) {
-    customAppsList.innerHTML = '<div style="color: var(--text-muted); font-size: 0.8rem; padding: 10px; text-align: center;">登録中のアプリがありません。「初期プリセットに戻す」か、上から追加してください。</div>';
-    return;
-  }
-
-  customApps.forEach(app => {
-    const item = document.createElement('div');
-    item.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);';
-    item.innerHTML = `
-      <div style="display: flex; flex-direction: column; min-width: 0; flex: 1;">
-        <span style="font-size: 0.85rem; font-weight: 700; color: #fff; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${app.name}</span>
-        <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">${app.scope || 'スコープなし'}</span>
-      </div>
-      <button type="button" class="btn btn-secondary btn-sm" data-delete-app="${app.id}" title="削除" style="padding: 3px 8px; color: #f43f5e; font-size: 0.75rem;">
-        🗑️
-      </button>
-    `;
-
-    item.querySelector('[data-delete-app]').addEventListener('click', () => {
-      if (confirm(`「${app.name}」をリストから削除しますか？`)) {
-        customApps = customApps.filter(a => a.id !== app.id);
-        saveCustomApps(true);
-        showToast(`「${app.name}」を削除しました`, '🗑️');
-      }
-    });
-
-    customAppsList.appendChild(item);
-  });
 }
 
 // Toast System
@@ -1583,68 +1538,6 @@ if (selectPresetApp) {
     inputMemoTitle.focus();
     updateMemoEditorPreview();
     showToast(`「${app.name}」を選択しました`, '📱');
-  });
-}
-
-// App Presets Manager Modal Handlers
-if (btnOpenAppManager && modalAppManager) {
-  btnOpenAppManager.addEventListener('click', (e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    renderCustomAppsList();
-    modalAppManager.classList.add('active');
-  });
-}
-
-if (btnCloseAppManager && modalAppManager) {
-  btnCloseAppManager.addEventListener('click', () => {
-    modalAppManager.classList.remove('active');
-  });
-}
-
-if (btnSaveAppManager && modalAppManager) {
-  btnSaveAppManager.addEventListener('click', () => {
-    modalAppManager.classList.remove('active');
-  });
-}
-
-// Add New Custom App
-if (btnAddCustomApp && inputNewAppName) {
-  btnAddCustomApp.addEventListener('click', () => {
-    const name = inputNewAppName.value.trim();
-    if (!name) {
-      alert('アプリ・対象の表示名を入力してください（例: 【握力アプリ】）');
-      inputNewAppName.focus();
-      return;
-    }
-
-    const formattedName = name.startsWith('【') && name.endsWith('】') ? name : `【${name}】`;
-    const scope = (inputNewAppScope ? inputNewAppScope.value.trim() : '');
-    const newId = 'app-' + Date.now();
-
-    customApps.push({
-      id: newId,
-      name: formattedName,
-      scope: scope
-    });
-
-    saveCustomApps(true);
-    inputNewAppName.value = '';
-    if (inputNewAppScope) inputNewAppScope.value = '';
-    showToast(`「${formattedName}」を追加・KV同期しました`, '✨');
-  });
-}
-
-// Reset Default Presets
-if (btnResetDefaultApps) {
-  btnResetDefaultApps.addEventListener('click', () => {
-    if (confirm('登録中のアプリ名を初期プリセット（7種類）に戻しますか？')) {
-      customApps = [...DEFAULT_APP_PRESETS];
-      saveCustomApps(true);
-      showToast('初期プリセットに戻しました', '🔄');
-    }
   });
 }
 
