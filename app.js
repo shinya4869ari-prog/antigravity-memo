@@ -128,13 +128,16 @@ let currentView = 'kanban'; // 'kanban' | 'list'
 
 // Default Custom Apps Presets
 const DEFAULT_APP_PRESETS = [
-  { id: "app-1", name: "【韓国語学習・歌詞/ニュース】", scope: "korean-learner / n8n" },
-  { id: "app-2", name: "【国家の天秤ブログ】", scope: "blog / n8n" },
-  { id: "app-3", name: "【AI開発環境・ルール】", scope: "workspace / rules" },
-  { id: "app-4", name: "【新規アプリ構想】", scope: "new-apps" },
-  { id: "app-5", name: "【Mission Hub改善】", scope: "antigravity-memo" },
-  { id: "app-6", name: "【インフラ・ハード】", scope: "infrastructure / pc" },
-  { id: "app-7", name: "【映画・ドラマ】", scope: "personal / movies" }
+  { id: "app-1", name: "Korean-Learner", scope: "korean-learner" },
+  { id: "app-2", name: "antigravity-memo", scope: "antigravity-memo" },
+  { id: "app-3", name: "歌詞翻訳", scope: "lyrics" },
+  { id: "app-4", name: "おすすめ映画", scope: "movies" },
+  { id: "app-5", name: "メモ", scope: "memo" },
+  { id: "app-6", name: "やりたいこと", scope: "ideas" },
+  { id: "app-7", name: "id osiete", scope: "id-osiete" },
+  { id: "app-8", name: "seesaw-portfolio", scope: "seesaw-portfolio" },
+  { id: "app-9", name: "switchbot-pc", scope: "switchbot-pc" },
+  { id: "app-10", name: "akuryoku100", scope: "akuryoku100" }
 ];
 let customApps = [];
 
@@ -419,11 +422,11 @@ async function saveCustomApps(syncCloud = true) {
 function populateAppDropdowns() {
   if (selectPresetApp) {
     const currentVal = selectPresetApp.value;
-    selectPresetApp.innerHTML = '<option value="">▼ よく使うアプリ・対象を選択...</option>';
+    selectPresetApp.innerHTML = '<option value="">▼ 対象を選択...</option>';
     customApps.forEach(app => {
       const opt = document.createElement('option');
       opt.value = app.id;
-      opt.textContent = `${app.name} (${app.scope || '全般'})`;
+      opt.textContent = app.name;
       selectPresetApp.appendChild(opt);
     });
     selectPresetApp.value = currentVal;
@@ -431,7 +434,7 @@ function populateAppDropdowns() {
 
   if (filterAppSelect) {
     const currentFilterVal = filterAppSelect.value;
-    filterAppSelect.innerHTML = '<option value="all">すべての対象アプリ</option>';
+    filterAppSelect.innerHTML = '<option value="all">すべての対象</option>';
     customApps.forEach(app => {
       const opt = document.createElement('option');
       opt.value = app.id;
@@ -786,12 +789,7 @@ function generateSinglePrompt(memo) {
     prompt += `**対象ファイル・スコープ**: \`${memo.scope}\`\n`;
   }
   prompt += `\n### 依頼内容・詳細\n`;
-  prompt += `${memo.description || '（詳細はタイトルを参照してください）'}\n\n`;
-  
-  prompt += `### 期待する結果・完了条件\n`;
-  prompt += `- [ ] 上記の要望・修正点に沿ってコードや設定を反映してください\n`;
-  prompt += `- [ ] 関連するファイルや挙動に不整合がないか確認してください\n`;
-  prompt += `- [ ] 完了後に変更箇所と確認結果を簡潔に報告してください\n`;
+  prompt += `${memo.description || '（詳細はタイトルを参照してください）'}\n`;
 
   return prompt;
 }
@@ -964,25 +962,25 @@ function applyEditorFormat(action) {
       if (selectedText) {
         replacement = selectedText.split('\n').map(l => l.startsWith('- [ ] ') ? l : `- [ ] ${l}`).join('\n');
       } else {
-        replacement = '\n- [ ] 完了条件・チェック項目';
+        // 余計なダミー文字は出さず、チェックボックスのみを挿入してすぐに文字を打てるようにする
+        const isLineStart = start === 0 || textarea.value[start - 1] === '\n';
+        replacement = isLineStart ? '- [ ] ' : '\n- [ ] ';
       }
       break;
     case 'bullet':
       if (selectedText) {
         replacement = selectedText.split('\n').map(l => l.startsWith('- ') ? l : `- ${l}`).join('\n');
       } else {
-        replacement = '\n- 箇条書き項目';
+        // 余計なダミー文字は出さず、箇条書き記号のみを挿入してすぐに文字を打てるようにする
+        const isLineStart = start === 0 || textarea.value[start - 1] === '\n';
+        replacement = isLineStart ? '- ' : '\n- ';
       }
       break;
     case 'inline-code':
       replacement = selectedText ? `\`${selectedText}\`` : '`コード`';
       break;
     case 'code-block':
-      replacement = selectedText ? `\n\`\`\`\n${selectedText}\n\`\`\`\n` : '\n```\n// コードを記述\n```\n';
-      break;
-    case 'insert-template':
-      const tpl = `### 依頼内容・詳細\n具体的に行ってほしい修正や実装内容を記入してください。\n\n### 期待する結果・完了条件\n- [ ] 要件を満たすコードを反映\n- [ ] 関連ファイルに不整合がないか確認\n- [ ] 変更内容と動作確認結果を報告\n`;
-      replacement = textarea.value.trim() ? `\n\n${tpl}` : tpl;
+      replacement = selectedText ? `\n\`\`\`\n${selectedText}\n\`\`\`\n` : '\n```\n\n```\n';
       break;
     default:
       return;
@@ -1528,10 +1526,10 @@ if (selectPresetApp) {
       const endIdx = currentTitle.indexOf('】');
       currentTitle = currentTitle.slice(endIdx + 1).trim();
     }
-    inputMemoTitle.value = `${app.name} ${currentTitle}`.trim() + (currentTitle ? '' : ' ');
+    inputMemoTitle.value = `【${app.name}】 ${currentTitle}`.trim() + (currentTitle ? '' : ' ');
 
-    // Auto set scope if currently empty
-    if (app.scope && !inputMemoScope.value.trim()) {
+    // Set scope to matching preset scope
+    if (app.scope) {
       inputMemoScope.value = app.scope;
     }
 

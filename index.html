@@ -295,13 +295,13 @@
           <div class="editor-title-container" style="width: 100%; display: flex; flex-direction: column; gap: 8px;">
             <div class="editor-app-selector-bar" style="display: flex; align-items: center; gap: 8px;">
               <span style="font-size: 0.82rem; font-weight: 700; color: var(--cf-orange); white-space: nowrap; display: flex; align-items: center; gap: 4px;">
-                📱 対象アプリ（選択するとタイトルに反映）:
+                📱 対象:
               </span>
               <select id="select-preset-app" class="form-select form-select-compact" style="flex: 1; font-weight: 600; padding: 7px 12px; background: rgba(243, 128, 32, 0.12); border: 1px solid rgba(243, 128, 32, 0.45); color: #fff; border-radius: var(--radius-sm); cursor: pointer;">
-                <option value="">▼ よく使う対象を選択（あとで直接書き換えOK）...</option>
+                <option value="">▼ 対象を選択...</option>
               </select>
             </div>
-            <input type="text" id="input-memo-title" class="form-input editor-title-input" placeholder="タイトル / 要約（例: 【韓国語学習】ヘッダーのボタン配色をオレンジに変更してほしい）" required autocomplete="off" style="width: 100%; box-sizing: border-box;">
+            <input type="text" id="input-memo-title" class="form-input editor-title-input" placeholder="タイトル / 要約（例: 【Korean-Learner】 ヘッダーのボタン配色を修正）" required autocomplete="off" style="width: 100%; box-sizing: border-box;">
           </div>
 
           <!-- Compact Meta Options -->
@@ -375,10 +375,6 @@
             <button type="button" class="btn-tool" data-action="bullet" title="箇条書きリスト (- )">• 箇条書き</button>
             <button type="button" class="btn-tool" data-action="inline-code" title="インラインコード (`コード`)">`コード`</button>
             <button type="button" class="btn-tool" data-action="code-block" title="コードブロック (```)">``` ブロック</button>
-            <span class="tool-sep"></span>
-            <button type="button" class="btn-tool btn-tool-template" data-action="insert-template" title="Antigravity標準テンプレートを詳細欄に挿入">
-              ✨ AGYテンプレート挿入
-            </button>
           </div>
           <div class="toolbar-status">
             <span id="editor-char-count">0 文字 / 0 行</span>
