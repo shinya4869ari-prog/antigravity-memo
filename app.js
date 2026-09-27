@@ -142,10 +142,11 @@ const DEFAULT_APP_PRESETS = [
 let customApps = [];
 
 const CATEGORY_MAP = {
-  fix: { label: '訂正・修正', icon: '🔧', color: 'var(--cat-fix)', badgeClass: 'badge-fix' },
-  idea: { label: '構想・アイデア', icon: '💡', color: 'var(--cat-idea)', badgeClass: 'badge-idea' },
-  task: { label: '指示・タスク', icon: '📋', color: 'var(--cat-task)', badgeClass: 'badge-task' },
-  rule: { label: 'ルール・前提', icon: '⚙️', color: 'var(--cat-rule)', badgeClass: 'badge-rule' }
+  list: { label: 'リスト', icon: '📋', color: 'var(--cat-list)', badgeClass: 'badge-list' },
+  task: { label: 'タスク', icon: '✅', color: 'var(--cat-task)', badgeClass: 'badge-task' },
+  schedule: { label: 'スケジュール・メモ', icon: '📅', color: 'var(--cat-schedule)', badgeClass: 'badge-schedule' },
+  idea: { label: 'アイデア', icon: '💡', color: 'var(--cat-idea)', badgeClass: 'badge-idea' },
+  other: { label: 'その他', icon: '📁', color: 'var(--cat-other)', badgeClass: 'badge-other' }
 };
 
 const PRIORITY_MAP = {
@@ -155,10 +156,9 @@ const PRIORITY_MAP = {
 };
 
 const STATUS_MAP = {
-  backlog: { label: 'アイデアスプール (Backlog)', icon: '📌' },
+  backlog: { label: 'アイデア (Backlog)', icon: '📌' },
   todo: { label: '指示待ち (Todo)', icon: '⏳' },
-  in_progress: { label: '作業中 (In Progress)', icon: '🚀' },
-  done: { label: '完了 (Done)', icon: '✅' }
+  in_progress: { label: '作業中 (In Progress)', icon: '🚀' }
 };
 
 // DOM Elements
@@ -422,7 +422,7 @@ async function saveCustomApps(syncCloud = true) {
 function populateAppDropdowns() {
   if (selectPresetApp) {
     const currentVal = selectPresetApp.value;
-    selectPresetApp.innerHTML = '<option value="">▼ 対象を選択...</option>';
+    selectPresetApp.innerHTML = '<option value="">▼ タイトルを選択...</option>';
     customApps.forEach(app => {
       const opt = document.createElement('option');
       opt.value = app.id;
@@ -520,26 +520,37 @@ function formatDueDate(isoStr) {
 // Stats Calculation
 function updateStats() {
   const total = memos.length;
-  const countFix = memos.filter(m => m.category === 'fix').length;
-  const countIdea = memos.filter(m => m.category === 'idea').length;
+  const countList = memos.filter(m => m.category === 'list').length;
   const countTask = memos.filter(m => m.category === 'task').length;
-  const countRule = memos.filter(m => m.category === 'rule').length;
+  const countSchedule = memos.filter(m => m.category === 'schedule').length;
+  const countIdea = memos.filter(m => m.category === 'idea').length;
+  const countOther = memos.filter(m => m.category === 'other' || (!['list', 'task', 'schedule', 'idea'].includes(m.category))).length;
 
-  document.getElementById('count-all').textContent = total;
-  document.getElementById('count-fix').textContent = countFix;
-  document.getElementById('count-idea').textContent = countIdea;
-  document.getElementById('count-task').textContent = countTask;
-  document.getElementById('count-rule').textContent = countRule;
+  const elAll = document.getElementById('count-all');
+  const elList = document.getElementById('count-list');
+  const elTask = document.getElementById('count-task');
+  const elSchedule = document.getElementById('count-schedule');
+  const elIdea = document.getElementById('count-idea');
+  const elOther = document.getElementById('count-other');
+
+  if (elAll) elAll.textContent = total;
+  if (elList) elList.textContent = countList;
+  if (elTask) elTask.textContent = countTask;
+  if (elSchedule) elSchedule.textContent = countSchedule;
+  if (elIdea) elIdea.textContent = countIdea;
+  if (elOther) elOther.textContent = countOther;
 
   const countBacklog = memos.filter(m => m.status === 'backlog').length;
-  const countTodo = memos.filter(m => m.status === 'todo').length;
+  const countTodo = memos.filter(m => m.status === 'todo' || m.status === 'done').length;
   const countInProgress = memos.filter(m => m.status === 'in_progress').length;
-  const countDone = memos.filter(m => m.status === 'done').length;
 
-  document.getElementById('badge-count-backlog').textContent = countBacklog;
-  document.getElementById('badge-count-todo').textContent = countTodo;
-  document.getElementById('badge-count-in_progress').textContent = countInProgress;
-  document.getElementById('badge-count-done').textContent = countDone;
+  const elBacklog = document.getElementById('badge-count-backlog');
+  const elTodo = document.getElementById('badge-count-todo');
+  const elInProgress = document.getElementById('badge-count-in_progress');
+
+  if (elBacklog) elBacklog.textContent = countBacklog;
+  if (elTodo) elTodo.textContent = countTodo;
+  if (elInProgress) elInProgress.textContent = countInProgress;
 }
 
 // Filter Memos (Always sorted newest first)
@@ -595,17 +606,18 @@ function renderKanban(filteredMemos) {
   const columns = {
     backlog: document.getElementById('cards-backlog'),
     todo: document.getElementById('cards-todo'),
-    in_progress: document.getElementById('cards-in_progress'),
-    done: document.getElementById('cards-done')
+    in_progress: document.getElementById('cards-in_progress')
   };
 
   // Clear existing
-  Object.values(columns).forEach(col => (col.innerHTML = ''));
+  Object.values(columns).forEach(col => { if (col) col.innerHTML = ''; });
 
   filteredMemos.forEach(memo => {
+    // 完了列をなくしたため、ステータスがdoneのメモがあれば指示待ち（todo）として安全に表示
+    const status = memo.status === 'done' ? 'todo' : memo.status;
     const card = createCardElement(memo);
-    if (columns[memo.status]) {
-      columns[memo.status].appendChild(card);
+    if (columns[status]) {
+      columns[status].appendChild(card);
     }
   });
 
@@ -1030,7 +1042,7 @@ function openEditMemoModal(id, event) {
   inputMemoTitle.value = memo.title;
   inputMemoDesc.value = memo.description || '';
   inputMemoPriority.value = memo.priority;
-  inputMemoStatus.value = memo.status;
+  inputMemoStatus.value = memo.status === 'done' ? 'todo' : memo.status;
   inputMemoScope.value = memo.scope || '';
   inputMemoDue.value = memo.dueDate ? memo.dueDate.slice(0, 16) : '';
 
@@ -1043,7 +1055,9 @@ function openEditMemoModal(id, event) {
     }
   }
 
-  const catRadio = formMemo.querySelector(`input[value="${memo.category}"]`);
+  const validCats = ['list', 'task', 'schedule', 'idea', 'other'];
+  const catVal = validCats.includes(memo.category) ? memo.category : 'task';
+  const catRadio = formMemo.querySelector(`input[value="${catVal}"]`);
   if (catRadio) catRadio.checked = true;
 
   modalMemoTitle.textContent = '指示・メモの編集';

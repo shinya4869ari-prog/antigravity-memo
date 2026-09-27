@@ -30,15 +30,17 @@
   --agy-cyan: #06b6d4;
   --agy-blue: #3b82f6;
 
-  /* Status & Category Colors */
-  --cat-fix: #f43f5e;
-  --cat-fix-bg: rgba(244, 63, 94, 0.15);
-  --cat-idea: #fbbf24;
-  --cat-idea-bg: rgba(251, 191, 36, 0.15);
+  /* Status & Category Colors (新5区分: リスト, タスク, スケジュール・メモ, アイデア, その他) */
+  --cat-list: #818cf8;
+  --cat-list-bg: rgba(129, 140, 248, 0.15);
   --cat-task: #38bdf8;
   --cat-task-bg: rgba(56, 189, 248, 0.15);
-  --cat-rule: #a855f7;
-  --cat-rule-bg: rgba(168, 85, 247, 0.15);
+  --cat-schedule: #34d399;
+  --cat-schedule-bg: rgba(52, 211, 153, 0.15);
+  --cat-idea: #fbbf24;
+  --cat-idea-bg: rgba(251, 191, 36, 0.15);
+  --cat-other: #94a3b8;
+  --cat-other-bg: rgba(148, 163, 184, 0.15);
 
   --priority-high: #ef4444;
   --priority-med: #f59e0b;
@@ -521,7 +523,7 @@ body {
 /* Kanban Board */
 .kanban-board {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 18px;
   align-items: start;
 }
@@ -658,16 +660,10 @@ body {
   letter-spacing: 0.02em;
 }
 
-.badge-fix {
-  background: var(--cat-fix-bg);
-  color: var(--cat-fix);
-  border: 1px solid rgba(244, 63, 94, 0.3);
-}
-
-.badge-idea {
-  background: var(--cat-idea-bg);
-  color: var(--cat-idea);
-  border: 1px solid rgba(251, 191, 36, 0.3);
+.badge-list {
+  background: var(--cat-list-bg);
+  color: var(--cat-list);
+  border: 1px solid rgba(129, 140, 248, 0.3);
 }
 
 .badge-task {
@@ -676,10 +672,22 @@ body {
   border: 1px solid rgba(56, 189, 248, 0.3);
 }
 
-.badge-rule {
-  background: var(--cat-rule-bg);
-  color: var(--cat-rule);
-  border: 1px solid rgba(168, 85, 247, 0.3);
+.badge-schedule {
+  background: var(--cat-schedule-bg);
+  color: var(--cat-schedule);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.badge-idea {
+  background: var(--cat-idea-bg);
+  color: var(--cat-idea);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.badge-other {
+  background: var(--cat-other-bg);
+  color: var(--cat-other);
+  border: 1px solid rgba(148, 163, 184, 0.3);
 }
 
 .badge-priority-high {
@@ -1265,32 +1273,39 @@ body {
   user-select: none;
 }
 
-.cat-pill-opt input:checked + .cat-pill-badge.cat-fix {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: var(--cat-fix);
-  color: #fca5a5;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
-}
-
-.cat-pill-opt input:checked + .cat-pill-badge.cat-idea {
-  background: rgba(245, 158, 11, 0.2);
-  border-color: var(--cat-idea);
-  color: #fcd34d;
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+.cat-pill-opt input:checked + .cat-pill-badge.cat-list {
+  background: rgba(129, 140, 248, 0.2);
+  border-color: var(--cat-list);
+  color: #c7d2fe;
+  box-shadow: 0 0 10px rgba(129, 140, 248, 0.3);
 }
 
 .cat-pill-opt input:checked + .cat-pill-badge.cat-task {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(56, 189, 248, 0.2);
   border-color: var(--cat-task);
-  color: #93c5fd;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+  color: #bae6fd;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
 }
 
-.cat-pill-opt input:checked + .cat-pill-badge.cat-rule {
-  background: rgba(16, 185, 129, 0.2);
-  border-color: var(--cat-rule);
-  color: #6ee7b7;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+.cat-pill-opt input:checked + .cat-pill-badge.cat-schedule {
+  background: rgba(52, 211, 153, 0.2);
+  border-color: var(--cat-schedule);
+  color: #a7f3d0;
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.3);
+}
+
+.cat-pill-opt input:checked + .cat-pill-badge.cat-idea {
+  background: rgba(251, 191, 36, 0.2);
+  border-color: var(--cat-idea);
+  color: #fde68a;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+}
+
+.cat-pill-opt input:checked + .cat-pill-badge.cat-other {
+  background: rgba(148, 163, 184, 0.2);
+  border-color: var(--cat-other);
+  color: #cbd5e1;
+  box-shadow: 0 0 10px rgba(148, 163, 184, 0.3);
 }
 
 .meta-fields-row {
@@ -2363,11 +2378,21 @@ body {
 #select-preset-app {
   min-height: 36px;
   font-size: 0.88rem;
-  color: #fdba74;
+  color: #ffffff;
   border: 1px solid rgba(243, 128, 32, 0.45);
-  background: rgba(243, 128, 32, 0.12);
+  background: rgba(15, 23, 42, 0.85);
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
+}
+
+/* ドロップダウンメニューの選択肢が最初からクッキリ読めるように設定 */
+#select-preset-app option,
+.select-filter option,
+.form-select option {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  padding: 10px 12px;
+  font-size: 0.95rem;
 }
 
 #select-preset-app:focus {

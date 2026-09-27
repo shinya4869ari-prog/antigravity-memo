@@ -117,36 +117,44 @@
         <span class="stat-count" id="count-all">0</span>
       </div>
 
-      <div class="stat-chip" data-filter="fix" id="stat-fix">
+      <div class="stat-chip" data-filter="list" id="stat-list">
         <div class="stat-info">
-          <span class="stat-icon">🔧</span>
-          <span class="stat-label">訂正・バグ修正</span>
+          <span class="stat-icon">📋</span>
+          <span class="stat-label">リスト</span>
         </div>
-        <span class="stat-count" id="count-fix">0</span>
+        <span class="stat-count" id="count-list">0</span>
+      </div>
+
+      <div class="stat-chip" data-filter="task" id="stat-task">
+        <div class="stat-info">
+          <span class="stat-icon">✅</span>
+          <span class="stat-label">タスク</span>
+        </div>
+        <span class="stat-count" id="count-task">0</span>
+      </div>
+
+      <div class="stat-chip" data-filter="schedule" id="stat-schedule">
+        <div class="stat-info">
+          <span class="stat-icon">📅</span>
+          <span class="stat-label">スケジュール・メモ</span>
+        </div>
+        <span class="stat-count" id="count-schedule">0</span>
       </div>
 
       <div class="stat-chip" data-filter="idea" id="stat-idea">
         <div class="stat-info">
           <span class="stat-icon">💡</span>
-          <span class="stat-label">やりたいこと・構想</span>
+          <span class="stat-label">アイデア</span>
         </div>
         <span class="stat-count" id="count-idea">0</span>
       </div>
 
-      <div class="stat-chip" data-filter="task" id="stat-task">
+      <div class="stat-chip" data-filter="other" id="stat-other">
         <div class="stat-info">
-          <span class="stat-icon">📋</span>
-          <span class="stat-label">指示・タスク</span>
+          <span class="stat-icon">📁</span>
+          <span class="stat-label">その他</span>
         </div>
-        <span class="stat-count" id="count-task">0</span>
-      </div>
-
-      <div class="stat-chip" data-filter="rule" id="stat-rule">
-        <div class="stat-info">
-          <span class="stat-icon">⚙️</span>
-          <span class="stat-label">ルール・前提指示</span>
-        </div>
-        <span class="stat-count" id="count-rule">0</span>
+        <span class="stat-count" id="count-other">0</span>
       </div>
     </section>
 
@@ -157,16 +165,17 @@
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <input type="text" id="search-input" placeholder="タイトル、内容、対象ファイルで検索...">
+        <input type="text" id="search-input" placeholder="タイトル、内容、対象で検索...">
       </div>
 
       <div class="filters-group">
         <select id="filter-category" class="select-filter" aria-label="カテゴリー絞り込み">
           <option value="all">すべてのカテゴリー</option>
-          <option value="fix">🔧 訂正・バグ修正</option>
-          <option value="idea">💡 やりたいこと・構想</option>
-          <option value="task">📋 指示・タスク</option>
-          <option value="rule">⚙️ ルール・前提指示</option>
+          <option value="list">📋 リスト</option>
+          <option value="task">✅ タスク</option>
+          <option value="schedule">📅 スケジュール・メモ</option>
+          <option value="idea">💡 アイデア</option>
+          <option value="other">📁 その他</option>
         </select>
 
         <select id="filter-app" class="select-filter" aria-label="対象アプリ絞り込み">
@@ -240,18 +249,6 @@
         </div>
         <div class="column-cards" id="cards-in_progress"></div>
       </div>
-
-      <!-- Done -->
-      <div class="kanban-column" data-status="done" id="col-done">
-        <div class="column-header">
-          <div class="column-title">
-            <span style="color: #10b981;">✅</span>
-            <span>完了・反映済 (Done)</span>
-          </div>
-          <span class="column-badge" id="badge-count-done">0</span>
-        </div>
-        <div class="column-cards" id="cards-done"></div>
-      </div>
     </main>
 
     <!-- Main Workspace: List View (Initially hidden) -->
@@ -295,10 +292,10 @@
           <div class="editor-title-container" style="width: 100%; display: flex; flex-direction: column; gap: 8px;">
             <div class="editor-app-selector-bar" style="display: flex; align-items: center; gap: 8px;">
               <span style="font-size: 0.82rem; font-weight: 700; color: var(--cf-orange); white-space: nowrap; display: flex; align-items: center; gap: 4px;">
-                📱 対象:
+                🏷️ タイトルを選択:
               </span>
-              <select id="select-preset-app" class="form-select form-select-compact" style="flex: 1; font-weight: 600; padding: 7px 12px; background: rgba(243, 128, 32, 0.12); border: 1px solid rgba(243, 128, 32, 0.45); color: #fff; border-radius: var(--radius-sm); cursor: pointer;">
-                <option value="">▼ 対象を選択...</option>
+              <select id="select-preset-app" class="form-select form-select-compact" style="flex: 1; font-weight: 600; padding: 7px 12px; background: #0f172a; border: 1px solid rgba(243, 128, 32, 0.45); color: #ffffff; border-radius: var(--radius-sm); cursor: pointer;">
+                <option value="">▼ タイトルを選択...</option>
               </select>
             </div>
             <input type="text" id="input-memo-title" class="form-input editor-title-input" placeholder="タイトル / 要約（例: 【Korean-Learner】 ヘッダーのボタン配色を修正）" required autocomplete="off" style="width: 100%; box-sizing: border-box;">
@@ -311,20 +308,24 @@
               <label class="meta-field-label">区分</label>
               <div class="category-pills">
                 <label class="cat-pill-opt">
-                  <input type="radio" name="memo-category" value="fix" checked>
-                  <span class="cat-pill-badge cat-fix">🔧 訂正・修正</span>
+                  <input type="radio" name="memo-category" value="list">
+                  <span class="cat-pill-badge cat-list">📋 リスト</span>
+                </label>
+                <label class="cat-pill-opt">
+                  <input type="radio" name="memo-category" value="task" checked>
+                  <span class="cat-pill-badge cat-task">✅ タスク</span>
+                </label>
+                <label class="cat-pill-opt">
+                  <input type="radio" name="memo-category" value="schedule">
+                  <span class="cat-pill-badge cat-schedule">📅 スケジュール・メモ</span>
                 </label>
                 <label class="cat-pill-opt">
                   <input type="radio" name="memo-category" value="idea">
                   <span class="cat-pill-badge cat-idea">💡 アイデア</span>
                 </label>
                 <label class="cat-pill-opt">
-                  <input type="radio" name="memo-category" value="task">
-                  <span class="cat-pill-badge cat-task">📋 指示・タスク</span>
-                </label>
-                <label class="cat-pill-opt">
-                  <input type="radio" name="memo-category" value="rule">
-                  <span class="cat-pill-badge cat-rule">⚙️ 前提ルール</span>
+                  <input type="radio" name="memo-category" value="other">
+                  <span class="cat-pill-badge cat-other">📁 その他</span>
                 </label>
               </div>
             </div>
@@ -346,7 +347,6 @@
                   <option value="todo" selected>⏳ 指示待ち</option>
                   <option value="backlog">📌 アイデア</option>
                   <option value="in_progress">🚀 作業中</option>
-                  <option value="done">✅ 完了</option>
                 </select>
               </div>
 
