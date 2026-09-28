@@ -2567,3 +2567,64 @@ details[open] .editor-details-summary {
   }
 }
 
+
+/* ==========================================================================
+   バージョンバッジ & キャッシュ更新ボタン (v10)
+   ========================================================================== */
+
+.app-version-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  background: rgba(243, 128, 32, 0.12);
+  border: 1px solid rgba(243, 128, 32, 0.35);
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--cf-orange);
+  letter-spacing: 0.05em;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.btn-cache-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn-cache-refresh:hover {
+  background: rgba(243, 128, 32, 0.1);
+  border-color: rgba(243, 128, 32, 0.4);
+  color: var(--cf-orange);
+}
+
+.btn-cache-refresh:active {
+  transform: scale(0.95);
+}
+
+.btn-cache-refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 回転アニメーション */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.btn-cache-refresh svg.spinning {
+  animation: spin 0.8s linear infinite;
+}
+

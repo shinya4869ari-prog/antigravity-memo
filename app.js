@@ -222,6 +222,37 @@ function setCloudStatus(status, text) {
   cloudSyncText.textContent = text;
 }
 
+// Cache Refresh Button (バージョンバッジ横の「🔄 更新」ボタン)
+const btnCacheRefresh = document.getElementById('btn-cache-refresh');
+if (btnCacheRefresh) {
+  btnCacheRefresh.addEventListener('click', async () => {
+    const icon = btnCacheRefresh.querySelector('svg');
+    if (icon) icon.classList.add('spinning');
+    btnCacheRefresh.disabled = true;
+
+    try {
+      // Service Worker のキャッシュを全削除
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+      // Service Worker を登録解除して確実にリセット
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(r => r.unregister()));
+      }
+      showToast('キャッシュを削除しました。最新版を読み込んでいます...', '🔄');
+      setTimeout(() => window.location.reload(true), 800);
+    } catch (err) {
+      console.error('Cache clear failed', err);
+      showToast('キャッシュのクリアに失敗しました', '❌');
+      if (icon) icon.classList.remove('spinning');
+      btnCacheRefresh.disabled = false;
+    }
+  });
+}
+
+
 // Utility: Deduplicate memos by id and sort newest first
 function deduplicateMemos(list) {
   if (!Array.isArray(list)) return [];
