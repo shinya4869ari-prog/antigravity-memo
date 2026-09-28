@@ -18,7 +18,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MissionHub">
 
-  <link rel="stylesheet" href="style.css?v=20260924_v7">
+  <link rel="stylesheet" href="style.css?v=20260928_v10">
 </head>
 <body>
   <div class="app-container">
@@ -268,16 +268,6 @@
           <h2 id="modal-memo-title">指示・メモの編集</h2>
         </div>
         <div class="modal-header-actions">
-          <!-- View mode switch -->
-          <div class="editor-view-tabs" id="editor-view-tabs" role="tablist">
-            <button type="button" class="btn-view-tab" data-mode="edit" title="エディタのみ表示">✏️ 編集</button>
-            <button type="button" class="btn-view-tab active" data-mode="split" title="エディタとプレビューを並べて表示">🌓 分割</button>
-            <button type="button" class="btn-view-tab" data-mode="preview" title="プレビューのみ表示">👁️ プレビュー</button>
-          </div>
-          <!-- Maximize / Normal Toggle -->
-          <button type="button" class="btn-editor-action" id="btn-toggle-memo-fullscreen" title="全画面 / 通常ウィンドウ切替">
-            <span id="fullscreen-icon">🗖</span>
-          </button>
           <!-- Close Button -->
           <button type="button" class="modal-close" id="btn-close-memo-modal" title="閉じる">&times;</button>
         </div>
@@ -301,66 +291,73 @@
             <input type="text" id="input-memo-title" class="form-input editor-title-input" placeholder="タイトル / 要約（例: 【Korean-Learner】 ヘッダーのボタン配色を修正）" required autocomplete="off" style="width: 100%; box-sizing: border-box;">
           </div>
 
-          <!-- Compact Meta Options -->
-          <div class="editor-meta-strip">
-            <!-- Category Pills -->
-            <div class="meta-field-category">
-              <label class="meta-field-label">区分</label>
-              <div class="category-pills">
-                <label class="cat-pill-opt">
-                  <input type="radio" name="memo-category" value="list">
-                  <span class="cat-pill-badge cat-list">📋 リスト</span>
-                </label>
-                <label class="cat-pill-opt">
-                  <input type="radio" name="memo-category" value="task" checked>
-                  <span class="cat-pill-badge cat-task">✅ タスク</span>
-                </label>
-                <label class="cat-pill-opt">
-                  <input type="radio" name="memo-category" value="schedule">
-                  <span class="cat-pill-badge cat-schedule">📅 スケジュール・メモ</span>
-                </label>
-                <label class="cat-pill-opt">
-                  <input type="radio" name="memo-category" value="idea">
-                  <span class="cat-pill-badge cat-idea">💡 アイデア</span>
-                </label>
-                <label class="cat-pill-opt">
-                  <input type="radio" name="memo-category" value="other">
-                  <span class="cat-pill-badge cat-other">📁 その他</span>
-                </label>
+          <!-- 詳細設定（折りたたみ） -->
+          <details class="editor-details" id="editor-details-section">
+            <summary class="editor-details-summary">
+              <span class="details-summary-icon">⚙️</span>
+              <span>詳細設定（区分・優先度・ステータス・期限）</span>
+              <span class="details-chevron">▶</span>
+            </summary>
+            <div class="editor-meta-strip">
+              <!-- Category Pills -->
+              <div class="meta-field-category">
+                <label class="meta-field-label">区分</label>
+                <div class="category-pills">
+                  <label class="cat-pill-opt">
+                    <input type="radio" name="memo-category" value="list">
+                    <span class="cat-pill-badge cat-list">📋 リスト</span>
+                  </label>
+                  <label class="cat-pill-opt">
+                    <input type="radio" name="memo-category" value="task" checked>
+                    <span class="cat-pill-badge cat-task">✅ タスク</span>
+                  </label>
+                  <label class="cat-pill-opt">
+                    <input type="radio" name="memo-category" value="schedule">
+                    <span class="cat-pill-badge cat-schedule">📅 スケジュール・メモ</span>
+                  </label>
+                  <label class="cat-pill-opt">
+                    <input type="radio" name="memo-category" value="idea">
+                    <span class="cat-pill-badge cat-idea">💡 アイデア</span>
+                  </label>
+                  <label class="cat-pill-opt">
+                    <input type="radio" name="memo-category" value="other">
+                    <span class="cat-pill-badge cat-other">📁 その他</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Priority, Status, Scope, Due Date in a responsive row -->
+              <div class="meta-fields-row">
+                <div class="meta-field-item">
+                  <label class="meta-field-label" for="input-memo-priority">優先度</label>
+                  <select id="input-memo-priority" class="form-select form-select-compact">
+                    <option value="high">🔥 高 (最優先)</option>
+                    <option value="med" selected>⚡ 中 (通常)</option>
+                    <option value="low">☕ 低 (余裕)</option>
+                  </select>
+                </div>
+
+                <div class="meta-field-item">
+                  <label class="meta-field-label" for="input-memo-status">ステータス</label>
+                  <select id="input-memo-status" class="form-select form-select-compact">
+                    <option value="todo" selected>⏳ 指示待ち</option>
+                    <option value="backlog">📌 アイデア</option>
+                    <option value="in_progress">🚀 作業中</option>
+                  </select>
+                </div>
+
+                <div class="meta-field-item meta-field-scope">
+                  <label class="meta-field-label" for="input-memo-scope">対象スコープ</label>
+                  <input type="text" id="input-memo-scope" class="form-input form-input-compact" placeholder="例: src/App.vue, style.css">
+                </div>
+
+                <div class="meta-field-item meta-field-due">
+                  <label class="meta-field-label" for="input-memo-due">期限・予定日</label>
+                  <input type="datetime-local" id="input-memo-due" class="form-input form-input-compact">
+                </div>
               </div>
             </div>
-
-            <!-- Priority, Status, Scope, Due Date in a responsive row -->
-            <div class="meta-fields-row">
-              <div class="meta-field-item">
-                <label class="meta-field-label" for="input-memo-priority">優先度</label>
-                <select id="input-memo-priority" class="form-select form-select-compact">
-                  <option value="high">🔥 高 (最優先)</option>
-                  <option value="med" selected>⚡ 中 (通常)</option>
-                  <option value="low">☕ 低 (余裕)</option>
-                </select>
-              </div>
-
-              <div class="meta-field-item">
-                <label class="meta-field-label" for="input-memo-status">ステータス</label>
-                <select id="input-memo-status" class="form-select form-select-compact">
-                  <option value="todo" selected>⏳ 指示待ち</option>
-                  <option value="backlog">📌 アイデア</option>
-                  <option value="in_progress">🚀 作業中</option>
-                </select>
-              </div>
-
-              <div class="meta-field-item meta-field-scope">
-                <label class="meta-field-label" for="input-memo-scope">対象スコープ</label>
-                <input type="text" id="input-memo-scope" class="form-input form-input-compact" placeholder="例: src/App.vue, style.css">
-              </div>
-
-              <div class="meta-field-item meta-field-due">
-                <label class="meta-field-label" for="input-memo-due">期限・予定日</label>
-                <input type="datetime-local" id="input-memo-due" class="form-input form-input-compact">
-              </div>
-            </div>
-          </div>
+          </details>
         </div>
 
         <!-- Editor Toolbar (Markdown formatting & helpers) -->
@@ -381,31 +378,12 @@
           </div>
         </div>
 
-        <!-- Editor Workspace: Split Panes -->
-        <div class="editor-workspace mode-split" id="editor-workspace" style="display: flex; flex: 1; min-height: 380px; width: 100%; overflow: hidden;">
-          <!-- Left: Input Area -->
-          <div class="editor-pane editor-pane-input" id="editor-pane-input" style="flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0;">
-            <div class="pane-header">
-              <span class="pane-title">📝 Markdown / 指示詳細入力</span>
-              <span class="pane-shortcut-tip"><kbd>Tab</kbd> インデント | <kbd>Ctrl+Enter</kbd> 保存</span>
-            </div>
-            <div class="pane-body" style="flex: 1; display: flex; flex-direction: column; min-height: 0; position: relative;">
-              <textarea id="input-memo-desc" class="editor-textarea" placeholder="Antigravityに伝えてほしい具体的な内容、現状の課題、期待する挙動などを自由に記入してください。&#10;&#10;例:&#10;### 依頼内容・詳細&#10;ボタンの配色をCloudflareオレンジに変更してほしい。&#10;&#10;### 期待する結果・完了条件&#10;- [ ] 該当ボタンのスタイルを調整&#10;- [ ] ホバー時のアニメーションも確認" style="width: 100%; height: 100%; min-height: 300px; flex: 1; box-sizing: border-box; resize: none;"></textarea>
-            </div>
+        <!-- Editor Workspace: Simple Input Only -->
+        <div class="editor-workspace-simple" id="editor-workspace">
+          <div class="pane-shortcut-bar">
+            <span class="pane-shortcut-tip"><kbd>Tab</kbd> インデント | <kbd>Ctrl+Enter</kbd> 保存 | <kbd>Esc</kbd> 閉じる</span>
           </div>
-
-          <!-- Right: Live Preview Area -->
-          <div class="editor-pane editor-pane-preview" id="editor-pane-preview" style="flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0;">
-            <div class="pane-header">
-              <span class="pane-title">👁️ リアルタイム・プレビュー (Markdown)</span>
-              <span class="pane-badge-live">LIVE</span>
-            </div>
-            <div class="pane-body editor-preview-scroll" style="flex: 1; overflow-y: auto;">
-              <div class="editor-preview-container" id="memo-desc-preview">
-                <!-- Live preview rendered here -->
-              </div>
-            </div>
-          </div>
+          <textarea id="input-memo-desc" class="editor-textarea-full" placeholder="ここに内容を入力...&#10;&#10;例:&#10;### 依頼内容&#10;ボタンの配色をCloudflareオレンジに変更してほしい。&#10;&#10;- [ ] 該当ボタンのスタイルを調整&#10;- [ ] ホバー時のアニメーションも確認"></textarea>
         </div>
 
         <!-- Modal Footer -->

@@ -2429,3 +2429,141 @@ body {
 }
 
 
+/* ==========================================================================
+   エディタ シンプル化 (案3): 入力専用モード + 詳細設定折りたたみ (v10)
+   ========================================================================== */
+
+/* シンプル入力ワークスペース */
+.editor-workspace-simple {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background: rgba(7, 9, 14, 0.5);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+/* ショートカットヒントバー */
+.pane-shortcut-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+/* テキストエリア（全幅・全高） */
+.editor-textarea-full {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+  padding: 18px 20px;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  line-height: 1.75;
+  box-sizing: border-box;
+}
+
+.editor-textarea-full::placeholder {
+  color: var(--text-muted);
+  font-family: var(--font-main);
+}
+
+.editor-textarea-full:focus {
+  background: rgba(243, 128, 32, 0.02);
+}
+
+/* 詳細設定 折りたたみ */
+.editor-details {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  margin-top: 4px;
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+  transition: all var(--transition-normal);
+}
+
+.editor-details-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  list-style: none;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.editor-details-summary::-webkit-details-marker {
+  display: none;
+}
+
+.editor-details-summary:hover {
+  background: rgba(243, 128, 32, 0.06);
+  color: var(--cf-orange);
+}
+
+.details-summary-icon {
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.details-chevron {
+  margin-left: auto;
+  font-size: 0.7rem;
+  transition: transform var(--transition-fast);
+  color: var(--text-muted);
+}
+
+details[open] .details-chevron {
+  transform: rotate(90deg);
+  color: var(--cf-orange);
+}
+
+details[open] .editor-details-summary {
+  color: var(--cf-orange);
+  background: rgba(243, 128, 32, 0.05);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.editor-details .editor-meta-strip {
+  padding: 12px 14px 14px;
+}
+
+/* スマホ向け: モーダルをほぼ全画面に */
+@media (max-width: 768px) {
+  .modal-content.modal-editor-fullscreen {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+
+  .editor-textarea-full {
+    font-size: 1rem;
+    padding: 14px 16px;
+    min-height: 200px;
+  }
+
+  .editor-details-summary {
+    font-size: 0.85rem;
+    padding: 10px 14px;
+  }
+}
+

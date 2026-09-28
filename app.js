@@ -185,11 +185,8 @@ const inputMemoPriority = document.getElementById('input-memo-priority');
 const inputMemoStatus = document.getElementById('input-memo-status');
 const inputMemoScope = document.getElementById('input-memo-scope');
 const inputMemoDue = document.getElementById('input-memo-due');
-const memoDescPreview = document.getElementById('memo-desc-preview');
 const editorCharCount = document.getElementById('editor-char-count');
 const editorWorkspace = document.getElementById('editor-workspace');
-const btnToggleMemoFullscreen = document.getElementById('btn-toggle-memo-fullscreen');
-const fullscreenIcon = document.getElementById('fullscreen-icon');
 const btnCopyEditorPrompt = document.getElementById('btn-copy-editor-prompt');
 
 const modalPrompt = document.getElementById('modal-prompt');
@@ -917,31 +914,10 @@ function renderSafeMarkdown(text) {
   return safe;
 }
 
-// Update Live Preview & Stats
+// Update character/line count (preview removed, input-only mode)
 function updateMemoEditorPreview() {
-  if (!memoDescPreview) return;
-  const text = inputMemoDesc ? (inputMemoDesc.value || '') : '';
-  const title = inputMemoTitle && inputMemoTitle.value.trim() ? inputMemoTitle.value.trim() : '（タイトル未設定）';
-  const cat = formMemo ? (formMemo.querySelector('input[name="memo-category"]:checked')?.value || 'task') : 'task';
-  const catInfo = CATEGORY_MAP[cat] || CATEGORY_MAP.task;
-  const priInfo = PRIORITY_MAP[inputMemoPriority ? inputMemoPriority.value : 'med'] || PRIORITY_MAP.med;
-  const scopeVal = inputMemoScope ? inputMemoScope.value.trim() : '';
-
-  let headerHtml = `<div class="preview-memo-top">`;
-  headerHtml += `<div class="preview-meta-badges">`;
-  headerHtml += `<span class="badge ${catInfo.badgeClass}">${catInfo.icon} ${catInfo.label}</span>`;
-  headerHtml += `<span class="badge ${priInfo.badgeClass}">${priInfo.icon} ${priInfo.label}</span>`;
-  if (scopeVal) {
-    headerHtml += `<span class="card-scope">🎯 ${escapeHtml(scopeVal)}</span>`;
-  }
-  headerHtml += `</div>`;
-  headerHtml += `<h1 class="preview-memo-title">${escapeHtml(title)}</h1>`;
-  headerHtml += `</div>`;
-
-  memoDescPreview.innerHTML = headerHtml + renderSafeMarkdown(text);
-
-  // Character and line count
   if (editorCharCount) {
+    const text = inputMemoDesc ? (inputMemoDesc.value || '') : '';
     const charCount = text.length;
     const lineCount = text ? text.split('\n').length : 0;
     editorCharCount.textContent = `${charCount} 文字 / ${lineCount} 行`;
@@ -1003,19 +979,6 @@ function applyEditorFormat(action) {
   updateMemoEditorPreview();
 }
 
-// Fullscreen / Windowed toggle
-function toggleMemoFullscreen() {
-  if (!modalMemo) return;
-  modalMemo.classList.toggle('is-maximized');
-  const isMax = modalMemo.classList.contains('is-maximized');
-  if (fullscreenIcon) {
-    fullscreenIcon.textContent = isMax ? '🗗' : '🗖';
-  }
-  if (btnToggleMemoFullscreen) {
-    btnToggleMemoFullscreen.title = isMax ? '通常ウィンドウに戻す' : '全画面に最大化';
-  }
-  localStorage.setItem('antigravity_memo_maximized', isMax ? 'true' : 'false');
-}
 
 // Modal Handlers
 function openNewMemoModal() {
@@ -1146,35 +1109,6 @@ document.querySelectorAll('.editor-toolbar .btn-tool').forEach(btn => {
     if (action) applyEditorFormat(action);
   });
 });
-
-// View mode tabs (edit, split, preview)
-document.querySelectorAll('#editor-view-tabs .btn-view-tab').forEach(tabBtn => {
-  tabBtn.addEventListener('click', () => {
-    const mode = tabBtn.getAttribute('data-mode');
-    document.querySelectorAll('#editor-view-tabs .btn-view-tab').forEach(b => b.classList.remove('active'));
-    tabBtn.classList.add('active');
-
-    if (editorWorkspace) {
-      editorWorkspace.classList.remove('mode-edit', 'mode-split', 'mode-preview');
-      editorWorkspace.classList.add(`mode-${mode}`);
-    }
-    if (mode !== 'edit') {
-      updateMemoEditorPreview();
-    }
-  });
-});
-
-// Fullscreen toggle button
-if (btnToggleMemoFullscreen) {
-  btnToggleMemoFullscreen.addEventListener('click', toggleMemoFullscreen);
-}
-
-// Restore saved fullscreen preference
-if (localStorage.getItem('antigravity_memo_maximized') === 'true' && modalMemo) {
-  modalMemo.classList.add('is-maximized');
-  if (fullscreenIcon) fullscreenIcon.textContent = '🗗';
-  if (btnToggleMemoFullscreen) btnToggleMemoFullscreen.title = '通常ウィンドウに戻す';
-}
 
 // Live typing updates for preview & textarea shortcuts
 if (inputMemoDesc) {
