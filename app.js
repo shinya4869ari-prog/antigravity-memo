@@ -1774,6 +1774,7 @@ function initVoiceRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) return null;
 
+  // SpeechRecognition は使い捨てオブジェクトのため、毎回新しく生成する
   const recog = new SpeechRecognition();
   recog.lang = 'ja-JP';
   recog.continuous = false;
@@ -1842,21 +1843,19 @@ function startVoiceInput() {
   voiceResultState.style.display = 'none';
   voiceTranscriptBox.innerHTML = '<span class="placeholder-tip">「明日 配車予約」「来週金曜 14時に点検」と喋ってください</span>';
   voiceStatusText.textContent = 'マイクを起動中...';
+  voiceStatusText.style.color = '';
 
-  if (!speechRecog) {
-    speechRecog = initVoiceRecognition();
+  // 前のインスタンスが残っている場合は先にstopして破棄する
+  if (speechRecog) {
+    try { speechRecog.abort(); } catch (_) {}
+    speechRecog = null;
   }
 
-  try {
-    speechRecog.start();
-  } catch (err) {
-    try {
-      speechRecog.stop();
-      setTimeout(() => speechRecog.start(), 200);
-    } catch (e) {
-      console.error('Voice restart failed:', e);
-    }
-  }
+  // 毎回必ず新しいインスタンスを生成（使い回すとInvalidStateErrorになる）
+  speechRecog = initVoiceRecognition();
+  if (!speechRecog) return;
+
+  speechRecog.start();
 }
 
 function stopVoiceInput() {
