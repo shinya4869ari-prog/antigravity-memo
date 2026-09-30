@@ -19,7 +19,7 @@ const INITIAL_MEMOS = [
   },
   {
     id: 'memo-next-2',
-    category: 'fix',
+    category: 'other',
     title: 'スマホ実機でのタッチ操作とモーダル表示の最適化',
     description: 'Cloudflare Pagesで公開されたURLをスマホ実機で開き、カードのタップやプロンプトコピーボタンの押しやすさ、モーダルのスクロール挙動を確認・微調整する。',
     priority: 'high',
@@ -74,7 +74,7 @@ const INITIAL_MEMOS = [
   },
   {
     id: 'memo-next-7',
-    category: 'rule',
+    category: 'other',
     title: 'UIデザインの指針: Cloudflareオレンジとフューチャリスティックなダーク調を維持',
     description: '今後の機能追加時も、Cloudflareのアクセントオレンジ（#f38020）とAntigravityのサイバーダーク背景、滑らかな角丸とガラスモーフィズムを基調とすること。Vanilla CSSで軽量かつ堅牢に完結させる。',
     priority: 'high',
@@ -285,6 +285,12 @@ function loadMemos() {
   } else {
     memos = [...INITIAL_MEMOS];
   }
+  const validCategories = ['list', 'task', 'schedule', 'idea', 'other'];
+  memos.forEach(m => {
+    if (!validCategories.includes(m.category)) {
+      m.category = 'other';
+    }
+  });
   localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
   updateStats();
   render();
@@ -585,8 +591,13 @@ function updateStats() {
 function getFilteredMemos() {
   const filtered = memos.filter(memo => {
     // Category filter
-    if (activeCategoryFilter !== 'all' && memo.category !== activeCategoryFilter) {
-      return false;
+    if (activeCategoryFilter !== 'all') {
+      if (activeCategoryFilter === 'other') {
+        const isOther = memo.category === 'other' || !['list', 'task', 'schedule', 'idea'].includes(memo.category);
+        if (!isOther) return false;
+      } else if (memo.category !== activeCategoryFilter) {
+        return false;
+      }
     }
     // App preset filter
     if (activeAppFilter !== 'all') {
@@ -664,7 +675,7 @@ function renderKanban(filteredMemos) {
 }
 
 function createCardElement(memo) {
-  const cat = CATEGORY_MAP[memo.category] || CATEGORY_MAP.task;
+  const cat = CATEGORY_MAP[memo.category] || CATEGORY_MAP.other;
   const pri = PRIORITY_MAP[memo.priority] || PRIORITY_MAP.med;
   const isRecentNew = memo.createdAt && (Date.now() - new Date(memo.createdAt).getTime() < 86400000);
 
@@ -733,7 +744,7 @@ function renderList(filteredMemos) {
   }
 
   filteredMemos.forEach(memo => {
-    const cat = CATEGORY_MAP[memo.category] || CATEGORY_MAP.task;
+    const cat = CATEGORY_MAP[memo.category] || CATEGORY_MAP.other;
     const pri = PRIORITY_MAP[memo.priority] || PRIORITY_MAP.med;
     const stat = STATUS_MAP[memo.status] || STATUS_MAP.todo;
     const isRecentNew = memo.createdAt && (Date.now() - new Date(memo.createdAt).getTime() < 86400000);
@@ -1050,7 +1061,7 @@ function openEditMemoModal(id, event) {
   }
 
   const validCats = ['list', 'task', 'schedule', 'idea', 'other'];
-  const catVal = validCats.includes(memo.category) ? memo.category : 'task';
+  const catVal = validCats.includes(memo.category) ? memo.category : 'other';
   const catRadio = formMemo.querySelector(`input[value="${catVal}"]`);
   if (catRadio) catRadio.checked = true;
 
