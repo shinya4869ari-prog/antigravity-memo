@@ -627,7 +627,16 @@ function getFilteredMemos() {
     return true;
   });
 
-  return filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  // 優先度順（高 ➔ 中 ➔ 低）でソート。同じ優先度の場合は作成日時が新しい順にする
+  const PRIORITY_WEIGHT = { high: 3, med: 2, low: 1 };
+  return filtered.sort((a, b) => {
+    const weightA = PRIORITY_WEIGHT[a.priority] || 2;
+    const weightB = PRIORITY_WEIGHT[b.priority] || 2;
+    if (weightA !== weightB) {
+      return weightB - weightA;
+    }
+    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+  });
 }
 
 // Render Functions
