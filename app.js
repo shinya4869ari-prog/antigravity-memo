@@ -1375,6 +1375,19 @@ const ORGANIZED_MEMOS = [
     dueDate: "",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
+  },
+  // 共通開発ルール（グローバル作業ルール規範）のメモ
+  {
+    id: "memo-global-rules",
+    title: "【共通開発ルール】グローバル作業ルール規範",
+    description: "### 1. 作業の強制3ステップ運用（厳守）\n- **ステップ1【調査】**: 影響範囲や関連ファイルを調べ、現状の課題を短く報告する。\n- **ステップ2【計画】**: 「変更・作成・削除するファイル一覧」と「具体的な修正方針」を提示し、ユーザーの確認・指示を待つ。\n- **ステップ3【実装】**: ユーザーから方針に対する承諾（「進めて」「OK」等）を得た後、初めて実際のファイル編集・作成・削除を行う。\n- **ToDoリストの事前作成・更新の徹底**: プロジェクト内にToDoリスト（`TODO_ROADMAP.md` 等）が存在する場合、作業に着手する前に必ずToDoリストのタスク項目を作成・更新・整理してから実際の作業に進むこと。\n\n### 2. 実践的な事故防止策（アプリ開発時の安全管理）\n- **git worktree の適所活用**: アプリのコードを大きく書き換える際や、既存環境を壊すリスクがある本格実装時は、必要に応じて `git worktree` で別フォルダを生やして作業し、メインフォルダを無傷に保つ。\n- **差分修正の徹底**: 既存のファイルを丸ごと削除・全置換することは避け、差分修正を基本とする。\n- **ブロックごとの説明コメント**: コードを作成・変更する際は、ブロックごとに簡単な説明コメントを入れ、手動での訂正・確認を容易にする。\n\n### 3. 認証情報の安全運用\n- コード内やフォルダ内に本番のAPIキー、パスワード、トークンを平文で放置・ハードコードすることは厳禁。\n- ローカルには原則としてダミー値・モック用の設定のみを置き、認証情報は入力フォームや実行時環境変数経由で扱う設計とする。\n\n### 4. ターミナル・コマンド実行の制限\n- **安全なコマンド（自動実行可）**: ファイル読み取り、状態確認、通常ビルド等（`ls`, `cat`, `git status`, `node -v` 等）は内容と目的を1行提示して迅速に実行する。\n- **手動確認が必須なコマンド（勝手に実行厳禁）**: 新規パッケージ導入（`npm install`, `pip install` 等）、ファイル削除・Git強制操作（`rm`, `git reset --hard` 等）。\n\n### 5. セキュリティ最優先の原則（イエスマン厳禁・ブレーキ役の徹底）\n- **便利さより安全性を絶対優先**: セキュリティや運用上のリスクを伴う場合は「それはセキュリティ上よろしくないため、やめた方がいいです」とハッキリ指摘し明確にブレーキをかける。\n- **リスク解説と「安全な代替案」のセット提示**: 事故の危険性の説明と、安全な代替案・ベストプラクティスを必ずセットで提案する。\n\n※原本ファイル: `globalrules.md`",
+    category: "rule",
+    priority: "high",
+    status: "todo",
+    scope: "global / workspace / security",
+    dueDate: "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   }
 ];
 
@@ -1382,12 +1395,12 @@ const ORGANIZED_MEMOS = [
 const btnLoadCategorizedMemos = document.getElementById('btn-load-categorized-memos');
 if (btnLoadCategorizedMemos) {
   btnLoadCategorizedMemos.addEventListener('click', () => {
-    if (confirm('散らばったメモを【韓国語学習】【ブログ】【AI開発環境】【新規アプリ構想】など7つの対象別メモに自動整理・統合しますか？\n\n※元の古い散在メモは綺麗に整理・上書きされ、スッキリまとまります。')) {
+    if (confirm('散らばったメモを【韓国語学習】【ブログ】【AI開発環境】【新規アプリ構想】など8つの対象別メモに自動整理・統合しますか？\n\n※元の古い散在メモは綺麗に整理・上書きされ、スッキリまとまります。')) {
       lastLocalSaveTime = Date.now();
       localVersion++;
       memos = [...ORGANIZED_MEMOS];
       saveMemos(true);
-      showToast('🎉 対象別に整理された7件のメモに更新しました！', '✨');
+      showToast('🎉 対象別に整理された8件のメモに更新しました！', '✨');
       modalData.classList.remove('active');
     }
   });
