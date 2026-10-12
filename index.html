@@ -18,7 +18,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MissionHub">
 
-  <link rel="stylesheet" href="style.css?v=20261012_v17">
+  <link rel="stylesheet" href="style.css?v=20261012_v18">
 </head>
 <body>
   <div class="app-container">
@@ -43,8 +43,8 @@
               </svg>
               <span id="cloud-sync-text">Cloud KV 同期済</span>
             </span>
-            <!-- App Version Badge & Cache Refresh Button -->
-            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v17</span>
+            <!-- App Version Badge & Cache Refresh Button (v18: スクロール保証 & インライン候補編集) -->
+            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v18</span>
             <button id="btn-cache-refresh" class="btn-cache-refresh" title="キャッシュをクリアして最新版に更新">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
@@ -284,8 +284,12 @@
         </div>
       </div>
 
-      <form id="form-memo" class="editor-form" style="display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden;">
+      <!-- フォーム本体（ヘッダーとフッターを固定し、中間ボディを縦スクロール可能にする設計） -->
+      <form id="form-memo" class="editor-form">
         <input type="hidden" id="input-memo-id">
+
+        <!-- スクロール可能入力ボディ（画面サイズに関わらず中身が快適にスクロール） -->
+        <div class="editor-scrollable-body" id="editor-scrollable-body">
 
         <!-- Top Title & Metadata Bar -->
         <div class="editor-top-bar">
@@ -417,8 +421,9 @@
             <!-- 添付画像のサムネイルがここに挿入されます -->
           </div>
         </div>
+      </div><!-- /.editor-scrollable-body -->
 
-        <!-- Modal Footer -->
+        <!-- Modal Footer: 常時画面下部に固定配置（スクロール不要で常に即時保存可能） -->
         <div class="modal-footer editor-footer">
           <div class="footer-info">
             <span class="shortcut-tag"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> で即時保存</span>
@@ -786,7 +791,7 @@
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toast-container"></div>
 
-  <!-- Application Logic -->
-  <script src="app.js?v=20261012_v17"></script>
+  <!-- Application Logic (v18) -->
+  <script src="app.js?v=20261012_v18"></script>
 </body>
 </html>

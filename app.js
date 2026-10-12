@@ -507,8 +507,8 @@ function populateAppDropdowns() {
   }
 }
 
-// タイトル候補プリセット一覧を描画 (v17)
-function renderCustomAppsList() {
+// タイトル候補プリセット一覧を描画 (v18: prompt()を完全廃止し、画面内インライン直接編集に対応)
+function renderCustomAppsList(editingId = null) {
   if (!presetsListContainer) return;
   presetsListContainer.innerHTML = '';
 
@@ -525,6 +525,69 @@ function renderCustomAppsList() {
     const card = document.createElement('div');
     card.className = 'preset-item-card';
 
+    // 編集モードの場合（画面内で直接入力）
+    if (editingId === app.id) {
+      card.classList.add('is-editing');
+      card.innerHTML = `
+        <div class="preset-inline-edit-form">
+          <div class="preset-inline-edit-inputs">
+            <input type="text" class="form-input form-input-compact edit-name-input" value="${escapeHtml(app.name)}" placeholder="タイトル名" style="flex: 2;">
+            <input type="text" class="form-input form-input-compact edit-scope-input" value="${escapeHtml(app.scope || '')}" placeholder="スコープ (任意)" style="flex: 1;">
+          </div>
+          <div class="preset-inline-edit-actions">
+            <button type="button" class="btn-inline-cancel">キャンセル</button>
+            <button type="button" class="btn-inline-save">💾 保存</button>
+          </div>
+        </div>
+      `;
+
+      const inputName = card.querySelector('.edit-name-input');
+      const inputScope = card.querySelector('.edit-scope-input');
+      const btnSave = card.querySelector('.btn-inline-save');
+      const btnCancel = card.querySelector('.btn-inline-cancel');
+
+      const doSave = () => {
+        const newName = inputName.value.trim();
+        if (!newName) {
+          showToast('タイトル名を入力してください', '⚠️');
+          inputName.focus();
+          return;
+        }
+        const oldName = app.name;
+        const newScope = inputScope.value.trim();
+        app.name = newName;
+        app.scope = newScope;
+        saveCustomApps(true);
+
+        // エディタ側で選択中だった場合はタイトルプレフィックスも自動連動更新
+        if (inputMemoTitle && inputMemoTitle.value.includes(`【${oldName}】`)) {
+          inputMemoTitle.value = inputMemoTitle.value.replace(`【${oldName}】`, `【${newName}】`);
+          updateMemoEditorPreview();
+        }
+
+        renderCustomAppsList();
+        showToast(`「${app.name}」を更新しました`, '💾');
+      };
+
+      btnSave.addEventListener('click', doSave);
+      btnCancel.addEventListener('click', () => renderCustomAppsList());
+
+      // Enterで保存、Escでキャンセル
+      inputName.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); doSave(); }
+        if (e.key === 'Escape') { e.preventDefault(); renderCustomAppsList(); }
+      });
+      inputScope.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); doSave(); }
+        if (e.key === 'Escape') { e.preventDefault(); renderCustomAppsList(); }
+      });
+
+      setTimeout(() => inputName.focus(), 60);
+      presetsListContainer.appendChild(card);
+      return;
+    }
+
+    // 通常表示モード
     card.innerHTML = `
       <div class="preset-item-left">
         <div class="preset-order-actions">
@@ -570,33 +633,42 @@ function renderCustomAppsList() {
       });
     }
 
-    // 編集
+    // 編集（画面内インライン直接編集モードを開始）
     const btnEdit = card.querySelector('.btn-preset-action.edit');
     if (btnEdit) {
-      btnEdit.addEventListener('click', () => {
-        const newName = prompt('タイトル候補の名前を入力してください:', app.name);
-        if (newName && newName.trim()) {
-          app.name = newName.trim();
-          const newScope = prompt('対象スコープを入力してください（任意）:', app.scope || '');
-          if (newScope !== null) {
-            app.scope = newScope.trim();
-          }
-          saveCustomApps(true);
-          renderCustomAppsList();
-          showToast(`「${app.name}」を更新しました`, '💾');
-        }
+      btnEdit.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        renderCustomAppsList(app.id);
       });
     }
 
-    // 削除
+    // 削除（安全な2段階ボタンでブラウザのconfirmブロックを回避）
     const btnDel = card.querySelector('.btn-preset-action.del');
     if (btnDel) {
-      btnDel.addEventListener('click', () => {
-        if (confirm(`候補「${app.name}」を削除してもよろしいですか？`)) {
+      let confirmTimer = null;
+      btnDel.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (btnDel.dataset.confirming === 'true') {
+          clearTimeout(confirmTimer);
           const deleted = customApps.splice(idx, 1)[0];
           saveCustomApps(true);
           renderCustomAppsList();
           showToast(`「${deleted.name}」を削除しました`, '🗑️');
+        } else {
+          btnDel.dataset.confirming = 'true';
+          btnDel.textContent = '消去?';
+          btnDel.style.background = '#f43f5e';
+          btnDel.style.color = '#fff';
+          btnDel.title = 'もう一度クリックすると削除を確定します';
+          confirmTimer = setTimeout(() => {
+            btnDel.dataset.confirming = 'false';
+            btnDel.textContent = '🗑️';
+            btnDel.style.background = '';
+            btnDel.style.color = '';
+            btnDel.title = '削除';
+          }, 3500);
         }
       });
     }
@@ -605,25 +677,35 @@ function renderCustomAppsList() {
   });
 }
 
+// 候補編集モーダルを安全に閉じる
+function closeAppPresetsModal() {
+  if (modalAppPresets) {
+    modalAppPresets.classList.remove('active');
+    populateAppDropdowns();
+  }
+}
+
 // プリセット管理モーダルの開閉と新規追加リスナー
 if (btnManageAppPresets && modalAppPresets) {
-  btnManageAppPresets.addEventListener('click', () => {
+  btnManageAppPresets.addEventListener('click', (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     renderCustomAppsList();
     modalAppPresets.classList.add('active');
-    if (inputNewPresetName) inputNewPresetName.focus();
+    if (inputNewPresetName) {
+      setTimeout(() => inputNewPresetName.focus(), 80);
+    }
   });
 }
 
-if (btnClosePresetsModal && modalAppPresets) {
-  btnClosePresetsModal.addEventListener('click', () => {
-    modalAppPresets.classList.remove('active');
-  });
+if (btnClosePresetsModal) {
+  btnClosePresetsModal.addEventListener('click', closeAppPresetsModal);
 }
 
-if (btnClosePresetsBtn && modalAppPresets) {
-  btnClosePresetsBtn.addEventListener('click', () => {
-    modalAppPresets.classList.remove('active');
-  });
+if (btnClosePresetsBtn) {
+  btnClosePresetsBtn.addEventListener('click', closeAppPresetsModal);
 }
 
 // 新規追加ボタン
@@ -1612,10 +1694,25 @@ if (formMemo) {
   });
 }
 
-// Global keydown: Esc to close modal
+// Global keydown: Esc to close modal (前面の子モーダルから優先して閉じる)
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && modalMemo && modalMemo.classList.contains('active')) {
-    closeMemoModal();
+  if (e.key === 'Escape') {
+    if (modalLightbox && modalLightbox.classList.contains('active')) {
+      closeLightbox();
+      return;
+    }
+    if (modalAppPresets && modalAppPresets.classList.contains('active')) {
+      closeAppPresetsModal();
+      return;
+    }
+    if (modalVoice && modalVoice.classList.contains('active')) {
+      stopVoiceInput();
+      modalVoice.classList.remove('active');
+      return;
+    }
+    if (modalMemo && modalMemo.classList.contains('active')) {
+      closeMemoModal();
+    }
   }
 });
 

@@ -1421,6 +1421,19 @@ body {
   width: 100% !important;
 }
 
+/* スクロール可能エディタボディ (v18: 画面小でも確実に中身だけスクロールし保存ボタンを画面外に追いやらない) */
+.editor-scrollable-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 4px 14px 0;
+  overscroll-behavior: contain;
+}
+
 #editor-workspace.editor-workspace,
 .editor-workspace {
   display: flex !important;
@@ -1722,16 +1735,20 @@ body {
   flex: 1;
 }
 
-/* Modal Footer */
+/* Modal Footer (v18: 常時画面下部固定 Sticky 配置・保存ボタンを絶対に隠さない) */
 .modal-footer.editor-footer {
   padding: 12px 20px;
-  background: rgba(10, 14, 23, 0.95);
+  background: rgba(10, 14, 23, 0.98);
   border-top: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
   gap: 16px;
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .footer-info {
@@ -2457,12 +2474,12 @@ body {
   flex-shrink: 0;
 }
 
-/* テキストエリア（全幅・全高） */
+/* テキストエリア（全幅・全高・柔軟スクロール） */
 .editor-textarea-full {
   flex: 1;
   width: 100%;
   height: 100%;
-  min-height: 300px;
+  min-height: 180px;
   padding: 18px 20px;
   background: transparent;
   border: none;
@@ -3039,6 +3056,82 @@ details[open] .editor-details-summary {
   background: rgba(244, 63, 94, 0.2);
   border-color: #f43f5e;
   color: #f43f5e;
+}
+
+/* ==========================================================================
+   タイトル候補プリセットモーダルの最前面化 & インライン直接編集 (v18)
+   ========================================================================== */
+
+#modal-app-presets {
+  z-index: 1200 !important; /* エディタモーダル(1000)の真上に確実に前面表示 */
+}
+
+#modal-app-presets .modal-content {
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* インライン編集モード (promptを廃止しブラウザブロックを完全回避) */
+.preset-item-card.is-editing {
+  background: rgba(243, 128, 32, 0.08);
+  border-color: rgba(243, 128, 32, 0.5);
+  box-shadow: 0 0 12px rgba(243, 128, 32, 0.2);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.preset-inline-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.preset-inline-edit-inputs {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.preset-inline-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn-inline-save {
+  background: linear-gradient(135deg, var(--cf-orange) 0%, #ea580c 100%);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 5px 12px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-inline-save:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(243, 128, 32, 0.4);
+}
+
+.btn-inline-cancel {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  font-size: 0.76rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-inline-cancel:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-primary);
 }
 
 
