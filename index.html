@@ -18,7 +18,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MissionHub">
 
-  <link rel="stylesheet" href="style.css?v=20261001_v12">
+  <link rel="stylesheet" href="style.css?v=20261012_v15">
 </head>
 <body>
   <div class="app-container">
@@ -44,7 +44,7 @@
               <span id="cloud-sync-text">Cloud KV 同期済</span>
             </span>
             <!-- App Version Badge & Cache Refresh Button -->
-            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v12</span>
+            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v15</span>
             <button id="btn-cache-refresh" class="btn-cache-refresh" title="キャッシュをクリアして最新版に更新">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
@@ -299,7 +299,10 @@
                 <option value="">▼ タイトルを選択...</option>
               </select>
             </div>
-            <input type="text" id="input-memo-title" class="form-input editor-title-input" placeholder="タイトル / 要約（例: 【Korean-Learner】 ヘッダーのボタン配色を修正）" required autocomplete="off" style="width: 100%; box-sizing: border-box;">
+            <div class="title-input-wrapper">
+              <input type="text" id="input-memo-title" class="form-input editor-title-input" placeholder="タイトル / 要約（例: 【Korean-Learner】 ヘッダーのボタン配色を修正）" required autocomplete="off">
+              <button type="button" class="btn btn-secondary btn-icon-mic" id="btn-voice-title" title="タイトルを音声入力">🎙️</button>
+            </div>
           </div>
 
           <!-- 詳細設定（折りたたみ） -->
@@ -383,6 +386,10 @@
             <button type="button" class="btn-tool" data-action="bullet" title="箇条書きリスト (- )">• 箇条書き</button>
             <button type="button" class="btn-tool" data-action="inline-code" title="インラインコード (`コード`)">`コード`</button>
             <button type="button" class="btn-tool" data-action="code-block" title="コードブロック (```)">``` ブロック</button>
+            <span class="tool-sep"></span>
+            <button type="button" class="btn-tool" id="btn-voice-desc" title="本文に音声を追記">🎙️ 音声入力</button>
+            <button type="button" class="btn-tool btn-tool-attach" id="btn-attach-image" title="スクショ・画像を添付 (Ctrl+Vでも貼れます)">🖼️ 画像添付</button>
+            <input type="file" id="input-memo-image" accept="image/*" multiple style="display:none;">
           </div>
           <div class="toolbar-status">
             <span id="editor-char-count">0 文字 / 0 行</span>
@@ -392,9 +399,20 @@
         <!-- Editor Workspace: Simple Input Only -->
         <div class="editor-workspace-simple" id="editor-workspace">
           <div class="pane-shortcut-bar">
-            <span class="pane-shortcut-tip"><kbd>Tab</kbd> インデント | <kbd>Ctrl+Enter</kbd> 保存 | <kbd>Esc</kbd> 閉じる</span>
+            <span class="pane-shortcut-tip"><kbd>Tab</kbd> インデント | <kbd>Ctrl+Enter</kbd> 保存 | <kbd>Esc</kbd> 閉じる | <kbd>Ctrl+V</kbd> スクショ直接ペースト</span>
           </div>
-          <textarea id="input-memo-desc" class="editor-textarea-full" placeholder="ここに内容を入力...&#10;&#10;例:&#10;### 依頼内容&#10;ボタンの配色をCloudflareオレンジに変更してほしい。&#10;&#10;- [ ] 該当ボタンのスタイルを調整&#10;- [ ] ホバー時のアニメーションも確認"></textarea>
+          <textarea id="input-memo-desc" class="editor-textarea-full" placeholder="ここに内容を入力...&#10;&#10;💡 スクショをクリップボードにコピーしてこの画面で Ctrl+V (Macは Cmd+V) を押すと、直接画像を貼り付けられます！&#10;&#10;例:&#10;### 依頼内容&#10;添付スクショのここのボタンが不要なので削除してほしい。"></textarea>
+        </div>
+
+        <!-- 添付スクショ・画像セクション -->
+        <div class="attachments-section" id="memo-attachments-section">
+          <div class="attachments-header">
+            <span class="attachments-title">📸 添付スクショ・画像 <span id="attachments-count-badge" class="count-badge">0枚</span></span>
+            <span class="attachments-hint">💡 <code>Ctrl+V</code> ペーストやドラッグ＆ドロップで追加できます</span>
+          </div>
+          <div class="attachments-grid" id="attachments-preview-grid">
+            <!-- 添付画像のサムネイルがここに挿入されます -->
+          </div>
         </div>
 
         <!-- Modal Footer -->
@@ -556,13 +574,13 @@
         <button type="button" class="btn btn-secondary" id="btn-close-data-btn">閉じる</button>
       </div>
     </div>
-  <!-- Modal 5: Voice Recognition & Calendar Auto-Link -->
+  <!-- Modal 5: Voice Recognition & Note Creation -->
   <div class="modal-overlay" id="modal-voice">
     <div class="modal-content modal-voice-content">
       <div class="modal-header">
         <h2>
           <span class="mic-modal-badge">🎙️</span>
-          音声入力 &amp; カレンダー即時連携
+          音声入力 ＆ メモ追加
         </h2>
         <button class="modal-close" id="btn-close-voice-modal">&times;</button>
       </div>
@@ -577,42 +595,78 @@
           </div>
           <div class="voice-listening-text" id="voice-status-text">音声を待機中...</div>
           <div class="voice-transcript-box" id="voice-transcript-box">
-            <span class="placeholder-tip">「明日 配車予約」「来週金曜 14時に点検」と喋ってください</span>
+            <span class="placeholder-tip">「アプリのボタン配色を修正」「明日 14時に点検」など自由に喋ってください</span>
           </div>
           <div class="voice-controls">
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-stop-voice">■ 録音停止 / 確定</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-stop-voice">■ 録音完了 / 確定</button>
           </div>
         </div>
 
-        <!-- Result & Calendar Action State -->
+        <!-- Result & Action State -->
         <div id="voice-result-state" class="voice-state" style="display: none;">
           <div class="voice-result-banner">
             <span class="banner-icon">✨</span>
-            <span id="voice-result-message">音声を解析しました！</span>
+            <span id="voice-result-message">音声を認識しました！</span>
           </div>
 
           <div class="voice-parsed-card">
             <div class="parsed-row">
-              <span class="parsed-label">🎯 タスク名</span>
-              <input type="text" id="parsed-title-input" class="form-input parsed-val-input" placeholder="タスク名">
+              <span class="parsed-label">🎯 メモタイトル</span>
+              <input type="text" id="parsed-title-input" class="form-input parsed-val-input" placeholder="タイトル">
             </div>
+
             <div class="parsed-row">
-              <span class="parsed-label">📅 予定日時</span>
+              <span class="parsed-label">🏷️ 区分（カテゴリー）</span>
+              <div class="category-pills voice-category-pills">
+                <label class="cat-pill-opt">
+                  <input type="radio" name="voice-category" value="task" checked>
+                  <span class="cat-pill-badge cat-task">✅ タスク</span>
+                </label>
+                <label class="cat-pill-opt">
+                  <input type="radio" name="voice-category" value="list">
+                  <span class="cat-pill-badge cat-list">📋 リスト</span>
+                </label>
+                <label class="cat-pill-opt">
+                  <input type="radio" name="voice-category" value="schedule">
+                  <span class="cat-pill-badge cat-schedule">📅 予定</span>
+                </label>
+                <label class="cat-pill-opt">
+                  <input type="radio" name="voice-category" value="idea">
+                  <span class="cat-pill-badge cat-idea">💡 アイデア</span>
+                </label>
+                <label class="cat-pill-opt">
+                  <input type="radio" name="voice-category" value="other">
+                  <span class="cat-pill-badge cat-other">📁 その他</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="parsed-row">
+              <span class="parsed-label">🎯 対象スコープ</span>
+              <input type="text" id="parsed-scope-input" class="form-input parsed-val-input" placeholder="例: 音声メモ, korean-learner, blog など">
+            </div>
+
+            <div class="parsed-row">
+              <span class="parsed-label">📅 予定日時 (任意)</span>
               <div class="parsed-date-group">
-                <span id="parsed-relative-tag" class="parsed-tag">明日</span>
+                <span id="parsed-relative-tag" class="parsed-tag">今日</span>
                 <input type="datetime-local" id="parsed-date-input" class="form-input parsed-val-input">
               </div>
             </div>
           </div>
 
           <div class="voice-action-grid">
-            <button type="button" class="btn btn-google-cal" id="btn-open-google-cal">
-              <span style="font-size: 1.15rem;">📅</span>
-              <span>Googleカレンダーに登録</span>
-            </button>
             <button type="button" class="btn btn-primary" id="btn-save-voice-memo">
               <span>💾</span>
-              <span>メモカードに保存</span>
+              <span>メモに追加</span>
+            </button>
+            <button type="button" class="btn btn-secondary" id="btn-edit-in-full-modal" title="いつもの通常エディタで詳細やスクショを添付して保存">
+              <span>📝</span>
+              <span>通常エディタで編集</span>
+            </button>
+            <button type="button" class="btn btn-google-cal" id="btn-open-google-cal" title="Googleカレンダーに登録">
+              <span>📅</span>
+              <span>カレンダー連携</span>
             </button>
           </div>
         </div>
@@ -621,6 +675,14 @@
         <button type="button" class="btn btn-secondary btn-sm" id="btn-restart-voice">🔄 もう一度喋る</button>
         <button type="button" class="btn btn-secondary btn-sm" id="btn-close-voice-btn">閉じる</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal: Image Lightbox (スクショ全画面拡大表示) -->
+  <div class="modal-overlay" id="modal-lightbox">
+    <div class="lightbox-container">
+      <button class="lightbox-close" id="btn-close-lightbox" title="閉じる (Esc)">&times;</button>
+      <img id="lightbox-img" src="" alt="拡大スクリーンショット">
     </div>
   </div>
 
@@ -682,6 +744,6 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=20261001_v12"></script>
+  <script src="app.js?v=20261012_v15"></script>
 </body>
 </html>

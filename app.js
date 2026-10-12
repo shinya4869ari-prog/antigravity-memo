@@ -209,8 +209,25 @@ const voiceResultMessage = document.getElementById('voice-result-message');
 const parsedTitleInput = document.getElementById('parsed-title-input');
 const parsedDateInput = document.getElementById('parsed-date-input');
 const parsedRelativeTag = document.getElementById('parsed-relative-tag');
+const parsedScopeInput = document.getElementById('parsed-scope-input');
 const btnOpenGoogleCal = document.getElementById('btn-open-google-cal');
 const btnSaveVoiceMemo = document.getElementById('btn-save-voice-memo');
+const btnEditInFullModal = document.getElementById('btn-edit-in-full-modal');
+
+// Image Attachment & Lightbox Elements (v15)
+const inputMemoImage = document.getElementById('input-memo-image');
+const btnAttachImage = document.getElementById('btn-attach-image');
+const memoAttachmentsSection = document.getElementById('memo-attachments-section');
+const attachmentsPreviewGrid = document.getElementById('attachments-preview-grid');
+const attachmentsCountBadge = document.getElementById('attachments-count-badge');
+const btnVoiceTitle = document.getElementById('btn-voice-title');
+const btnVoiceDesc = document.getElementById('btn-voice-desc');
+const modalLightbox = document.getElementById('modal-lightbox');
+const lightboxImg = document.getElementById('lightbox-img');
+const btnCloseLightbox = document.getElementById('btn-close-lightbox');
+
+// 現在編集中の添付画像一覧 (Base64)
+let currentAttachments = [];
 
 // Storage & Cloud Sync Management
 const cloudSyncBadge = document.getElementById('cloud-sync-badge');
@@ -719,6 +736,17 @@ function createCardElement(memo) {
     ${memo.description ? `<div class="card-desc">${escapeHtml(memo.description)}</div>` : ''}
     ${memo.scope ? `<span class="card-scope">🎯 ${escapeHtml(memo.scope)}</span>` : ''}
 
+    ${(memo.images && Array.isArray(memo.images) && memo.images.length > 0) ? `
+      <div class="card-attachments-strip">
+        ${memo.images.map((imgSrc, idx) => `
+          <div class="card-thumb-preview" title="スクショをクリックして拡大表示" onclick="event.stopPropagation(); openLightbox('${imgSrc}')">
+            <img src="${imgSrc}" alt="スクショ ${idx + 1}" loading="lazy">
+            <span class="card-thumb-badge">📸 ${idx + 1}</span>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+
     <div class="card-footer">
       <span class="card-meta">${formatDate(memo.createdAt)}</span>
       <div class="card-actions">
@@ -767,6 +795,16 @@ function renderList(filteredMemos) {
         <div class="list-item-body">
           <div class="list-item-title">${escapeHtml(memo.title)}</div>
           <div class="list-item-desc">${escapeHtml(memo.description || '詳細なし')}</div>
+          ${(memo.images && Array.isArray(memo.images) && memo.images.length > 0) ? `
+            <div class="card-attachments-strip" style="margin-top: 6px;">
+              ${memo.images.map((imgSrc, idx) => `
+                <div class="card-thumb-preview" title="スクショをクリックして拡大表示" onclick="event.stopPropagation(); openLightbox('${imgSrc}')">
+                  <img src="${imgSrc}" alt="スクショ ${idx + 1}" loading="lazy">
+                  <span class="card-thumb-badge">📸 ${idx + 1}</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 10px;">
@@ -848,6 +886,9 @@ function generateSinglePrompt(memo) {
   if (memo.scope) {
     prompt += `**対象ファイル・スコープ**: \`${memo.scope}\`\n`;
   }
+  if (memo.images && Array.isArray(memo.images) && memo.images.length > 0) {
+    prompt += `**添付スクリーンショット**: あり (${memo.images.length}枚のスクショが添付されています。アプリ画面で確認できます)\n`;
+  }
   prompt += `\n### 依頼内容・詳細\n`;
   prompt += `${memo.description || '（詳細はタイトルを参照してください）'}\n`;
 
@@ -883,6 +924,9 @@ function generateBatchPrompt() {
     prompt += `### ${index + 1}. [${cat.label}] ${memo.title} (${pri.icon} 優先度: ${pri.label})\n`;
     if (memo.scope) {
       prompt += `- **対象**: \`${memo.scope}\`\n`;
+    }
+    if (memo.images && Array.isArray(memo.images) && memo.images.length > 0) {
+      prompt += `- **添付スクリーンショット**: あり (${memo.images.length}枚)\n`;
     }
     if (memo.description) {
       prompt += `- **詳細**: ${memo.description}\n`;
@@ -1030,6 +1074,202 @@ function applyEditorFormat(action) {
   updateMemoEditorPreview();
 }
 
+// ========================================================
+// 画像圧縮・スクショ添付 & ライトボックス処理 (v15)
+// ========================================================
+
+// スクショ・画像の自動リサイズ・圧縮（CanvasでWebP/JPEGに軽量化しCloudflare KVで安全に同期）
+function compressImage(file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth || height > maxHeight) {
+          if (width / height > maxWidth / maxHeight) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // WebP対応ならWebP、非対応ならJPEGにフォールバック
+        let dataUrl = canvas.toDataURL('image/webp', quality);
+        if (!dataUrl.startsWith('data:image/webp')) {
+          dataUrl = canvas.toDataURL('image/jpeg', quality);
+        }
+        resolve(dataUrl);
+      };
+      img.onerror = () => reject(new Error('画像の読み込みに失敗しました'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('ファイルの読み込みに失敗しました'));
+    reader.readAsDataURL(file);
+  });
+}
+
+// エディタ内の添付画像サムネイルを描画
+function renderAttachmentsPreview() {
+  if (!attachmentsPreviewGrid || !attachmentsCountBadge) return;
+  attachmentsPreviewGrid.innerHTML = '';
+  attachmentsCountBadge.textContent = `${currentAttachments.length}枚`;
+
+  currentAttachments.forEach((imgSrc, idx) => {
+    const item = document.createElement('div');
+    item.className = 'attachment-thumb-item';
+    item.title = 'クリックで拡大表示';
+    item.innerHTML = `
+      <img src="${imgSrc}" alt="添付スクショ ${idx + 1}">
+      <button type="button" class="attachment-btn-del" title="削除" data-index="${idx}">&times;</button>
+    `;
+
+    // 削除ボタン
+    const delBtn = item.querySelector('.attachment-btn-del');
+    if (delBtn) {
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        currentAttachments.splice(idx, 1);
+        renderAttachmentsPreview();
+      });
+    }
+
+    // クリックで拡大ライトボックス
+    item.addEventListener('click', () => {
+      openLightbox(imgSrc);
+    });
+
+    attachmentsPreviewGrid.appendChild(item);
+  });
+}
+
+// スクショ全画面拡大ライトボックスの開閉
+function openLightbox(src) {
+  if (!modalLightbox || !lightboxImg) return;
+  lightboxImg.src = src;
+  modalLightbox.classList.add('active');
+}
+
+function closeLightbox() {
+  if (!modalLightbox || !lightboxImg) return;
+  modalLightbox.classList.remove('active');
+  lightboxImg.src = '';
+}
+
+if (btnCloseLightbox) {
+  btnCloseLightbox.addEventListener('click', closeLightbox);
+}
+if (modalLightbox) {
+  modalLightbox.addEventListener('click', (e) => {
+    if (e.target === modalLightbox || e.target === btnCloseLightbox) {
+      closeLightbox();
+    }
+  });
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && modalLightbox?.classList.contains('active')) {
+    closeLightbox();
+  }
+});
+
+// クリップボードからのスクショ直接貼り付け (Ctrl+V / Cmd+V)
+document.addEventListener('paste', async (e) => {
+  if (!modalMemo.classList.contains('active')) return;
+
+  const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
+  if (!items) return;
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item.type && item.type.indexOf('image') !== -1) {
+      e.preventDefault();
+      const file = item.getAsFile();
+      if (file) {
+        try {
+          showToast('スクショを最適化中...', '⏳');
+          const compressed = await compressImage(file);
+          currentAttachments.push(compressed);
+          renderAttachmentsPreview();
+          showToast('📸 スクショを貼り付けました！', '✨');
+        } catch (err) {
+          console.error('Image paste error', err);
+          showToast('スクショの貼り付けに失敗しました', '❌');
+        }
+      }
+    }
+  }
+});
+
+// ファイル選択ダイアログでの画像追加
+if (btnAttachImage && inputMemoImage) {
+  btnAttachImage.addEventListener('click', () => inputMemoImage.click());
+  inputMemoImage.addEventListener('change', async (e) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      showToast('画像を最適化中...', '⏳');
+      for (let i = 0; i < files.length; i++) {
+        if (files[i].type && files[i].type.startsWith('image/')) {
+          try {
+            const compressed = await compressImage(files[i]);
+            currentAttachments.push(compressed);
+          } catch (err) {
+            console.error('File attach error', err);
+          }
+        }
+      }
+      renderAttachmentsPreview();
+      inputMemoImage.value = '';
+      showToast('📸 画像を添付しました！', '✨');
+    }
+  });
+}
+
+// ドラッグ＆ドロップによる画像添付
+if (memoAttachmentsSection) {
+  ['dragenter', 'dragover'].forEach(eventName => {
+    memoAttachmentsSection.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      memoAttachmentsSection.classList.add('dragover');
+    });
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    memoAttachmentsSection.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      memoAttachmentsSection.classList.remove('dragover');
+    });
+  });
+
+  memoAttachmentsSection.addEventListener('drop', async (e) => {
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      showToast('ドロップされた画像を処理中...', '⏳');
+      for (let i = 0; i < files.length; i++) {
+        if (files[i].type && files[i].type.startsWith('image/')) {
+          try {
+            const compressed = await compressImage(files[i]);
+            currentAttachments.push(compressed);
+          } catch (err) {
+            console.error('Drop image error', err);
+          }
+        }
+      }
+      renderAttachmentsPreview();
+      showToast('📸 画像を追加しました！', '✨');
+    }
+  });
+}
+
 
 // Modal Handlers
 function openNewMemoModal() {
@@ -1041,6 +1281,10 @@ function openNewMemoModal() {
   // Default radios
   const fixRadio = formMemo.querySelector('input[value="task"]');
   if (fixRadio) fixRadio.checked = true;
+
+  // 添付画像を初期化
+  currentAttachments = [];
+  renderAttachmentsPreview();
 
   updateMemoEditorPreview();
   modalMemo.classList.add('active');
@@ -1059,6 +1303,10 @@ function openEditMemoModal(id, event) {
   inputMemoStatus.value = memo.status === 'done' ? 'todo' : memo.status;
   inputMemoScope.value = memo.scope || '';
   inputMemoDue.value = memo.dueDate ? memo.dueDate.slice(0, 16) : '';
+
+  // 既存の添付画像を読み込み
+  currentAttachments = (memo.images && Array.isArray(memo.images)) ? [...memo.images] : [];
+  renderAttachmentsPreview();
 
   // Match title or scope to app preset dropdown
   if (selectPresetApp) {
@@ -1123,6 +1371,7 @@ formMemo.addEventListener('submit', (e) => {
       memo.scope = scope;
       memo.category = category;
       memo.dueDate = dueDate;
+      memo.images = [...currentAttachments]; // 添付画像を保存
       memo.updatedAt = new Date().toISOString();
       showToast('メモを更新しました', '💾');
     }
@@ -1137,6 +1386,7 @@ formMemo.addEventListener('submit', (e) => {
       status,
       scope,
       dueDate,
+      images: [...currentAttachments], // 添付画像を保存
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -1905,6 +2155,21 @@ function handleVoiceFinalResult(transcript) {
 
   parsedTitleInput.value = parsed.title;
   parsedRelativeTag.textContent = parsed.relativeLabel || '今日';
+  if (parsedScopeInput) {
+    parsedScopeInput.value = '音声入力';
+  }
+
+  // カテゴリの初期判定（キーワードに応じたおすすめ選択）
+  if (parsed.title.includes('予約') || parsed.title.includes('点検') || parsed.title.includes('MTG') || parsed.title.includes('会議')) {
+    const radio = document.querySelector('input[name="voice-category"][value="schedule"]');
+    if (radio) radio.checked = true;
+  } else if (parsed.title.includes('思いつき') || parsed.title.includes('構想') || parsed.title.includes('検討')) {
+    const radio = document.querySelector('input[name="voice-category"][value="idea"]');
+    if (radio) radio.checked = true;
+  } else {
+    const radio = document.querySelector('input[name="voice-category"][value="task"]');
+    if (radio) radio.checked = true;
+  }
 
   if (parsed.targetDate) {
     const y = parsed.targetDate.getFullYear();
@@ -1923,25 +2188,94 @@ function handleVoiceFinalResult(transcript) {
     parsedDateInput.value = `${y}-${m}-${d}T10:00`;
   }
 
-  voiceResultMessage.textContent = `「${parsed.title}」(${parsed.relativeLabel || '日時解析済'}) を検出しました！`;
+  voiceResultMessage.textContent = `「${parsed.title}」を検出しました！`;
 }
 
+// ユーザーが選択したカテゴリーとスコープを反映して保存
 function saveParsedVoiceMemo(title, dueVal) {
+  const category = document.querySelector('input[name="voice-category"]:checked')?.value || 'task';
+  const scope = parsedScopeInput ? (parsedScopeInput.value.trim() || '音声入力') : '音声入力';
+
   const newMemo = {
     id: 'memo-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
-    category: 'task',
-    title: title || '音声入力タスク',
-    description: '🎙️ 音声入力より自動作成',
-    priority: 'high',
+    category,
+    title: title || '音声入力メモ',
+    description: `🎙️ 音声入力より作成: 「${title}」`,
+    priority: 'med',
     status: 'todo',
-    scope: 'カレンダー連携タスク',
+    scope,
     dueDate: dueVal ? new Date(dueVal).toISOString() : null,
+    images: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
   memos.unshift(newMemo);
   saveMemos(true);
   modalVoice.classList.remove('active');
+}
+
+// インライン音声入力（タイトル欄や本文欄への直接入力）
+let inlineRecog = null;
+function startInlineVoiceInput(targetInput, btnElement) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert('お使いのブラウザは音声入力（Web Speech API）に対応していません。');
+    return;
+  }
+
+  // 既に起動中の場合は停止して確定
+  if (inlineRecog) {
+    try { inlineRecog.stop(); } catch (_) {}
+    inlineRecog = null;
+    if (btnElement) btnElement.classList.remove('listening');
+    return;
+  }
+
+  const recog = new SpeechRecognition();
+  recog.lang = 'ja-JP';
+  recog.continuous = false;
+  recog.interimResults = true;
+  recog.maxAlternatives = 1;
+
+  recog.onstart = () => {
+    if (btnElement) btnElement.classList.add('listening');
+    showToast('音声入力中... マイクに喋ってください🎙️', '🔴');
+  };
+
+  let recognizedText = '';
+  recog.onresult = (event) => {
+    recognizedText = '';
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      recognizedText += event.results[i][0].transcript;
+    }
+  };
+
+  recog.onerror = (event) => {
+    console.warn('Inline voice error:', event.error);
+    if (btnElement) btnElement.classList.remove('listening');
+    inlineRecog = null;
+    if (event.error !== 'no-speech') {
+      showToast(`音声認識エラー: ${event.error}`, '⚠️');
+    }
+  };
+
+  recog.onend = () => {
+    if (btnElement) btnElement.classList.remove('listening');
+    inlineRecog = null;
+    if (recognizedText) {
+      if (targetInput === inputMemoTitle) {
+        targetInput.value = (targetInput.value ? targetInput.value + ' ' : '') + recognizedText;
+      } else if (targetInput === inputMemoDesc) {
+        const current = targetInput.value || '';
+        targetInput.value = current ? `${current}\n${recognizedText}` : recognizedText;
+        updateMemoEditorPreview();
+      }
+      showToast(`「${recognizedText}」を入力しました`, '✨');
+    }
+  };
+
+  inlineRecog = recog;
+  recog.start();
 }
 
 // Voice Modal Action Listeners
@@ -1957,6 +2291,45 @@ if (btnStopVoice) {
     if (text && !text.includes('と喋ってください')) {
       handleVoiceFinalResult(text);
     }
+  });
+}
+
+// 通常エディタで開いて詳しく編集
+if (btnEditInFullModal) {
+  btnEditInFullModal.addEventListener('click', () => {
+    const title = parsedTitleInput.value.trim() || '音声入力メモ';
+    const dueVal = parsedDateInput.value;
+    const category = document.querySelector('input[name="voice-category"]:checked')?.value || 'task';
+    const scope = parsedScopeInput ? parsedScopeInput.value.trim() : '音声入力';
+
+    modalVoice.classList.remove('active');
+    openNewMemoModal();
+
+    // 認識された値を通常モーダルに反映
+    inputMemoTitle.value = title;
+    inputMemoScope.value = scope;
+    if (dueVal) inputMemoDue.value = dueVal;
+    inputMemoDesc.value = `### 🎙️ 音声入力メモ\n${title}\n`;
+
+    const catRadio = formMemo.querySelector(`input[name="memo-category"][value="${category}"]`);
+    if (catRadio) catRadio.checked = true;
+
+    updateMemoEditorPreview();
+    showToast('通常エディタに音声を反映しました。カテゴリーやスクショを追加できます！', '📝');
+  });
+}
+
+// インラインマイクボタンのイベント設定
+if (btnVoiceTitle) {
+  btnVoiceTitle.addEventListener('click', (e) => {
+    e.preventDefault();
+    startInlineVoiceInput(inputMemoTitle, btnVoiceTitle);
+  });
+}
+if (btnVoiceDesc) {
+  btnVoiceDesc.addEventListener('click', (e) => {
+    e.preventDefault();
+    startInlineVoiceInput(inputMemoDesc, btnVoiceDesc);
   });
 }
 

@@ -2628,3 +2628,289 @@ details[open] .editor-details-summary {
   animation: spin 0.8s linear infinite;
 }
 
+/* ==========================================================================
+   スクショ・画像添付 & プレビュー機能 (v15)
+   ========================================================================== */
+
+/* タイトル入力欄 + マイクボタン */
+.title-input-wrapper {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.title-input-wrapper .editor-title-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.btn-icon-mic {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: #f43f5e;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-icon-mic:hover {
+  background: rgba(244, 63, 94, 0.25);
+  border-color: #f43f5e;
+  transform: scale(1.05);
+}
+
+.btn-icon-mic.listening {
+  background: #f43f5e;
+  color: #fff;
+  animation: pulse-wave 1.5s infinite;
+}
+
+/* ツールバーの画像添付ボタン強調 */
+.btn-tool-attach {
+  color: #38bdf8 !important;
+  border-color: rgba(56, 189, 248, 0.3) !important;
+}
+
+.btn-tool-attach:hover {
+  background: rgba(56, 189, 248, 0.15) !important;
+}
+
+/* エディタ内: 添付ファイルセクション */
+.attachments-section {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-top: 10px;
+  transition: all var(--transition-fast);
+}
+
+.attachments-section.dragover {
+  border-color: var(--cf-orange);
+  background: rgba(243, 128, 32, 0.08);
+}
+
+.attachments-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.attachments-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.count-badge {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.attachments-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.attachments-hint code {
+  background: rgba(0, 0, 0, 0.35);
+  padding: 2px 5px;
+  border-radius: 4px;
+  color: var(--cf-orange);
+  font-family: var(--font-mono);
+}
+
+/* サムネイル一覧グリッド */
+.attachments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+}
+
+.attachment-thumb-item {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border-medium);
+  background: #0f172a;
+  cursor: pointer;
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.attachment-thumb-item:hover {
+  transform: translateY(-2px);
+  border-color: var(--cf-orange);
+}
+
+.attachment-thumb-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.attachment-btn-del {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #f43f5e;
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: all var(--transition-fast);
+}
+
+.attachment-btn-del:hover {
+  background: #f43f5e;
+  color: #ffffff;
+  transform: scale(1.15);
+}
+
+/* メモカード上の画像サムネイル帯 */
+.card-attachments-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 4px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.card-attachments-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.card-thumb-preview {
+  position: relative;
+  width: 60px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  background: #0b1120;
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.card-thumb-preview:hover {
+  transform: scale(1.05);
+  border-color: var(--cf-orange);
+}
+
+.card-thumb-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.card-thumb-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* スクショ全画面拡大ライトボックス */
+#modal-lightbox {
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.lightbox-container {
+  position: relative;
+  max-width: 92vw;
+  max-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightbox-container img {
+  max-width: 100%;
+  max-height: 88vh;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+  border: 1px solid var(--border-medium);
+}
+
+.lightbox-close {
+  position: absolute;
+  top: -18px;
+  right: -18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  z-index: 10001;
+}
+
+.lightbox-close:hover {
+  background: #f43f5e;
+  color: #fff;
+  transform: scale(1.1);
+}
+
+/* 音声モーダル内のカテゴリピル調整 */
+.voice-category-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.voice-category-pills .cat-pill-opt {
+  cursor: pointer;
+  margin: 0;
+}
+
+
