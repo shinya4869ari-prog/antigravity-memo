@@ -2049,9 +2049,10 @@ function openMemoGoogleCalendar(id, event) {
   showToast(`「${memo.title}」をGoogleカレンダーで開きます`, '📅');
 }
 
-// 3. Web Speech API Voice Controller
+// 3. Web Speech API Voice Controller (連続認識 & 考えながら喋れるモード v16)
 let speechRecog = null;
 let isVoiceActive = false;
+let accumulatedVoiceText = ''; // 喋った言葉をどんどん蓄積
 
 function initVoiceRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -2060,13 +2061,13 @@ function initVoiceRecognition() {
   // SpeechRecognition は使い捨てオブジェクトのため、毎回新しく生成する
   const recog = new SpeechRecognition();
   recog.lang = 'ja-JP';
-  recog.continuous = false;
+  recog.continuous = true; // ★ 連続認識モード：間が空いても勝手に切れない
   recog.interimResults = true;
   recog.maxAlternatives = 1;
 
   recog.onstart = () => {
     isVoiceActive = true;
-    voiceStatusText.textContent = '音声を聴き取っています... 喋ってください';
+    voiceStatusText.textContent = '🔴 聴き取っています... 考えながらゆっくり喋ってください';
     voiceStatusText.style.color = '#f43f5e';
     voiceListeningState.style.display = 'flex';
     voiceResultState.style.display = 'none';
@@ -2074,41 +2075,47 @@ function initVoiceRecognition() {
 
   recog.onresult = (event) => {
     let interim = '';
-    let finalTranscript = '';
     for (let i = event.resultIndex; i < event.results.length; ++i) {
+      const transcript = event.results[i][0].transcript;
       if (event.results[i].isFinal) {
-        finalTranscript += event.results[i][0].transcript;
+        accumulatedVoiceText += (accumulatedVoiceText ? ' ' : '') + transcript;
       } else {
-        interim += event.results[i][0].transcript;
+        interim += transcript;
       }
     }
 
-    const currentText = finalTranscript || interim;
-    if (currentText) {
-      voiceTranscriptBox.innerHTML = `<strong>「${escapeHtml(currentText)}」</strong>`;
-    }
-
-    if (finalTranscript) {
-      handleVoiceFinalResult(finalTranscript);
+    const currentDisplay = (accumulatedVoiceText + (interim ? ` (${interim})` : '')).trim();
+    if (currentDisplay) {
+      voiceTranscriptBox.innerHTML = `<strong>「${escapeHtml(currentDisplay)}」</strong>`;
     }
   };
 
   recog.onerror = (event) => {
     console.warn('Speech recognition error:', event.error);
-    isVoiceActive = false;
     if (event.error === 'not-allowed') {
+      isVoiceActive = false;
       voiceStatusText.textContent = 'マイクの使用が許可されていません。ブラウザのアドレスバーでマイクを許可してください。';
       voiceStatusText.style.color = '#f43f5e';
     } else if (event.error === 'no-speech') {
-      voiceStatusText.textContent = '音声が検出されませんでした。「もう一度喋る」を押してください。';
+      // 沈黙しても勝手に切らずに待機を継続
+      voiceStatusText.textContent = '聴き取り待機中... 考えながら続けて喋ってください🎙️';
       voiceStatusText.style.color = 'var(--text-muted)';
     } else {
-      voiceStatusText.textContent = `認識エラー: ${event.error}`;
+      voiceStatusText.textContent = `認識ステータス: ${event.error}`;
     }
   };
 
   recog.onend = () => {
-    isVoiceActive = false;
+    // ユーザーが停止ボタンを押す前にブラウザ都合で途切れた場合は自動再起動して継続
+    if (isVoiceActive && modalVoice.classList.contains('active')) {
+      try {
+        recog.start();
+      } catch (_) {
+        isVoiceActive = false;
+      }
+    } else {
+      isVoiceActive = false;
+    }
   };
 
   return recog;
@@ -2124,9 +2131,11 @@ function startVoiceInput() {
   modalVoice.classList.add('active');
   voiceListeningState.style.display = 'flex';
   voiceResultState.style.display = 'none';
-  voiceTranscriptBox.innerHTML = '<span class="placeholder-tip">「明日 配車予約」「来週金曜 14時に点検」と喋ってください</span>';
+  voiceTranscriptBox.innerHTML = '<span class="placeholder-tip">💡 考えながらゆっくり喋ってください。喋り終わったら下の「■ 録音完了 / 確定」を押します</span>';
   voiceStatusText.textContent = 'マイクを起動中...';
   voiceStatusText.style.color = '';
+
+  accumulatedVoiceText = ''; // 蓄積テキストを初期化
 
   // 前のインスタンスが残っている場合は先にstopして破棄する
   if (speechRecog) {
@@ -2142,8 +2151,9 @@ function startVoiceInput() {
 }
 
 function stopVoiceInput() {
-  if (speechRecog && isVoiceActive) {
-    speechRecog.stop();
+  isVoiceActive = false;
+  if (speechRecog) {
+    try { speechRecog.stop(); } catch (_) {}
   }
 }
 
@@ -2214,8 +2224,11 @@ function saveParsedVoiceMemo(title, dueVal) {
   modalVoice.classList.remove('active');
 }
 
-// インライン音声入力（タイトル欄や本文欄への直接入力）
+// インライン音声入力（タイトル欄や本文欄への直接入力：連続認識モード）
 let inlineRecog = null;
+let isInlineVoiceActive = false;
+let accumulatedInlineText = '';
+
 function startInlineVoiceInput(targetInput, btnElement) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
@@ -2223,54 +2236,74 @@ function startInlineVoiceInput(targetInput, btnElement) {
     return;
   }
 
-  // 既に起動中の場合は停止して確定
-  if (inlineRecog) {
-    try { inlineRecog.stop(); } catch (_) {}
-    inlineRecog = null;
+  // 既に起動中の場合は手動停止して確定
+  if (isInlineVoiceActive) {
+    isInlineVoiceActive = false;
+    if (inlineRecog) {
+      try { inlineRecog.stop(); } catch (_) {}
+      inlineRecog = null;
+    }
     if (btnElement) btnElement.classList.remove('listening');
+    showToast('音声入力を完了しました', '✨');
     return;
   }
 
   const recog = new SpeechRecognition();
   recog.lang = 'ja-JP';
-  recog.continuous = false;
+  recog.continuous = true; // ★ 連続モード
   recog.interimResults = true;
   recog.maxAlternatives = 1;
 
+  isInlineVoiceActive = true;
+  accumulatedInlineText = '';
+  const initialValue = targetInput.value || '';
+
   recog.onstart = () => {
     if (btnElement) btnElement.classList.add('listening');
-    showToast('音声入力中... マイクに喋ってください🎙️', '🔴');
+    showToast('🎙️ 連続音声入力中... 考えながら喋ってください（もう一度押すと完了）', '🔴');
   };
 
-  let recognizedText = '';
   recog.onresult = (event) => {
-    recognizedText = '';
+    let interim = '';
     for (let i = event.resultIndex; i < event.results.length; ++i) {
-      recognizedText += event.results[i][0].transcript;
+      const transcript = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        accumulatedInlineText += (accumulatedInlineText ? ' ' : '') + transcript;
+      } else {
+        interim += transcript;
+      }
+    }
+
+    const currentChunk = (accumulatedInlineText + (interim ? ` ${interim}` : '')).trim();
+    if (currentChunk) {
+      if (targetInput === inputMemoTitle) {
+        targetInput.value = initialValue ? `${initialValue} ${currentChunk}` : currentChunk;
+      } else if (targetInput === inputMemoDesc) {
+        targetInput.value = initialValue ? `${initialValue}\n${currentChunk}` : currentChunk;
+        updateMemoEditorPreview();
+      }
     }
   };
 
   recog.onerror = (event) => {
     console.warn('Inline voice error:', event.error);
-    if (btnElement) btnElement.classList.remove('listening');
-    inlineRecog = null;
     if (event.error !== 'no-speech') {
-      showToast(`音声認識エラー: ${event.error}`, '⚠️');
+      showToast(`音声認識ステータス: ${event.error}`, '⚠️');
     }
   };
 
   recog.onend = () => {
-    if (btnElement) btnElement.classList.remove('listening');
-    inlineRecog = null;
-    if (recognizedText) {
-      if (targetInput === inputMemoTitle) {
-        targetInput.value = (targetInput.value ? targetInput.value + ' ' : '') + recognizedText;
-      } else if (targetInput === inputMemoDesc) {
-        const current = targetInput.value || '';
-        targetInput.value = current ? `${current}\n${recognizedText}` : recognizedText;
-        updateMemoEditorPreview();
+    // ユーザーが手動停止していなければ自動再開
+    if (isInlineVoiceActive && modalMemo.classList.contains('active')) {
+      try {
+        recog.start();
+      } catch (_) {
+        isInlineVoiceActive = false;
+        if (btnElement) btnElement.classList.remove('listening');
       }
-      showToast(`「${recognizedText}」を入力しました`, '✨');
+    } else {
+      isInlineVoiceActive = false;
+      if (btnElement) btnElement.classList.remove('listening');
     }
   };
 
@@ -2280,16 +2313,31 @@ function startInlineVoiceInput(targetInput, btnElement) {
 
 // Voice Modal Action Listeners
 if (btnVoiceMemo) btnVoiceMemo.addEventListener('click', startVoiceInput);
-if (btnCloseVoiceModal) btnCloseVoiceModal.addEventListener('click', () => modalVoice.classList.remove('active'));
-if (btnCloseVoiceBtn) btnCloseVoiceBtn.addEventListener('click', () => modalVoice.classList.remove('active'));
+if (btnCloseVoiceModal) {
+  btnCloseVoiceModal.addEventListener('click', () => {
+    stopVoiceInput();
+    modalVoice.classList.remove('active');
+  });
+}
+if (btnCloseVoiceBtn) {
+  btnCloseVoiceBtn.addEventListener('click', () => {
+    stopVoiceInput();
+    modalVoice.classList.remove('active');
+  });
+}
 if (btnRestartVoice) btnRestartVoice.addEventListener('click', startVoiceInput);
 
 if (btnStopVoice) {
   btnStopVoice.addEventListener('click', () => {
     stopVoiceInput();
-    const text = voiceTranscriptBox.textContent.replace(/^[「\s]+|[」\s]+$/g, '').trim();
-    if (text && !text.includes('と喋ってください')) {
+    let text = accumulatedVoiceText.trim();
+    if (!text) {
+      text = voiceTranscriptBox.textContent.replace(/^[「\s]+|[」\s]+$/g, '').trim();
+    }
+    if (text && !text.includes('考えながらゆっくり喋ってください')) {
       handleVoiceFinalResult(text);
+    } else {
+      showToast('音声を検出できませんでした。「もう一度喋る」をお試しください', '⚠️');
     }
   });
 }
