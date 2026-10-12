@@ -229,6 +229,17 @@ const btnCloseLightbox = document.getElementById('btn-close-lightbox');
 // 現在編集中の添付画像一覧 (Base64)
 let currentAttachments = [];
 
+// App Presets Manager Elements (v17)
+const btnManageAppPresets = document.getElementById('btn-manage-app-presets');
+const modalAppPresets = document.getElementById('modal-app-presets');
+const btnClosePresetsModal = document.getElementById('btn-close-presets-modal');
+const btnClosePresetsBtn = document.getElementById('btn-close-presets-btn');
+const inputNewPresetName = document.getElementById('input-new-preset-name');
+const inputNewPresetScope = document.getElementById('input-new-preset-scope');
+const btnAddPreset = document.getElementById('btn-add-preset');
+const presetsListContainer = document.getElementById('presets-list-container');
+const btnResetPresets = document.getElementById('btn-reset-presets');
+
 // Storage & Cloud Sync Management
 const cloudSyncBadge = document.getElementById('cloud-sync-badge');
 const cloudSyncText = document.getElementById('cloud-sync-text');
@@ -494,6 +505,164 @@ function populateAppDropdowns() {
     });
     filterAppSelect.value = currentFilterVal || 'all';
   }
+}
+
+// タイトル候補プリセット一覧を描画 (v17)
+function renderCustomAppsList() {
+  if (!presetsListContainer) return;
+  presetsListContainer.innerHTML = '';
+
+  if (customApps.length === 0) {
+    presetsListContainer.innerHTML = `
+      <div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.85rem;">
+        候補が登録されていません。上のフォームから追加してください。
+      </div>
+    `;
+    return;
+  }
+
+  customApps.forEach((app, idx) => {
+    const card = document.createElement('div');
+    card.className = 'preset-item-card';
+
+    card.innerHTML = `
+      <div class="preset-item-left">
+        <div class="preset-order-actions">
+          <button type="button" class="btn-order-move" data-action="up" data-index="${idx}" title="上へ移動" ${idx === 0 ? 'disabled' : ''}>▲</button>
+          <button type="button" class="btn-order-move" data-action="down" data-index="${idx}" title="下へ移動" ${idx === customApps.length - 1 ? 'disabled' : ''}>▼</button>
+        </div>
+        <div class="preset-item-details">
+          <span class="preset-name-text">${escapeHtml(app.name)}</span>
+          <span class="preset-scope-tag">スコープ: ${escapeHtml(app.scope || 'なし')}</span>
+        </div>
+      </div>
+      <div class="preset-item-actions">
+        <button type="button" class="btn-preset-action edit" data-index="${idx}" title="名前を変更">✏️ 編集</button>
+        <button type="button" class="btn-preset-action del" data-index="${idx}" title="削除">🗑️</button>
+      </div>
+    `;
+
+    // 上へ移動
+    const btnUp = card.querySelector('[data-action="up"]');
+    if (btnUp) {
+      btnUp.addEventListener('click', () => {
+        if (idx > 0) {
+          const item = customApps.splice(idx, 1)[0];
+          customApps.splice(idx - 1, 0, item);
+          saveCustomApps(true);
+          renderCustomAppsList();
+          showToast(`「${item.name}」を上へ移動しました`, '⬆️');
+        }
+      });
+    }
+
+    // 下へ移動
+    const btnDown = card.querySelector('[data-action="down"]');
+    if (btnDown) {
+      btnDown.addEventListener('click', () => {
+        if (idx < customApps.length - 1) {
+          const item = customApps.splice(idx, 1)[0];
+          customApps.splice(idx + 1, 0, item);
+          saveCustomApps(true);
+          renderCustomAppsList();
+          showToast(`「${item.name}」を下へ移動しました`, '⬇️');
+        }
+      });
+    }
+
+    // 編集
+    const btnEdit = card.querySelector('.btn-preset-action.edit');
+    if (btnEdit) {
+      btnEdit.addEventListener('click', () => {
+        const newName = prompt('タイトル候補の名前を入力してください:', app.name);
+        if (newName && newName.trim()) {
+          app.name = newName.trim();
+          const newScope = prompt('対象スコープを入力してください（任意）:', app.scope || '');
+          if (newScope !== null) {
+            app.scope = newScope.trim();
+          }
+          saveCustomApps(true);
+          renderCustomAppsList();
+          showToast(`「${app.name}」を更新しました`, '💾');
+        }
+      });
+    }
+
+    // 削除
+    const btnDel = card.querySelector('.btn-preset-action.del');
+    if (btnDel) {
+      btnDel.addEventListener('click', () => {
+        if (confirm(`候補「${app.name}」を削除してもよろしいですか？`)) {
+          const deleted = customApps.splice(idx, 1)[0];
+          saveCustomApps(true);
+          renderCustomAppsList();
+          showToast(`「${deleted.name}」を削除しました`, '🗑️');
+        }
+      });
+    }
+
+    presetsListContainer.appendChild(card);
+  });
+}
+
+// プリセット管理モーダルの開閉と新規追加リスナー
+if (btnManageAppPresets && modalAppPresets) {
+  btnManageAppPresets.addEventListener('click', () => {
+    renderCustomAppsList();
+    modalAppPresets.classList.add('active');
+    if (inputNewPresetName) inputNewPresetName.focus();
+  });
+}
+
+if (btnClosePresetsModal && modalAppPresets) {
+  btnClosePresetsModal.addEventListener('click', () => {
+    modalAppPresets.classList.remove('active');
+  });
+}
+
+if (btnClosePresetsBtn && modalAppPresets) {
+  btnClosePresetsBtn.addEventListener('click', () => {
+    modalAppPresets.classList.remove('active');
+  });
+}
+
+// 新規追加ボタン
+if (btnAddPreset && inputNewPresetName) {
+  btnAddPreset.addEventListener('click', () => {
+    const name = inputNewPresetName.value.trim();
+    if (!name) {
+      alert('タイトル名を入力してください');
+      return;
+    }
+    const scope = inputNewPresetScope ? inputNewPresetScope.value.trim() : '';
+    const newId = 'app-' + Date.now();
+    customApps.unshift({ id: newId, name, scope });
+    saveCustomApps(true);
+    renderCustomAppsList();
+
+    inputNewPresetName.value = '';
+    if (inputNewPresetScope) inputNewPresetScope.value = '';
+    showToast(`「${name}」を先頭に追加しました！`, '✨');
+  });
+
+  inputNewPresetName.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      btnAddPreset.click();
+    }
+  });
+}
+
+// 初期値に戻す
+if (btnResetPresets) {
+  btnResetPresets.addEventListener('click', () => {
+    if (confirm('タイトル候補を初期の10件（Korean-Learner等）にリセットしますか？')) {
+      customApps = [...DEFAULT_APP_PRESETS];
+      saveCustomApps(true);
+      renderCustomAppsList();
+      showToast('タイトル候補を初期値にリセットしました', '🔄');
+    }
+  });
 }
 
 // Toast System
@@ -1774,13 +1943,22 @@ filterPrioritySelect.addEventListener('change', (e) => {
   render();
 });
 
-// App Preset Selection Handler (Insert prefix into Title & Scope)
+// App Preset Selection Handler (Insert prefix into Title & Scope + 自動先頭繰り上げ MRU)
 if (selectPresetApp) {
   selectPresetApp.addEventListener('change', () => {
     const selectedId = selectPresetApp.value;
     if (!selectedId) return;
-    const app = customApps.find(a => a.id === selectedId);
-    if (!app) return;
+    const appIndex = customApps.findIndex(a => a.id === selectedId);
+    if (appIndex === -1) return;
+    const app = customApps[appIndex];
+
+    // ★ 最近使ったものを自動で先頭に繰り上げ（上位表示）
+    if (appIndex > 0) {
+      customApps.splice(appIndex, 1);
+      customApps.unshift(app);
+      saveCustomApps(true); // クラウド＆ローカル保存してドロップダウン再描画
+      selectPresetApp.value = app.id;
+    }
 
     // Smart replace or prefix: if already starts with 【...】, replace it
     let currentTitle = inputMemoTitle.value.trim();
@@ -1797,7 +1975,7 @@ if (selectPresetApp) {
 
     inputMemoTitle.focus();
     updateMemoEditorPreview();
-    showToast(`「${app.name}」を選択しました`, '📱');
+    showToast(`「${app.name}」を選択しました（よく使う候補として先頭へ移動）`, '🏷️');
   });
 }
 

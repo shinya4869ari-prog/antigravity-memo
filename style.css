@@ -2913,4 +2913,133 @@ details[open] .editor-details-summary {
   margin: 0;
 }
 
+/* ==========================================================================
+   タイトル候補プリセット管理 (v17)
+   ========================================================================== */
+
+.preset-add-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.presets-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.preset-item-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  transition: all var(--transition-fast);
+  gap: 10px;
+}
+
+.preset-item-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(243, 128, 32, 0.4);
+}
+
+.preset-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.preset-order-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.btn-order-move {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.65rem;
+  width: 22px;
+  height: 16px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  padding: 0;
+}
+
+.btn-order-move:hover:not(:disabled) {
+  background: var(--cf-orange);
+  color: #fff;
+}
+
+.btn-order-move:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.preset-item-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.preset-name-text {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preset-scope-tag {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.preset-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-preset-action {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-preset-action:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+}
+
+.btn-preset-action.del:hover {
+  background: rgba(244, 63, 94, 0.2);
+  border-color: #f43f5e;
+  color: #f43f5e;
+}
+
+
 
