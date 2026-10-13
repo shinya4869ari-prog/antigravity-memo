@@ -377,6 +377,27 @@
                   <input type="datetime-local" id="input-memo-due" class="form-input form-input-compact">
                 </div>
               </div>
+
+              <!-- 🤖 Hermes 自律巡回・調査 設定バー (提案B) -->
+              <div class="meta-ai-watch-row" id="meta-ai-watch-row">
+                <div class="ai-watch-toggle-box">
+                  <label class="ai-watch-label" for="input-memo-ai-watch">
+                    <input type="checkbox" id="input-memo-ai-watch" class="ai-watch-checkbox">
+                    <span class="ai-watch-title">🤖 Hermes自律巡回・調査</span>
+                  </label>
+                  <span id="ai-watch-status-badge" class="ai-watch-badge off">⚡ OFF</span>
+                </div>
+                <div id="ai-frequency-container" class="ai-freq-container" style="display: none;">
+                  <label for="input-memo-ai-freq" class="ai-freq-label">巡回頻度:</label>
+                  <select id="input-memo-ai-freq" class="form-select form-select-compact ai-freq-select">
+                    <option value="weekly" selected>📅 週1回 (おすすめ)</option>
+                    <option value="daily">⚡ 毎日 (毎朝08:00)</option>
+                    <option value="every_3_days">🔄 3日おき</option>
+                    <option value="monthly">🗓️ 月1回</option>
+                    <option value="once">🎯 1回のみ (完了後スキップ)</option>
+                  </select>
+                </div>
+              </div>
             </div>
           </details>
         </div>

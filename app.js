@@ -189,6 +189,39 @@ const editorCharCount = document.getElementById('editor-char-count');
 const editorWorkspace = document.getElementById('editor-workspace');
 const btnCopyEditorPrompt = document.getElementById('btn-copy-editor-prompt');
 
+// 🤖 Hermes AI自律巡回設定要素 (v20)
+const inputMemoAiWatch = document.getElementById('input-memo-ai-watch');
+const inputMemoAiFreq = document.getElementById('input-memo-ai-freq');
+const aiFrequencyContainer = document.getElementById('ai-frequency-container');
+const aiWatchStatusBadge = document.getElementById('ai-watch-status-badge');
+const metaAiWatchRow = document.getElementById('meta-ai-watch-row');
+
+// 巡回頻度ラベルマップ
+const AI_FREQ_LABEL_MAP = {
+  daily: '毎日',
+  every_3_days: '3日おき',
+  weekly: '週1回',
+  monthly: '月1回',
+  once: '1回のみ'
+};
+
+function updateAiWatchUI() {
+  if (!inputMemoAiWatch) return;
+  const isChecked = inputMemoAiWatch.checked;
+  if (aiFrequencyContainer) aiFrequencyContainer.style.display = isChecked ? 'flex' : 'none';
+  if (metaAiWatchRow) metaAiWatchRow.classList.toggle('active', isChecked);
+  if (aiWatchStatusBadge) {
+    if (isChecked) {
+      aiWatchStatusBadge.textContent = '🔔 巡回有効';
+      aiWatchStatusBadge.className = 'ai-watch-badge on';
+    } else {
+      aiWatchStatusBadge.textContent = '⚡ OFF';
+      aiWatchStatusBadge.className = 'ai-watch-badge off';
+    }
+  }
+}
+if (inputMemoAiWatch) inputMemoAiWatch.addEventListener('change', updateAiWatchUI);
+
 const modalPrompt = document.getElementById('modal-prompt');
 const promptOutputBox = document.getElementById('prompt-output-box');
 const modalGuide = document.getElementById('modal-guide');
@@ -977,6 +1010,7 @@ function createCardElement(memo) {
           ${pri.icon} ${pri.label}
         </span>
         ${memo.dueDate ? `<span class="badge-due" title="予定日時">📅 ${formatDueDate(memo.dueDate)}</span>` : ''}
+        ${memo.aiWatch ? `<span class="badge-ai-watch" title="Hermes自律巡回中 (頻度: ${AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '週1回'})">🤖 巡回: ${AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '週1回'}</span>` : ''}
       </div>
       <button class="btn-card-action prompt-copy" title="Antigravity用指示をコピー" onclick="copySingleMemoPrompt('${memo.id}', event)">
         ⚡
@@ -1043,6 +1077,7 @@ function renderList(filteredMemos) {
       <div class="list-item-left">
         ${isRecentNew ? '<span class="badge-new" title="新着メモ">✨ NEW</span>' : ''}
         <span class="badge ${cat.badgeClass}">${cat.icon} ${cat.label}</span>
+        ${memo.aiWatch ? `<span class="badge-ai-watch" title="Hermes自律巡回中 (頻度: ${AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '週1回'})">🤖 巡回: ${AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '週1回'}</span>` : ''}
         <div class="list-item-body">
           <div class="list-item-title">${escapeHtml(memo.title)}</div>
           <div class="list-item-desc">${escapeHtml(memo.description || '詳細なし')}</div>
@@ -1134,6 +1169,10 @@ function generateSinglePrompt(memo) {
 
   let prompt = `## 【Antigravityへの依頼】${memo.title}\n\n`;
   prompt += `**区分**: ${cat.icon} ${cat.label} | **優先度**: ${pri.icon} ${pri.label}\n`;
+  if (memo.aiWatch) {
+    const freqLabel = AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '週1回';
+    prompt += `**自律巡回 (Hermes)**: 巡回中 (頻度: ${freqLabel})\n`;
+  }
   if (memo.scope) {
     prompt += `**対象ファイル・スコープ**: \`${memo.scope}\`\n`;
   }
@@ -1175,6 +1214,10 @@ function generateBatchPrompt() {
     prompt += `### ${index + 1}. [${cat.label}] ${memo.title} (${pri.icon} 優先度: ${pri.label})\n`;
     if (memo.scope) {
       prompt += `- **対象**: \`${memo.scope}\`\n`;
+    }
+    if (memo.aiWatch) {
+      const freqLabel = AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '週1回';
+      prompt += `- **自律巡回 (Hermes)**: 巡回中 (頻度: ${freqLabel})\n`;
     }
     if (memo.images && Array.isArray(memo.images) && memo.images.length > 0) {
       prompt += `- **添付スクリーンショット**: あり (${memo.images.length}枚)\n`;
@@ -1533,6 +1576,11 @@ function openNewMemoModal() {
   const fixRadio = formMemo.querySelector('input[value="task"]');
   if (fixRadio) fixRadio.checked = true;
 
+  // 🤖 Hermes自律巡回設定を初期化
+  if (inputMemoAiWatch) inputMemoAiWatch.checked = false;
+  if (inputMemoAiFreq) inputMemoAiFreq.value = 'weekly';
+  updateAiWatchUI();
+
   // 添付画像を初期化
   currentAttachments = [];
   renderAttachmentsPreview();
@@ -1554,6 +1602,21 @@ function openEditMemoModal(id, event) {
   inputMemoStatus.value = memo.status === 'done' ? 'todo' : memo.status;
   inputMemoScope.value = memo.scope || '';
   inputMemoDue.value = memo.dueDate ? memo.dueDate.slice(0, 16) : '';
+
+  // 🤖 Hermes自律巡回設定の復元（既存データに頻度記述がある場合の後方互換付き）
+  let isAiWatch = !!memo.aiWatch;
+  let aiFreq = memo.aiFrequency || 'weekly';
+  if (!isAiWatch && (memo.description || '').match(/(?:頻度|巡回間隔)[:：]/)) {
+    isAiWatch = true;
+    const descText = memo.description || '';
+    if (descText.includes('毎日')) aiFreq = 'daily';
+    else if (descText.includes('3日')) aiFreq = 'every_3_days';
+    else if (descText.includes('月')) aiFreq = 'monthly';
+    else if (descText.includes('1回')) aiFreq = 'once';
+  }
+  if (inputMemoAiWatch) inputMemoAiWatch.checked = isAiWatch;
+  if (inputMemoAiFreq) inputMemoAiFreq.value = aiFreq;
+  updateAiWatchUI();
 
   // 既存の添付画像を読み込み
   currentAttachments = (memo.images && Array.isArray(memo.images)) ? [...memo.images] : [];
@@ -1608,6 +1671,8 @@ formMemo.addEventListener('submit', (e) => {
   const dueVal = inputMemoDue.value;
   const dueDate = dueVal ? new Date(dueVal).toISOString() : null;
   const category = formMemo.querySelector('input[name="memo-category"]:checked')?.value || 'task';
+  const aiWatch = inputMemoAiWatch ? inputMemoAiWatch.checked : false;
+  const aiFrequency = aiWatch ? (inputMemoAiFreq ? inputMemoAiFreq.value : 'weekly') : null;
 
   if (!title) return;
 
@@ -1622,6 +1687,8 @@ formMemo.addEventListener('submit', (e) => {
       memo.scope = scope;
       memo.category = category;
       memo.dueDate = dueDate;
+      memo.aiWatch = aiWatch;
+      memo.aiFrequency = aiFrequency;
       memo.images = [...currentAttachments]; // 添付画像を保存
       memo.updatedAt = new Date().toISOString();
       showToast('メモを更新しました', '💾');
@@ -1637,6 +1704,8 @@ formMemo.addEventListener('submit', (e) => {
       status,
       scope,
       dueDate,
+      aiWatch,
+      aiFrequency,
       images: [...currentAttachments], // 添付画像を保存
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
