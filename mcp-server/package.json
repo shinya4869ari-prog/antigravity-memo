@@ -1,0 +1,13 @@
+{
+  "name": "antigravity-memo-mcp",
+  "version": "1.0.0",
+  "description": "Model Context Protocol (MCP) Server for Antigravity Mission Hub (Memos & Tasks)",
+  "main": "index.mjs",
+  "type": "module",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "keywords": ["mcp", "model-context-protocol", "antigravity", "hermes", "memos"],
+  "author": "Antigravity Mission Hub",
+  "license": "MIT"
+}
