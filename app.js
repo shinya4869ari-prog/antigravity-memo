@@ -860,6 +860,7 @@ function updateStats() {
   const countSchedule = memos.filter(m => m.category === 'schedule').length;
   const countIdea = memos.filter(m => m.category === 'idea').length;
   const countOther = memos.filter(m => m.category === 'other' || (!['list', 'task', 'schedule', 'idea'].includes(m.category))).length;
+  const countAiWatch = memos.filter(m => !!m.aiWatch).length;
 
   const elAll = document.getElementById('count-all');
   const elList = document.getElementById('count-list');
@@ -867,6 +868,7 @@ function updateStats() {
   const elSchedule = document.getElementById('count-schedule');
   const elIdea = document.getElementById('count-idea');
   const elOther = document.getElementById('count-other');
+  const elAiWatch = document.getElementById('count-ai-watch');
 
   if (elAll) elAll.textContent = total;
   if (elList) elList.textContent = countList;
@@ -874,6 +876,7 @@ function updateStats() {
   if (elSchedule) elSchedule.textContent = countSchedule;
   if (elIdea) elIdea.textContent = countIdea;
   if (elOther) elOther.textContent = countOther;
+  if (elAiWatch) elAiWatch.textContent = countAiWatch;
 
   const countBacklog = memos.filter(m => m.status === 'backlog').length;
   const countTodo = memos.filter(m => m.status === 'todo' || m.status === 'done').length;
@@ -891,9 +894,11 @@ function updateStats() {
 // Filter Memos (Always sorted newest first)
 function getFilteredMemos() {
   const filtered = memos.filter(memo => {
-    // Category filter
+    // Category or Patrol filter
     if (activeCategoryFilter !== 'all') {
-      if (activeCategoryFilter === 'other') {
+      if (activeCategoryFilter === 'ai-watch') {
+        if (!memo.aiWatch) return false;
+      } else if (activeCategoryFilter === 'other') {
         const isOther = memo.category === 'other' || !['list', 'task', 'schedule', 'idea'].includes(memo.category);
         if (!isOther) return false;
       } else if (memo.category !== activeCategoryFilter) {

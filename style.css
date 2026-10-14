@@ -392,6 +392,16 @@ body {
   box-shadow: 0 0 12px rgba(243, 128, 32, 0.2);
 }
 
+.stat-chip.stat-chip-ai-watch.active {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.18);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.35);
+}
+
+.stat-chip.stat-chip-ai-watch .stat-count {
+  color: #34d399;
+}
+
 .stat-info {
   display: flex;
   align-items: center;
@@ -2561,8 +2571,12 @@ details[open] .editor-details-summary {
   padding: 12px 14px 14px;
 }
 
-/* スマホ向け: モーダルをほぼ全画面に */
+/* スマホ向け: 本文ファースト・消失防止・快適入力設計 (v21) */
 @media (max-width: 768px) {
+  .modal-overlay-fullscreen {
+    padding: 0 !important;
+  }
+
   .modal-content.modal-editor-fullscreen {
     width: 100vw !important;
     max-width: 100vw !important;
@@ -2570,17 +2584,130 @@ details[open] .editor-details-summary {
     max-height: 100dvh !important;
     border-radius: 0 !important;
     margin: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
 
-  .editor-textarea-full {
-    font-size: 1rem;
-    padding: 14px 16px;
-    min-height: 200px;
+  /* ヘッダーのスリム化 */
+  .modal-editor-header {
+    padding: 8px 12px !important;
+    flex-shrink: 0;
+  }
+  .modal-editor-header h2 {
+    font-size: 1rem !important;
+  }
+  .editor-header-badge {
+    font-size: 0.68rem !important;
+    padding: 2px 6px !important;
   }
 
+  /* スクロールボディの最適化：上下パディングを抑え、キーボード表示時も自然スクロール */
+  .editor-scrollable-body {
+    padding: 0 4px 16px 0 !important;
+    gap: 8px !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+
+  /* タイトル入力エリアのコンパクト化 */
+  .editor-top-bar {
+    padding: 0 0 4px 0 !important;
+    gap: 6px !important;
+  }
+  .editor-app-selector-bar {
+    gap: 4px !important;
+  }
+  .editor-app-selector-bar span {
+    font-size: 0.74rem !important;
+  }
+  .editor-title-input {
+    font-size: 0.95rem !important;
+    padding: 8px 12px !important;
+  }
+
+  /* 詳細設定の折りたたみ */
   .editor-details-summary {
-    font-size: 0.85rem;
-    padding: 10px 14px;
+    font-size: 0.8rem !important;
+    padding: 7px 10px !important;
+  }
+
+  /* ツールバーの1行スリム横スクロール化（縦幅の無駄な消費をゼロに） */
+  .editor-toolbar {
+    padding: 4px 6px !important;
+    gap: 4px !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .toolbar-tools {
+    flex-wrap: nowrap !important;
+    gap: 4px !important;
+    width: auto !important;
+    white-space: nowrap !important;
+  }
+  .btn-tool {
+    padding: 4px 7px !important;
+    font-size: 0.75rem !important;
+    flex-shrink: 0 !important;
+  }
+  .toolbar-status {
+    display: none !important; /* スマホでは幅節約のため文字数カウントバーを非表示 */
+  }
+
+  /* PC用ショートカットキー説明バーを非表示（スマホでは画面を圧迫するため削除） */
+  .pane-shortcut-bar {
+    display: none !important;
+  }
+
+  /* エディタ入力領域（本文ファースト）：十分な高さを確保し、画面内で大きく表示 */
+  .editor-workspace-simple {
+    flex: 1 0 auto !important;
+    min-height: 240px !important;
+    border-radius: var(--radius-sm) !important;
+  }
+  .editor-textarea-full {
+    font-size: 0.95rem !important;
+    padding: 12px 14px !important;
+    min-height: 240px !important;
+    line-height: 1.65 !important;
+    scroll-margin-bottom: 60px !important;
+  }
+
+  /* フッター保存バー */
+  .editor-footer {
+    padding: 8px 12px !important;
+    flex-shrink: 0;
+  }
+  .footer-info {
+    display: none !important;
+  }
+  .footer-actions {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+  }
+  .footer-actions .btn {
+    flex: 1 !important;
+    padding: 10px 14px !important;
+    font-size: 0.88rem !important;
+  }
+
+  /* 統計リボンの2列最適化 */
+  .stats-ribbon {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+  .stat-chip {
+    padding: 9px 12px !important;
+  }
+  .stat-icon {
+    font-size: 1.1rem !important;
+  }
+  .stat-label {
+    font-size: 0.75rem !important;
+  }
+  .stat-count {
+    font-size: 1.15rem !important;
   }
 }
 
@@ -3246,15 +3373,32 @@ details[open] .editor-details-summary {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 7px;
-  border-radius: 10px;
-  font-size: 0.7rem;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.72rem;
   font-weight: 700;
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.22);
+  border: 1px solid rgba(16, 185, 129, 0.55);
   color: #34d399;
   white-space: nowrap;
-  margin-left: 4px;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+}
+
+/* 🤖 Hermes自律巡回中カード（エメラルドグリーンの光るボーダー＆ネオングロー） */
+.memo-card.memo-card-ai-watch {
+  border: 1px solid rgba(16, 185, 129, 0.5) !important;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.15) !important;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, rgba(13, 20, 36, 0.85) 100%) !important;
+}
+
+.memo-card.memo-card-ai-watch::before {
+  background: #10b981 !important;
+  box-shadow: 0 0 10px #10b981;
+}
+
+.memo-card.memo-card-ai-watch:hover {
+  border-color: rgba(52, 211, 153, 0.85) !important;
+  box-shadow: 0 0 22px rgba(16, 185, 129, 0.32) !important;
 }
 
 

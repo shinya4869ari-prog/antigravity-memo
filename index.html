@@ -43,8 +43,8 @@
               </svg>
               <span id="cloud-sync-text">Cloud KV 同期済</span>
             </span>
-            <!-- App Version Badge & Cache Refresh Button (v20: Hermes自律巡回スイッチ & 頻度ドロップダウン実装) -->
-            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v20</span>
+            <!-- App Version Badge & Cache Refresh Button (v21: スマホ本文消失バグ解消 ＆ 巡回調査看板の視認化・絞り込み実装) -->
+            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v21</span>
             <button id="btn-cache-refresh" class="btn-cache-refresh" title="キャッシュをクリアして最新版に更新">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
@@ -160,6 +160,14 @@
         <span class="stat-count" id="count-idea">0</span>
       </div>
 
+      <div class="stat-chip stat-chip-ai-watch" data-filter="ai-watch" id="stat-ai-watch">
+        <div class="stat-info">
+          <span class="stat-icon">🤖</span>
+          <span class="stat-label">巡回中 (Hermes)</span>
+        </div>
+        <span class="stat-count" id="count-ai-watch">0</span>
+      </div>
+
       <div class="stat-chip" data-filter="other" id="stat-other">
         <div class="stat-info">
           <span class="stat-icon">📁</span>
@@ -182,6 +190,7 @@
       <div class="filters-group">
         <select id="filter-category" class="select-filter" aria-label="カテゴリー絞り込み">
           <option value="all">すべてのカテゴリー</option>
+          <option value="ai-watch">🤖 巡回中のみ (Hermes)</option>
           <option value="list">📋 リスト</option>
           <option value="task">✅ タスク</option>
           <option value="schedule">📅 スケジュール・メモ</option>
