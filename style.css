@@ -3401,5 +3401,13 @@ details[open] .editor-details-summary {
   box-shadow: 0 0 22px rgba(16, 185, 129, 0.32) !important;
 }
 
+/* 🤖 Hermes自律巡回中リスト行（エメラルドグリーンの光るボーダー＆アクセント） */
+.list-item.list-item-ai-watch {
+  border-left: 3px solid #10b981 !important;
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, rgba(13, 20, 36, 0.4) 100%) !important;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.1) !important;
+}
+
+
 
 

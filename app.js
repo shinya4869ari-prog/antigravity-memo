@@ -989,13 +989,28 @@ function renderKanban(filteredMemos) {
   });
 }
 
+// カード・リスト表示用の本文プレビュー整形（Markdown記号や余計な記号をすっきり除去して可読性向上）
+function formatCardPreview(text) {
+  if (!text) return '';
+  return text
+    .replace(/^#+\s+/gm, '') // 見出し記号（#見出し）を除去
+    .replace(/^[-*+]\s+\[[ xX]\]\s*/gm, '') // チェックボックス（- [ ]）を除去
+    .replace(/^[-*+]\s+/gm, '') // リスト記号（- 項目）を除去
+    .replace(/`{1,3}[^`]*`{1,3}/g, (m) => m.replace(/`/g, '')) // インラインコード
+    .replace(/\*\*([^*]+)\*\*/g, '$1') // 太字
+    .replace(/\*([^*]+)\*/g, '$1') // 斜体
+    .replace(/\n{2,}/g, ' ') // 複数改行を1つの空白に
+    .trim();
+}
+
 function createCardElement(memo) {
   const cat = CATEGORY_MAP[memo.category] || CATEGORY_MAP.other;
   const pri = PRIORITY_MAP[memo.priority] || PRIORITY_MAP.med;
   const isRecentNew = memo.createdAt && (Date.now() - new Date(memo.createdAt).getTime() < 86400000);
 
   const card = document.createElement('div');
-  card.className = 'memo-card';
+  // Hermes自律巡回中のメモは専用のエメラルドグリーン発光クラスを付与
+  card.className = 'memo-card' + (memo.aiWatch ? ' memo-card-ai-watch' : '');
   card.setAttribute('draggable', 'true');
   card.setAttribute('data-id', memo.id);
   card.style.setProperty('--card-accent', cat.color);
@@ -1023,7 +1038,7 @@ function createCardElement(memo) {
     </div>
 
     <div class="card-title">${escapeHtml(memo.title)}</div>
-    ${memo.description ? `<div class="card-desc">${escapeHtml(memo.description)}</div>` : ''}
+    ${memo.description ? `<div class="card-desc">${escapeHtml(formatCardPreview(memo.description))}</div>` : ''}
     ${memo.scope ? `<span class="card-scope">🎯 ${escapeHtml(memo.scope)}</span>` : ''}
 
     ${(memo.images && Array.isArray(memo.images) && memo.images.length > 0) ? `
@@ -1077,7 +1092,7 @@ function renderList(filteredMemos) {
     const isRecentNew = memo.createdAt && (Date.now() - new Date(memo.createdAt).getTime() < 86400000);
 
     const item = document.createElement('div');
-    item.className = 'list-item';
+    item.className = 'list-item' + (memo.aiWatch ? ' list-item-ai-watch' : '');
     item.innerHTML = `
       <div class="list-item-left">
         ${isRecentNew ? '<span class="badge-new" title="新着メモ">✨ NEW</span>' : ''}
@@ -1085,7 +1100,7 @@ function renderList(filteredMemos) {
         ${memo.aiWatch ? `<span class="badge-ai-watch" title="Hermes自律巡回中 (頻度: ${AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '週1回'})">🤖 巡回: ${AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '週1回'}</span>` : ''}
         <div class="list-item-body">
           <div class="list-item-title">${escapeHtml(memo.title)}</div>
-          <div class="list-item-desc">${escapeHtml(memo.description || '詳細なし')}</div>
+          <div class="list-item-desc">${escapeHtml(formatCardPreview(memo.description) || '詳細なし')}</div>
           ${(memo.images && Array.isArray(memo.images) && memo.images.length > 0) ? `
             <div class="card-attachments-strip" style="margin-top: 6px;">
               ${memo.images.map((imgSrc, idx) => `
