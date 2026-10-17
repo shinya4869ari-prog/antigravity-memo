@@ -43,8 +43,8 @@
               </svg>
               <span id="cloud-sync-text">Cloud KV 同期済</span>
             </span>
-            <!-- App Version Badge & Cache Refresh Button (v21: スマホ本文消失バグ解消 ＆ 巡回調査看板の視認化・絞り込み実装) -->
-            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v21</span>
+            <!-- App Version Badge & Cache Refresh Button (v22: Antigravity事前調査・提案ボタン刷新＆提案ファイル連携) -->
+            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v22</span>
             <button id="btn-cache-refresh" class="btn-cache-refresh" title="キャッシュをクリアして最新版に更新">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
@@ -163,7 +163,7 @@
       <div class="stat-chip stat-chip-ai-watch" data-filter="ai-watch" id="stat-ai-watch">
         <div class="stat-info">
           <span class="stat-icon">🤖</span>
-          <span class="stat-label">巡回中 (Hermes)</span>
+          <span class="stat-label">事前提案 (Anti)</span>
         </div>
         <span class="stat-count" id="count-ai-watch">0</span>
       </div>
@@ -190,7 +190,7 @@
       <div class="filters-group">
         <select id="filter-category" class="select-filter" aria-label="カテゴリー絞り込み">
           <option value="all">すべてのカテゴリー</option>
-          <option value="ai-watch">🤖 巡回中のみ (Hermes)</option>
+          <option value="ai-watch">🤖 事前提案対象のみ (Anti)</option>
           <option value="list">📋 リスト</option>
           <option value="task">✅ タスク</option>
           <option value="schedule">📅 スケジュール・メモ</option>
@@ -387,23 +387,22 @@
                 </div>
               </div>
 
-              <!-- 🤖 Hermes 自律巡回・調査 設定バー (提案B) -->
+              <!-- 🤖 Antigravity 事前調査・提案 設定バー -->
               <div class="meta-ai-watch-row" id="meta-ai-watch-row">
                 <div class="ai-watch-toggle-box">
                   <label class="ai-watch-label" for="input-memo-ai-watch">
                     <input type="checkbox" id="input-memo-ai-watch" class="ai-watch-checkbox">
-                    <span class="ai-watch-title">🤖 Hermes自律巡回・調査</span>
+                    <span class="ai-watch-title">🤖 Antigravity 事前調査・提案</span>
                   </label>
                   <span id="ai-watch-status-badge" class="ai-watch-badge off">⚡ OFF</span>
                 </div>
                 <div id="ai-frequency-container" class="ai-freq-container" style="display: none;">
-                  <label for="input-memo-ai-freq" class="ai-freq-label">巡回頻度:</label>
+                  <label for="input-memo-ai-freq" class="ai-freq-label">提案モード:</label>
                   <select id="input-memo-ai-freq" class="form-select form-select-compact ai-freq-select">
-                    <option value="weekly" selected>📅 週1回 (おすすめ)</option>
-                    <option value="daily">⚡ 毎日 (毎朝08:00)</option>
-                    <option value="every_3_days">🔄 3日おき</option>
-                    <option value="monthly">🗓️ 月1回</option>
-                    <option value="once">🎯 1回のみ (完了後スキップ)</option>
+                    <option value="once" selected>🎯 事前提案ファイル作成＆通知 (1回完結・おすすめ)</option>
+                    <option value="weekly">📅 週1回チェック</option>
+                    <option value="every_3_days">🔄 3日おきチェック</option>
+                    <option value="monthly">🗓️ 月1回チェック</option>
                   </select>
                 </div>
               </div>

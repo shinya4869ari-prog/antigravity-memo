@@ -20,8 +20,8 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Cloudflare KV エンドポイント（環境変数 MEMO_API_URL、未指定時はローカルフォールバック）
-const MEMO_API_URL = process.env.MEMO_API_URL || '';
+// Cloudflare KV エンドポイント（環境変数 MEMO_API_URL、未指定時は本番Cloudflare KVエンドポイントへ直結）
+const MEMO_API_URL = process.env.MEMO_API_URL || 'https://antigravity-memo.shinya4869ari.workers.dev/api/memos';
 // ローカルバックアップ用キャッシュファイル
 const LOCAL_CACHE_FILE = path.resolve(__dirname, 'memos_local_cache.json');
 // ルートの MEMOS.md のパス
@@ -125,16 +125,19 @@ function parseMemosFromMarkdown(filePath) {
       const lines = sec.trim().split('\n');
       const title = lines[0] ? lines[0].replace(/^【.*?】\s*/, '').trim() : `Memo ${idx + 1}`;
       const content = lines.slice(1).join('\n').trim();
-      const isPatrol = sec.includes('巡回中') || sec.includes('自律巡回');
+      const isPatrol = sec.includes('巡回中') || sec.includes('自律巡回') || sec.includes('事前調査・提案');
       return {
         id: `memo-${Date.now()}-${idx}`,
         title: lines[0] || '無題',
+        description: content,
         content: content,
-        category: 'タスク',
-        priority: sec.includes('🔥') ? 'high' : 'medium',
-        status: sec.includes('✅') ? 'done' : 'pending',
+        category: 'task',
+        priority: sec.includes('🔥') ? 'high' : 'med',
+        status: sec.includes('✅') ? 'done' : 'todo',
+        aiWatch: isPatrol,
+        aiFrequency: 'once',
         hermesPatrol: isPatrol,
-        hermesFrequency: 'weekly',
+        hermesFrequency: 'once',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -150,13 +153,16 @@ function parseMemosFromMarkdown(filePath) {
 function syncToMarkdown(memos, filePath) {
   const lines = ['# Antigravity Mission Hub - 共有メモ一覧\n'];
   for (const m of memos) {
+    const isWatch = !!(m.aiWatch || m.hermesPatrol);
+    const freq = m.aiFrequency || m.hermesFrequency || 'once';
+    const body = m.description !== undefined ? m.description : (m.content || '');
     lines.push(`## ${m.title}`);
     lines.push(`- **ID**: \`${m.id}\``);
-    lines.push(`- **カテゴリー**: ${m.category || '一般'} | **優先度**: ${m.priority || 'medium'} | **ステータス**: ${m.status || 'pending'}`);
-    if (m.hermesPatrol) {
-      lines.push(`- **自律巡回 (Hermes)**: 巡回中 (頻度: ${m.hermesFrequency || 'weekly'})`);
+    lines.push(`- **カテゴリー**: ${m.category || 'task'} | **優先度**: ${m.priority || 'med'} | **ステータス**: ${m.status || 'todo'}`);
+    if (isWatch) {
+      lines.push(`- **事前調査・提案 (Antigravity)**: 対象 (モード: ${freq}${m.aiProposed ? ' / 提案済' : ''})`);
     }
-    lines.push(`\n${m.content || ''}\n`);
+    lines.push(`\n${body}\n`);
     lines.push('---\n');
   }
   fs.writeFileSync(filePath, lines.join('\n'), 'utf-8');
@@ -168,17 +174,17 @@ function syncToMarkdown(memos, filePath) {
 const TOOLS = [
   {
     name: 'list_memos',
-    description: 'メモ・タスク一覧を取得します。ステータスやHermes自律巡回フラグでフィルタ可能です。',
+    description: 'メモ・タスク一覧を取得します。ステータスやAntigravity事前提案フラグでフィルタ可能です。',
     inputSchema: {
       type: 'object',
       properties: {
         patrol_only: {
           type: 'boolean',
-          description: 'trueにするとHermes自律巡回が有効（hermesPatrol: true）のメモのみを抽出します'
+          description: 'trueにするとAntigravity事前調査・提案が有効（aiWatch: true）のメモのみを抽出します'
         },
         status: {
           type: 'string',
-          description: 'ステータスで絞り込み (pending: 未着手, in-progress: 進行中, done: 完了)'
+          description: 'ステータスで絞り込み (todo/pending: 未着手, in_progress: 進行中, done: 完了)'
         },
         category: {
           type: 'string',
@@ -217,23 +223,23 @@ const TOOLS = [
         },
         category: {
           type: 'string',
-          description: 'カテゴリー（例: タスク, アイデア, 調査, 議事録）'
+          description: 'カテゴリー（task, list, schedule, idea, other）'
         },
         priority: {
           type: 'string',
-          description: '優先度 (low, medium, high, urgent)'
+          description: '優先度 (low, med, high)'
         },
         status: {
           type: 'string',
-          description: 'ステータス (pending, in-progress, done)'
+          description: 'ステータス (todo, in_progress, done)'
         },
         hermes_patrol: {
           type: 'boolean',
-          description: 'Hermes自律巡回を有効にするかどうか'
+          description: 'Antigravity事前調査・提案を有効にするかどうか'
         },
         hermes_frequency: {
           type: 'string',
-          description: '巡回頻度（weekly, daily, 3days, monthly, once）'
+          description: '提案モード（once, weekly, every_3_days, monthly）'
         }
       },
       required: ['title', 'content']
@@ -241,7 +247,7 @@ const TOOLS = [
   },
   {
     name: 'update_memo',
-    description: '既存メモのステータス変更、本文の書き換え、または調査結果の追記を行います。',
+    description: '既存メモのステータス変更、本文の書き換え、または調査・提案結果の追記を行います。',
     inputSchema: {
       type: 'object',
       properties: {
@@ -251,11 +257,11 @@ const TOOLS = [
         },
         status: {
           type: 'string',
-          description: '新しいステータス (pending, in-progress, done)'
+          description: '新しいステータス (todo, in_progress, done)'
         },
         content_append: {
           type: 'string',
-          description: '本文の末尾に追記するテキスト（調査結果や進捗メモなど）'
+          description: '本文の末尾に追記するテキスト（事前提案や調査結果など）'
         },
         content: {
           type: 'string',
@@ -263,7 +269,7 @@ const TOOLS = [
         },
         hermes_patrol: {
           type: 'boolean',
-          description: '巡回フラグの更新 (true / false)'
+          description: '事前提案フラグの更新 (true / false)'
         }
       },
       required: ['id']
@@ -281,7 +287,7 @@ async function handleToolCall(name, args) {
     case 'list_memos': {
       let filtered = [...memos];
       if (args.patrol_only) {
-        filtered = filtered.filter(m => m.hermesPatrol === true);
+        filtered = filtered.filter(m => m.aiWatch === true || m.hermesPatrol === true);
       }
       if (args.status) {
         filtered = filtered.filter(m => m.status === args.status);
@@ -290,16 +296,23 @@ async function handleToolCall(name, args) {
         filtered = filtered.filter(m => m.category === args.category);
       }
 
-      const summary = filtered.map(m => ({
-        id: m.id,
-        title: m.title,
-        category: m.category || '一般',
-        priority: m.priority || 'medium',
-        status: m.status || 'pending',
-        hermesPatrol: !!m.hermesPatrol,
-        hermesFrequency: m.hermesFrequency || 'weekly',
-        updatedAt: m.updatedAt || m.createdAt
-      }));
+      const summary = filtered.map(m => {
+        const isWatch = !!(m.aiWatch || m.hermesPatrol);
+        const freq = m.aiFrequency || m.hermesFrequency || 'once';
+        return {
+          id: m.id,
+          title: m.title,
+          category: m.category || 'task',
+          priority: m.priority || 'med',
+          status: m.status || 'todo',
+          aiWatch: isWatch,
+          aiFrequency: freq,
+          aiProposed: !!m.aiProposed,
+          hermesPatrol: isWatch,
+          hermesFrequency: freq,
+          updatedAt: m.updatedAt || m.createdAt
+        };
+      });
 
       return {
         count: summary.length,
@@ -308,24 +321,34 @@ async function handleToolCall(name, args) {
     }
 
     case 'get_memo': {
-      const memo = memos.find(m => m.id === args.id || m.title.includes(args.id));
+      const memo = memos.find(m => m.id === args.id || (m.title && m.title.includes(args.id)));
       if (!memo) {
         throw new Error(`メモが見つかりませんでした (ID: ${args.id})`);
       }
-      return memo;
+      return {
+        ...memo,
+        content: memo.description !== undefined ? memo.description : (memo.content || ''),
+        description: memo.description !== undefined ? memo.description : (memo.content || ''),
+        aiWatch: !!(memo.aiWatch || memo.hermesPatrol)
+      };
     }
 
     case 'create_memo': {
       const now = new Date().toISOString();
+      const isWatch = args.hermes_patrol !== undefined ? args.hermes_patrol : false;
+      const freq = args.hermes_frequency || 'once';
       const newMemo = {
         id: `memo-${Date.now()}`,
         title: args.title,
+        description: args.content,
         content: args.content,
-        category: args.category || 'タスク',
-        priority: args.priority || 'medium',
-        status: args.status || 'pending',
-        hermesPatrol: args.hermes_patrol !== undefined ? args.hermes_patrol : false,
-        hermesFrequency: args.hermes_frequency || 'weekly',
+        category: args.category || 'task',
+        priority: args.priority || 'med',
+        status: args.status || 'todo',
+        aiWatch: isWatch,
+        aiFrequency: freq,
+        hermesPatrol: isWatch,
+        hermesFrequency: freq,
         createdAt: now,
         updatedAt: now
       };
@@ -341,19 +364,29 @@ async function handleToolCall(name, args) {
     }
 
     case 'update_memo': {
-      const idx = memos.findIndex(m => m.id === args.id || m.title.includes(args.id));
+      const idx = memos.findIndex(m => m.id === args.id || (m.title && m.title.includes(args.id)));
       if (idx === -1) {
         throw new Error(`更新対象のメモが見つかりませんでした (ID: ${args.id})`);
       }
 
       const memo = memos[idx];
       const now = new Date().toISOString();
+      const currentBody = memo.description !== undefined ? memo.description : (memo.content || '');
 
       if (args.status !== undefined) memo.status = args.status;
-      if (args.hermes_patrol !== undefined) memo.hermesPatrol = args.hermes_patrol;
-      if (args.content !== undefined) memo.content = args.content;
+      if (args.hermes_patrol !== undefined) {
+        memo.aiWatch = args.hermes_patrol;
+        memo.hermesPatrol = args.hermes_patrol;
+      }
+      if (args.content !== undefined) {
+        memo.description = args.content;
+        memo.content = args.content;
+      }
       if (args.content_append) {
-        memo.content = `${memo.content || ''}\n\n### 🤖 AI追記 (${now.slice(0, 16).replace('T', ' ')})\n${args.content_append}`.trim();
+        const updatedBody = `${currentBody}\n\n### 🤖 Antigravity 事前提案・追記 (${now.slice(0, 16).replace('T', ' ')})\n${args.content_append}`.trim();
+        memo.description = updatedBody;
+        memo.content = updatedBody;
+        memo.aiProposed = true;
       }
       memo.updatedAt = now;
 

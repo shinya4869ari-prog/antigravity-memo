@@ -189,20 +189,20 @@ const editorCharCount = document.getElementById('editor-char-count');
 const editorWorkspace = document.getElementById('editor-workspace');
 const btnCopyEditorPrompt = document.getElementById('btn-copy-editor-prompt');
 
-// 🤖 Hermes AI自律巡回設定要素 (v20)
+// 🤖 Antigravity AI事前調査・提案設定要素 (v22)
 const inputMemoAiWatch = document.getElementById('input-memo-ai-watch');
 const inputMemoAiFreq = document.getElementById('input-memo-ai-freq');
 const aiFrequencyContainer = document.getElementById('ai-frequency-container');
 const aiWatchStatusBadge = document.getElementById('ai-watch-status-badge');
 const metaAiWatchRow = document.getElementById('meta-ai-watch-row');
 
-// 巡回頻度ラベルマップ
+// 提案モードラベルマップ
 const AI_FREQ_LABEL_MAP = {
+  once: '事前提案',
   daily: '毎日',
   every_3_days: '3日おき',
   weekly: '週1回',
-  monthly: '月1回',
-  once: '1回のみ'
+  monthly: '月1回'
 };
 
 function updateAiWatchUI() {
@@ -212,7 +212,7 @@ function updateAiWatchUI() {
   if (metaAiWatchRow) metaAiWatchRow.classList.toggle('active', isChecked);
   if (aiWatchStatusBadge) {
     if (isChecked) {
-      aiWatchStatusBadge.textContent = '🔔 巡回有効';
+      aiWatchStatusBadge.textContent = '🔔 提案対象 (Anti)';
       aiWatchStatusBadge.className = 'ai-watch-badge on';
     } else {
       aiWatchStatusBadge.textContent = '⚡ OFF';
@@ -1009,7 +1009,7 @@ function createCardElement(memo) {
   const isRecentNew = memo.createdAt && (Date.now() - new Date(memo.createdAt).getTime() < 86400000);
 
   const card = document.createElement('div');
-  // Hermes自律巡回中のメモは専用のエメラルドグリーン発光クラスを付与
+  // Antigravity事前提案対象のメモは専用のエメラルドグリーン発光クラスを付与
   card.className = 'memo-card' + (memo.aiWatch ? ' memo-card-ai-watch' : '');
   card.setAttribute('draggable', 'true');
   card.setAttribute('data-id', memo.id);
@@ -1030,7 +1030,7 @@ function createCardElement(memo) {
           ${pri.icon} ${pri.label}
         </span>
         ${memo.dueDate ? `<span class="badge-due" title="予定日時">📅 ${formatDueDate(memo.dueDate)}</span>` : ''}
-        ${memo.aiWatch ? `<span class="badge-ai-watch" title="Hermes自律巡回中 (頻度: ${AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '週1回'})">🤖 巡回: ${AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '週1回'}</span>` : ''}
+        ${memo.aiWatch ? `<span class="badge-ai-watch" title="Antigravity事前調査・提案 (${memo.aiProposed ? '提案ファイル作成済' : (AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '事前提案')})">${memo.aiProposed ? '✅ Anti提案済' : `🤖 Anti提案: ${AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '事前提案'}`}</span>` : ''}
       </div>
       <button class="btn-card-action prompt-copy" title="Antigravity用指示をコピー" onclick="copySingleMemoPrompt('${memo.id}', event)">
         ⚡
@@ -1097,7 +1097,7 @@ function renderList(filteredMemos) {
       <div class="list-item-left">
         ${isRecentNew ? '<span class="badge-new" title="新着メモ">✨ NEW</span>' : ''}
         <span class="badge ${cat.badgeClass}">${cat.icon} ${cat.label}</span>
-        ${memo.aiWatch ? `<span class="badge-ai-watch" title="Hermes自律巡回中 (頻度: ${AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '週1回'})">🤖 巡回: ${AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '週1回'}</span>` : ''}
+        ${memo.aiWatch ? `<span class="badge-ai-watch" title="Antigravity事前調査・提案 (${memo.aiProposed ? '提案ファイル作成済' : (AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '事前提案')})">${memo.aiProposed ? '✅ Anti提案済' : `🤖 Anti提案: ${AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '事前提案'}`}</span>` : ''}
         <div class="list-item-body">
           <div class="list-item-title">${escapeHtml(memo.title)}</div>
           <div class="list-item-desc">${escapeHtml(formatCardPreview(memo.description) || '詳細なし')}</div>
@@ -1190,8 +1190,8 @@ function generateSinglePrompt(memo) {
   let prompt = `## 【Antigravityへの依頼】${memo.title}\n\n`;
   prompt += `**区分**: ${cat.icon} ${cat.label} | **優先度**: ${pri.icon} ${pri.label}\n`;
   if (memo.aiWatch) {
-    const freqLabel = AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '週1回';
-    prompt += `**自律巡回 (Hermes)**: 巡回中 (頻度: ${freqLabel})\n`;
+    const freqLabel = AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '事前提案';
+    prompt += `**事前調査・提案 (Antigravity)**: 対象 (${freqLabel})\n`;
   }
   if (memo.scope) {
     prompt += `**対象ファイル・スコープ**: \`${memo.scope}\`\n`;
@@ -1236,8 +1236,8 @@ function generateBatchPrompt() {
       prompt += `- **対象**: \`${memo.scope}\`\n`;
     }
     if (memo.aiWatch) {
-      const freqLabel = AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '週1回';
-      prompt += `- **自律巡回 (Hermes)**: 巡回中 (頻度: ${freqLabel})\n`;
+      const freqLabel = AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '事前提案';
+      prompt += `- **事前調査・提案 (Antigravity)**: 対象 (${freqLabel})\n`;
     }
     if (memo.images && Array.isArray(memo.images) && memo.images.length > 0) {
       prompt += `- **添付スクリーンショット**: あり (${memo.images.length}枚)\n`;
@@ -1596,9 +1596,9 @@ function openNewMemoModal() {
   const fixRadio = formMemo.querySelector('input[value="task"]');
   if (fixRadio) fixRadio.checked = true;
 
-  // 🤖 Hermes自律巡回設定を初期化
+  // 🤖 Antigravity事前調査・提案設定を初期化
   if (inputMemoAiWatch) inputMemoAiWatch.checked = false;
-  if (inputMemoAiFreq) inputMemoAiFreq.value = 'weekly';
+  if (inputMemoAiFreq) inputMemoAiFreq.value = 'once';
   updateAiWatchUI();
 
   // 添付画像を初期化
@@ -1623,16 +1623,16 @@ function openEditMemoModal(id, event) {
   inputMemoScope.value = memo.scope || '';
   inputMemoDue.value = memo.dueDate ? memo.dueDate.slice(0, 16) : '';
 
-  // 🤖 Hermes自律巡回設定の復元（既存データに頻度記述がある場合の後方互換付き）
+  // 🤖 Antigravity事前調査・提案設定の復元（既存データに頻度記述がある場合の後方互換付き）
   let isAiWatch = !!memo.aiWatch;
-  let aiFreq = memo.aiFrequency || 'weekly';
+  let aiFreq = memo.aiFrequency || 'once';
   if (!isAiWatch && (memo.description || '').match(/(?:頻度|巡回間隔)[:：]/)) {
     isAiWatch = true;
     const descText = memo.description || '';
-    if (descText.includes('毎日')) aiFreq = 'daily';
+    if (descText.includes('週')) aiFreq = 'weekly';
     else if (descText.includes('3日')) aiFreq = 'every_3_days';
     else if (descText.includes('月')) aiFreq = 'monthly';
-    else if (descText.includes('1回')) aiFreq = 'once';
+    else aiFreq = 'once';
   }
   if (inputMemoAiWatch) inputMemoAiWatch.checked = isAiWatch;
   if (inputMemoAiFreq) inputMemoAiFreq.value = aiFreq;
@@ -1692,7 +1692,7 @@ formMemo.addEventListener('submit', (e) => {
   const dueDate = dueVal ? new Date(dueVal).toISOString() : null;
   const category = formMemo.querySelector('input[name="memo-category"]:checked')?.value || 'task';
   const aiWatch = inputMemoAiWatch ? inputMemoAiWatch.checked : false;
-  const aiFrequency = aiWatch ? (inputMemoAiFreq ? inputMemoAiFreq.value : 'weekly') : null;
+  const aiFrequency = aiWatch ? (inputMemoAiFreq ? inputMemoAiFreq.value : 'once') : null;
 
   if (!title) return;
 
