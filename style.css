@@ -796,70 +796,105 @@ body {
   border-color: #6366f1;
 }
 
-/* List View */
+/* List View (スマホ・PC対応: 内容がしっかり読めるモダンカードリスト) */
 .list-view-container {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .list-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   transition: all var(--transition-normal);
-  gap: 16px;
+  cursor: pointer;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .list-item:hover {
   background: var(--bg-card-hover);
   border-color: var(--border-medium);
-  transform: translateX(4px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-.list-item-left {
+/* 上段: バッジ・タグ群（スマホでも自然に折り返し） */
+.list-item-header {
   display: flex;
   align-items: center;
-  gap: 14px;
-  flex: 1;
-  min-width: 0;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
 }
 
+.list-item-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* 中段: メモのタイトルと詳細本文（横幅いっぱいに表示） */
 .list-item-body {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  flex: 1;
+  gap: 6px;
+  width: 100%;
   min-width: 0;
 }
 
 .list-item-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.4;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .list-item-desc {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: var(--text-secondary);
-  white-space: nowrap;
+  line-height: 1.5;
+  word-break: break-word;
+  white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+/* 下段: アクションボタン（カレンダー・⚡・編集・削除） */
+.list-item-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.list-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .list-item-status-pill {
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: 9999px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 /* Empty State */
