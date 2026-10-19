@@ -1093,39 +1093,28 @@ function renderList(filteredMemos) {
 
     const item = document.createElement('div');
     item.className = 'list-item' + (memo.aiWatch ? ' list-item-ai-watch' : '');
-    // リストアイテムの構造: スマホでも内容が潰れずしっかり読めるよう、タグ・本文・ボタンをすっきり分離
+    // リスト表示: カンバンカードと差別化されたスリム一覧行（タイトルが明瞭・コンパクト）
     item.innerHTML = `
-      <div class="list-item-header">
-        <div class="list-item-tags">
-          ${isRecentNew ? '<span class="badge-new" title="新着メモ">✨ NEW</span>' : ''}
-          <span class="badge ${cat.badgeClass}">${cat.icon} ${cat.label}</span>
-          <span class="badge ${pri.badgeClass}">${pri.icon} ${pri.label}</span>
+      <div class="list-item-main">
+        <div class="list-item-title-row">
+          <span class="list-item-icon">${cat.icon}</span>
+          ${isRecentNew ? '<span class="badge-new-micro">NEW</span>' : ''}
+          <span class="list-item-title" title="${escapeHtml(memo.title)}">${escapeHtml(memo.title)}</span>
+          ${memo.aiWatch ? `<span class="badge-ai-micro" title="AI提案対象: ${memo.aiProposed ? '提案済' : '巡回中'}">🤖</span>` : ''}
+        </div>
+        <div class="list-item-sub-row">
+          <span class="badge-micro ${cat.badgeClass}">${cat.label}</span>
+          <span class="badge-micro ${pri.badgeClass}">${pri.icon} ${pri.label}</span>
           <span class="list-item-status-pill">${stat.icon} ${stat.label}</span>
-          ${memo.dueDate ? `<span class="badge-due">📅 ${formatDueDate(memo.dueDate)}</span>` : ''}
-          ${memo.aiWatch ? `<span class="badge-ai-watch" title="Antigravity事前調査・提案 (${memo.aiProposed ? '提案ファイル作成済' : (AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '事前提案')})">${memo.aiProposed ? '✅ Anti提案済' : `🤖 Anti提案: ${AI_FREQ_LABEL_MAP[memo.aiFrequency] || memo.aiFrequency || '事前提案'}`}</span>` : ''}
+          ${memo.dueDate ? `<span class="badge-due-micro">📅 ${formatDueDate(memo.dueDate)}</span>` : ''}
+          ${(memo.description && memo.description.trim()) ? `<span class="list-item-preview-text">${escapeHtml(formatCardPreview(memo.description))}</span>` : ''}
         </div>
       </div>
-      <div class="list-item-body">
-        <div class="list-item-title">${escapeHtml(memo.title)}</div>
-        <div class="list-item-desc">${escapeHtml(formatCardPreview(memo.description) || '詳細なし')}</div>
-        ${(memo.images && Array.isArray(memo.images) && memo.images.length > 0) ? `
-          <div class="card-attachments-strip" style="margin-top: 6px;">
-            ${memo.images.map((imgSrc, idx) => `
-              <div class="card-thumb-preview" title="スクショをクリックして拡大表示" onclick="event.stopPropagation(); openLightbox('${imgSrc}')">
-                <img src="${imgSrc}" alt="スクショ ${idx + 1}" loading="lazy">
-                <span class="card-thumb-badge">📸 ${idx + 1}</span>
-              </div>
-            `).join('')}
-          </div>
-        ` : ''}
-      </div>
-      <div class="list-item-footer">
-        <div class="list-item-actions">
-          <button class="btn-card-action" title="Googleカレンダーに登録" onclick="openMemoGoogleCalendar('${memo.id}', event)">📅</button>
-          <button class="btn-card-action prompt-copy" title="Antigravity用指示をコピー" onclick="copySingleMemoPrompt('${memo.id}', event)">⚡</button>
-          <button class="btn-card-action" title="編集" onclick="openEditMemoModal('${memo.id}', event)">✏️</button>
-          <button class="btn-card-action" title="削除" onclick="deleteMemo('${memo.id}', event)">🗑️</button>
-        </div>
+      <div class="list-item-actions">
+        <button class="btn-card-action prompt-copy" title="Antigravity用指示をコピー" onclick="copySingleMemoPrompt('${memo.id}', event)">⚡</button>
+        <button class="btn-card-action" title="Googleカレンダーに登録" onclick="openMemoGoogleCalendar('${memo.id}', event)">📅</button>
+        <button class="btn-card-action" title="編集" onclick="openEditMemoModal('${memo.id}', event)">✏️</button>
+        <button class="btn-card-action" title="削除" onclick="deleteMemo('${memo.id}', event)">🗑️</button>
       </div>
     `;
 

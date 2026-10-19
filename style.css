@@ -796,105 +796,164 @@ body {
   border-color: #6366f1;
 }
 
-/* List View (スマホ・PC対応: 内容がしっかり読めるモダンカードリスト) */
+/* ==========================================================================
+   List View (カンバンと明確に差別化されたスリム一覧行デザイン)
+   ========================================================================== */
 .list-view-container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px; /* スリムに並べるため余白を6pxに */
 }
 
+/* 1行スリムリストアイテム */
 .list-item {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   transition: all var(--transition-normal);
   cursor: pointer;
   box-sizing: border-box;
   width: 100%;
+  gap: 12px;
 }
 
 .list-item:hover {
   background: var(--bg-card-hover);
   border-color: var(--border-medium);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transform: translateX(3px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* 上段: バッジ・タグ群（スマホでも自然に折り返し） */
-.list-item-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  gap: 8px;
-}
-
-.list-item-tags {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-/* 中段: メモのタイトルと詳細本文（横幅いっぱいに表示） */
-.list-item-body {
+/* メイン情報部（タイトル行 ＋ サブ情報行） */
+.list-item-main {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  width: 100%;
+  gap: 4px;
+  flex: 1;
   min-width: 0;
 }
 
-.list-item-title {
-  font-size: 1.02rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.4;
-  word-break: break-word;
-  white-space: normal;
+/* タイトル行: アイコン ＋ NEWバッジ ＋ 太字タイトル ＋ AIバッジ */
+.list-item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
-.list-item-desc {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  word-break: break-word;
-  white-space: pre-wrap;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
+.list-item-icon {
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+
+.list-item-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* サブ情報行: カテゴリ・優先度・ステータス・プレビュー */
+.list-item-sub-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  flex-wrap: nowrap;
   overflow: hidden;
 }
 
-/* 下段: アクションボタン（カレンダー・⚡・編集・削除） */
-.list-item-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  width: 100%;
-  padding-top: 8px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+.badge-micro {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 
+.badge-new-micro {
+  background: #f59e0b;
+  color: #000;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.badge-ai-micro {
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.badge-due-micro {
+  font-size: 0.7rem;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  padding: 1px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.list-item-preview-text {
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  font-size: 0.75rem;
+}
+
+/* 右端のアクションボタン群（コンパクト表示） */
 .list-item-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.list-item-actions .btn-card-action {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
 }
 
 .list-item-status-pill {
-  padding: 3px 8px;
-  border-radius: 9999px;
-  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
   font-weight: 600;
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-secondary);
   white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* スマホ対応: 非常に狭い画面（480px以下）でもタイトルが最優先で読める */
+@media (max-width: 480px) {
+  .list-item {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .list-item-title {
+    font-size: 0.9rem;
+  }
+  .list-item-preview-text {
+    display: none; /* スマホの超狭画面では本文プレビューを隠してタグとタイトルを最優先 */
+  }
 }
 
 /* Empty State */
