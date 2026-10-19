@@ -43,8 +43,8 @@
               </svg>
               <span id="cloud-sync-text">Cloud KV 同期済</span>
             </span>
-            <!-- App Version Badge & Cache Refresh Button (v22: Antigravity事前調査・提案ボタン刷新＆提案ファイル連携) -->
-            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v22</span>
+            <!-- App Version Badge & Cache Refresh Button (v23: リスト表示スリム一覧行化＆上に戻るボタン) -->
+            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v23</span>
             <button id="btn-cache-refresh" class="btn-cache-refresh" title="キャッシュをクリアして最新版に更新">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
@@ -821,6 +821,13 @@
 
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toast-container"></div>
+
+  <!-- Floating Scroll To Top Button (スクロール追従・上に戻るボタン) -->
+  <button id="btn-scroll-top" class="btn-scroll-top" aria-label="ページ最上部へ戻る" title="上に戻る">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="18 15 12 9 6 15"></polyline>
+    </svg>
+  </button>
 
   <!-- Application Logic (v23) -->
   <script src="app.js?v=20261019_v23"></script>

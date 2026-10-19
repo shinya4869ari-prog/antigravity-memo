@@ -3502,6 +3502,50 @@ details[open] .editor-details-summary {
   box-shadow: 0 0 10px rgba(16, 185, 129, 0.1) !important;
 }
 
+/* ==========================================================================
+   Floating Scroll-To-Top Button (スクロール追従・上に戻るボタン)
+   ========================================================================== */
+.btn-scroll-top {
+  position: fixed;
+  bottom: 24px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(243, 128, 32, 0.6);
+  color: var(--cf-orange);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 950;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 10px rgba(243, 128, 32, 0.25);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(12px) scale(0.9);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-scroll-top.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.btn-scroll-top:hover {
+  background: var(--cf-orange);
+  color: #fff;
+  border-color: #fff;
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(243, 128, 32, 0.45);
+}
+
+.btn-scroll-top:active {
+  transform: translateY(0) scale(0.95);
+}
+
 
 
 

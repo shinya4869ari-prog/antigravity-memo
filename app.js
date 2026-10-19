@@ -2956,3 +2956,27 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// ==========================================================================
+// 4. Scroll To Top Button (スクロール追従・上に戻るボタン)
+// ==========================================================================
+const btnScrollTop = document.getElementById('btn-scroll-top');
+if (btnScrollTop) {
+  // スクロール量監視: 180px以上スクロールでふわっと表示
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 180) {
+      btnScrollTop.classList.add('visible');
+    } else {
+      btnScrollTop.classList.remove('visible');
+    }
+  }, { passive: true });
+
+  // タップでスムーズに最上部へスクロール
+  btnScrollTop.addEventListener('click', () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  });
+}
+
+
