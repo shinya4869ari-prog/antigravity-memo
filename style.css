@@ -2578,7 +2578,9 @@ body {
   flex-shrink: 0;
 }
 
-/* テキストエリア（全幅・全高・柔軟スクロール） */
+/* テキストエリア（全幅・全高・柔軟スクロール）
+   ※ iOS Safariで等幅フォント(monospace)単独だとコード入力と誤認され日本語IME予測変換バーが出なくなるため、
+   システム日本語フォント優先のハイブリッドフォントスタックを指定 */
 .editor-textarea-full {
   flex: 1;
   width: 100%;
@@ -2590,8 +2592,8 @@ body {
   outline: none;
   resize: none;
   color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: 0.95rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Segoe UI", Roboto, var(--font-mono), sans-serif;
+  font-size: 1rem;
   line-height: 1.75;
   box-sizing: border-box;
 }
@@ -2759,11 +2761,13 @@ details[open] .editor-details-summary {
     border-radius: var(--radius-sm) !important;
   }
   .editor-textarea-full {
-    font-size: 0.95rem !important;
+    /* iOS Safariで16px未満のフォーム入力時に発生する自動拡大ズーム＆IME候補バー描画干渉を防止 */
+    font-size: 1rem !important;
     padding: 12px 14px !important;
     min-height: 240px !important;
     line-height: 1.65 !important;
     scroll-margin-bottom: 60px !important;
+    -webkit-text-size-adjust: 100%;
   }
 
   /* フッター保存バー */

@@ -294,8 +294,22 @@
 
 ---
 
-### 📍 現在地ステータス ＆ 次回タスク（2026/10/16 09:57 更新）
-- **現在バージョン**: `v22`（完了 🎉）
-- **直近完了タスク**: 「🤖 Antigravity 事前調査・提案」へのUI刷新・MCP整合性修正・提案ファイル自動生成＋ntfy通知スクリプト実装＆実機テスト完了
-- **次回タスク**: Cloudflare Workers (`wrangler deploy` または GitHub連携) への `v22` フロントエンド反映確認
+### 🕒 2026/10/20 13:45 - 📱 iOS Safari/PWA 本文入力時の漢字予測変換候補消失バグの根本解消 (v24 完了 🎉)
+- **ステータス**: 🟢 完了（2026/10/20 13:43 着手 〜 2026/10/20 13:45 完了）
+- **背景と課題**:
+  - iPhone（iOS Safari / PWA実機）でメモ本文を編集・訂正しようとすると、ひらがな（未確定下線）のままキーボード上部に漢字の予測変換候補バーが出ず、代わりにフォームナビゲーションバー（`∧` `∨` `✓`）が表示されて漢字変換ができない。
+  - 原因は本文テキストエリア（`.editor-textarea-full`）に等幅フォント（`var(--font-mono)`）のみが設定されており、iOS WebKitがコード入力と判定してIME予測変換バーを抑制・上書きしていたため。また言語属性未設定および16px未満フォントによる微小ズームも影響。
+- **実装完了内容**:
+  - [x] `style.css`: 本文テキストエリア（`.editor-textarea-full`）の `font-family` を日本語システムフォント優先（`-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Segoe UI", Roboto, var(--font-mono), sans-serif`）に是正し、等幅フォント誤判定によるIME抑制を根本解消。さらにスマホ時のフォントサイズをズーム防止の `1rem`（16px）へ引き上げ、`-webkit-text-size-adjust: 100%` を追加
+  - [x] `index.html`: 本文 `<textarea id="input-memo-desc">` に `lang="ja" autocorrect="on" autocapitalize="off" spellcheck="true"` を明示付与、アプリバージョンを `v24` に更新
+  - [x] `sw.js`: キャッシュバージョンを `v24`（`antigravity-hub-v24`）に更新し、スマホ実機でPWA/ブラウザキャッシュが即座にパージ・更新されるよう設定
+
+---
+
+### 📍 現在地ステータス ＆ 次回タスク（2026/10/20 13:45 更新）
+- **現在バージョン**: `v24`（完了 🎉）
+- **直近完了タスク**: iOS Safari/PWA本文入力時の漢字予測変換候補消失バグの根本解消（フォントスタック是正・属性追加・SW v24更新）
+- **次回タスク**: 実機での入力動作確認（更新ボタンまたはリロードで最新版反映）
+
+
 

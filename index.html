@@ -18,7 +18,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MissionHub">
 
-  <link rel="stylesheet" href="style.css?v=20261019_v23">
+  <link rel="stylesheet" href="style.css?v=20261020_v24">
 </head>
 <body>
   <div class="app-container">
@@ -43,8 +43,8 @@
               </svg>
               <span id="cloud-sync-text">Cloud KV 同期済</span>
             </span>
-            <!-- App Version Badge & Cache Refresh Button (v23: リスト表示スリム一覧行化＆上に戻るボタン) -->
-            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v23</span>
+            <!-- App Version Badge & Cache Refresh Button (v24: iOS Safari本文入力時の日本語漢字変換候補表示最適化) -->
+            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v24</span>
             <button id="btn-cache-refresh" class="btn-cache-refresh" title="キャッシュをクリアして最新版に更新">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
@@ -437,7 +437,7 @@
           <div class="pane-shortcut-bar">
             <span class="pane-shortcut-tip"><kbd>Tab</kbd> インデント | <kbd>Ctrl+Enter</kbd> 保存 | <kbd>Esc</kbd> 閉じる | <kbd>Ctrl+V</kbd> スクショ直接ペースト</span>
           </div>
-          <textarea id="input-memo-desc" class="editor-textarea-full" placeholder="ここに内容を入力...&#10;&#10;💡 スクショをクリップボードにコピーしてこの画面で Ctrl+V (Macは Cmd+V) を押すと、直接画像を貼り付けられます！&#10;&#10;例:&#10;### 依頼内容&#10;添付スクショのここのボタンが不要なので削除してほしい。"></textarea>
+          <textarea id="input-memo-desc" class="editor-textarea-full" lang="ja" autocorrect="on" autocapitalize="off" spellcheck="true" placeholder="ここに内容を入力...&#10;&#10;💡 スクショをクリップボードにコピーしてこの画面で Ctrl+V (Macは Cmd+V) を押すと、直接画像を貼り付けられます！&#10;&#10;例:&#10;### 依頼内容&#10;添付スクショのここのボタンが不要なので削除してほしい。"></textarea>
         </div>
 
         <!-- 添付スクショ・画像セクション -->
@@ -829,7 +829,7 @@
     </svg>
   </button>
 
-  <!-- Application Logic (v23) -->
-  <script src="app.js?v=20261019_v23"></script>
+  <!-- Application Logic (v24) -->
+  <script src="app.js?v=20261020_v24"></script>
 </body>
 </html>
