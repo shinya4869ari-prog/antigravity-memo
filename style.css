@@ -3553,3 +3553,14 @@ details[open] .editor-details-summary {
 
 
 
+
+
+/* Speech cleanup stays visible outside the horizontally scrolling toolbar. */
+.speech-cleanup { padding: 10px 16px; width: 100%; box-sizing: border-box; }
+.speech-cleanup-hint { font-size: 0.8rem; color: var(--text-muted); }
+.speech-cleanup-preview { margin-top: 10px; padding: 12px; border: 1px solid var(--accent-emerald, #34d399); border-radius: 10px; background: rgba(16, 185, 129, 0.06); }
+.speech-cleanup-preview p { margin: 0 0 10px; font-size: 0.85rem; }
+.speech-cleanup-preview label { display: block; margin-bottom: 10px; }
+.speech-cleanup-preview textarea { display: block; width: 100%; box-sizing: border-box; margin-top: 4px; font-family: inherit; font-size: 16px; resize: vertical; }
+.speech-cleanup-preview button { margin: 4px 8px 4px 0; min-height: 44px; }
+@media (max-width: 600px) { .speech-cleanup-hint { display: block; margin-top: 4px; } }

@@ -2980,3 +2980,122 @@ if (btnScrollTop) {
 }
 
 
+
+
+// Offline speech cleanup: conservative rules; never infer missing intent or facts.
+function cleanSpeechText(text) {
+  let inCode = false;
+  return text.split('\n').map(line => {
+    if (/^\s*(```|~~~)/.test(line)) { inCode = !inCode; return line; }
+    // Preserve Markdown structure, URLs and code exactly.
+    if (inCode || /(?:https?:\/\/|`|^\s*(?:[-*#>]|\d+\.))/.test(line)) return line;
+    let result = line;
+    // Only remove standalone fillers at a phrase boundary, never inside words.
+    let previous;
+    do {
+      previous = result;
+    result = result.replace(/(^|[、。，！？!?\s])(?:えーと|ええと|えっと|あのー|そのー|うーん|えー|ええー)(?:[、，, \t]+|(?=[。！？!?]|$))/g, '$1');
+    result = result.replace(/(^|[、。，！？!?\s])(?:うんうん|はいはい|そうですね)(?:[、，, \t]+|(?=[。！？!?]|$))/g, '$1');
+    } while (result !== previous);
+    // Collapse identical phrases only when separated by punctuation or spaces.
+    result = result.replace(/([^、。，！？!?\s]{2,40})(?:[、，, \t]+\1)+(?![ぁ-んァ-ヶ一-龯a-zA-Z0-9])/g, '$1');
+    result = result.replace(/^[、，, \t]+/, '').replace(/[ \t]+([、。！？])/g, '$1').replace(/、{2,}/g, '、');
+    return result.trimEnd();
+  }).join('\n').trim();
+}
+
+function setupSpeechCleanup(buttonId, containerId, fields) {
+  const button = document.getElementById(buttonId);
+  const container = document.getElementById(containerId);
+  let panel;
+  button.addEventListener('click', () => {
+    if (isInlineVoiceActive || isVoiceActive) {
+      showToast('音声入力を停止してから訂正してください', '🎙️');
+      return;
+    }
+    if (panel) panel.remove();
+    const originals = fields.map(field => field.input.value);
+    if (!originals.some(value => value.trim())) {
+      showToast('訂正する文章を入力してください', '📝');
+      return;
+    }
+    panel = document.createElement('div');
+    panel.className = 'speech-cleanup-preview';
+    const hint = document.createElement('p');
+    hint.textContent = '訂正案（編集できます）。意味や誤変換は確認してください。保存は「保存する／メモに追加」で行います。';
+    panel.append(hint);
+    const candidates = fields.map((field, index) => {
+      const label = document.createElement('label');
+      label.textContent = field.label;
+      const input = document.createElement('textarea');
+      input.className = 'form-input';
+      input.lang = 'ja';
+      input.rows = field.label === '本文' ? 5 : 2;
+      input.value = cleanSpeechText(originals[index]);
+      label.append(input);
+      panel.append(label);
+      return input;
+    });
+    const status = document.createElement('p');
+    status.setAttribute('role', 'status');
+    if (candidates.every((input, index) => input.value === originals[index])) {
+      status.textContent = '自動で訂正できる箇所はありません。必要なら上の案を編集できます。';
+    }
+    const apply = document.createElement('button');
+    apply.type = 'button';
+    apply.className = 'btn btn-primary btn-sm';
+    apply.textContent = '訂正案を反映';
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'btn btn-secondary btn-sm';
+    cancel.textContent = '閉じる';
+    cancel.addEventListener('click', () => panel.remove());
+    apply.addEventListener('click', () => {
+      if (isInlineVoiceActive || isVoiceActive || fields.some((field, index) => field.input.value !== originals[index])) {
+        status.textContent = '入力内容が変わりました。音声を停止し「自動訂正」を押し直してください。';
+        return;
+      }
+      const applied = candidates.map(input => input.value);
+      fields.forEach((field, index) => {
+        field.input.value = applied[index];
+        field.input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      apply.disabled = true;
+      candidates.forEach(input => { input.disabled = true; });
+      status.textContent = '反映しました。内容を確認して保存してください。';
+      const undo = document.createElement('button');
+      undo.type = 'button';
+      undo.className = 'btn btn-secondary btn-sm';
+      undo.textContent = '元の文に戻す';
+      undo.addEventListener('click', () => {
+        if (isInlineVoiceActive || isVoiceActive || fields.some((field, index) => field.input.value !== applied[index])) {
+          status.textContent = '反映後に編集されています。上書きを防ぐため元に戻せません。';
+          return;
+        }
+        fields.forEach((field, index) => {
+          field.input.value = originals[index];
+          field.input.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        panel.remove();
+        showToast('元の文に戻しました', '↩️');
+      });
+      panel.append(undo);
+    });
+    panel.append(status, apply, cancel);
+    container.append(panel);
+    panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  });
+  // A preview belongs to one editing session only.
+  const modal = container.closest('.modal-overlay');
+  new MutationObserver(() => {
+    if (!modal.classList.contains('active') && panel) panel.remove();
+  }).observe(modal, { attributes: true, attributeFilter: ['class'] });
+}
+
+setupSpeechCleanup('btn-cleanup-editor', 'editor-speech-cleanup', [
+  { label: 'タイトル', input: inputMemoTitle },
+  { label: '本文', input: inputMemoDesc }
+]);
+setupSpeechCleanup('btn-cleanup-voice', 'voice-speech-cleanup', [
+  { label: 'タイトル', input: parsedTitleInput }
+]);

@@ -4,4 +4,6 @@ node_modules/
 .env.*
 *.code-workspace
 .chat-attachments/
+mcp-server/memos_local_cache.json
+
 

@@ -18,7 +18,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MissionHub">
 
-  <link rel="stylesheet" href="style.css?v=20261020_v24">
+  <link rel="stylesheet" href="style.css?v=20261021_v25">
 </head>
 <body>
   <div class="app-container">
@@ -43,8 +43,8 @@
               </svg>
               <span id="cloud-sync-text">Cloud KV 同期済</span>
             </span>
-            <!-- App Version Badge & Cache Refresh Button (v24: iOS Safari本文入力時の日本語漢字変換候補表示最適化) -->
-            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v24</span>
+            <!-- App Version Badge & Cache Refresh Button (v25: 保存前の音声自動訂正) -->
+            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v25</span>
             <button id="btn-cache-refresh" class="btn-cache-refresh" title="キャッシュをクリアして最新版に更新">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
@@ -432,6 +432,10 @@
           </div>
         </div>
 
+        <div class="speech-cleanup" id="editor-speech-cleanup">
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-cleanup-editor">✨ 自動訂正</button>
+          <span class="speech-cleanup-hint">相槌・重複を整えて、保存前に確認</span>
+        </div>
         <!-- Editor Workspace: Simple Input Only -->
         <div class="editor-workspace-simple" id="editor-workspace">
           <div class="pane-shortcut-bar">
@@ -694,6 +698,10 @@
             </div>
           </div>
 
+          <div class="speech-cleanup" id="voice-speech-cleanup">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-cleanup-voice">✨ 自動訂正</button>
+            <span class="speech-cleanup-hint">タイトルの訂正案を確認</span>
+          </div>
           <div class="voice-action-grid">
             <button type="button" class="btn btn-primary" id="btn-save-voice-memo">
               <span>💾</span>
@@ -829,7 +837,7 @@
     </svg>
   </button>
 
-  <!-- Application Logic (v24) -->
-  <script src="app.js?v=20261020_v24"></script>
+  <!-- Application Logic (v25) -->
+  <script src="app.js?v=20261021_v25"></script>
 </body>
 </html>
