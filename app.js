@@ -31,11 +31,11 @@ const INITIAL_MEMOS = [
   {
     id: 'memo-next-3',
     category: 'task',
-    title: '開発ロードマップ (TODO.md) の作成と進捗管理',
+    title: '開発ロードマップ (TODO_ROADMAP.md) の作成と進捗管理',
     description: 'Antigravityと一緒に次に進めるべきタスク、今後実装したい機能（KV同期、PWA化、音声入力）を整理してプロジェクト内に保存・管理する。',
     priority: 'med',
     status: 'in_progress',
-    scope: 'TODO.md, README.md',
+    scope: 'TODO_ROADMAP.md, README.md',
     createdAt: new Date(Date.now() - 3600000).toISOString(),
     updatedAt: new Date().toISOString()
   },

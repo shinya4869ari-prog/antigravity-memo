@@ -61,13 +61,13 @@ antigravity-memo-app/
 ├── wrangler.json       # Cloudflare デプロイ設定ファイル
 ├── .assetsignore       # Cloudflare Pages アセット除外設定
 ├── .gitignore          # Git除外設定
-├── TODO.md             # 開発ロードマップ・次やることリスト
+├── TODO_ROADMAP.md     # 開発ロードマップ・次やることリスト
 └── README.md           # 本ドキュメント
 ```
 
 ---
 
 ## 📋 開発ロードマップ (次やること)
-今後の機能拡張や改善タスクは [TODO.md](TODO.md) に整理されています。
+今後の機能拡張や改善タスクは [TODO_ROADMAP.md](TODO_ROADMAP.md) に整理されています。
 Cloudflare KVによる端末間リアルタイム同期、PWA完全アプリ化、音声入力×カレンダー連携は完了済みです。
 

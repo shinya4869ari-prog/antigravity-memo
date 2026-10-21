@@ -4,11 +4,11 @@
 
 ---
 
-## 📋 0. 【最優先原則】作業前に「TODO.md」を確認・同期すること
+## 📋 0. 【最優先原則】作業前に「TODO_ROADMAP.md」を確認・同期すること
 * **文脈と進捗の把握:**  
-  機能追加や修正に着手する前に、必ず [TODO.md](file:///home/ubuntu/CascadeProjects/antigravity-memo/TODO.md) を確認し、現在の開発ステータス・優先課題・完了済み事項を把握してから作業すること。
+  機能追加や修正に着手する前に、必ず [TODO_ROADMAP.md](file:///home/ubuntu/CascadeProjects/antigravity-memo/TODO_ROADMAP.md) を確認し、現在の開発ステータス・優先課題・完了済み事項を把握してから作業すること。
 * **ロードマップの最新化:**  
-  作業完了時や新たな課題発見時には、`TODO.md` を更新して常にプロジェクトの現在地を最新に保つこと。
+  作業完了時や新たな課題発見時には、`TODO_ROADMAP.md` を更新して常にプロジェクトの現在地を最新に保つこと。
 
 ---
 
