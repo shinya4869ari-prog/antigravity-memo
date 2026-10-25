@@ -18,7 +18,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MissionHub">
 
-  <link rel="stylesheet" href="style.css?v=20261021_v25">
+  <link rel="stylesheet" href="style.css?v=20261025_v26">
 </head>
 <body>
   <div class="app-container">
@@ -44,7 +44,7 @@
               <span id="cloud-sync-text">Cloud KV 同期済</span>
             </span>
             <!-- App Version Badge & Cache Refresh Button (v25: 保存前の音声自動訂正) -->
-            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v25</span>
+            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v26</span>
             <button id="btn-cache-refresh" class="btn-cache-refresh" title="キャッシュをクリアして最新版に更新">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
@@ -117,6 +117,29 @@
         </button>
       </div>
     </header>
+
+    <section class="shared-pad" id="shared-pad" aria-labelledby="shared-pad-title">
+      <div class="shared-pad-heading">
+        <h2 id="shared-pad-title">📋 デバイス共有メモ帳</h2>
+        <span id="shared-pad-status" role="status" aria-live="polite">読み込み中…</span>
+      </div>
+      <p>コードも、ちょっとしたメモも、スクショも。ここに置いて別のデバイスで開けます。</p>
+      <label class="sr-only" for="shared-pad-text">共有するメモ</label>
+      <textarea id="shared-pad-text" lang="ja" spellcheck="true" placeholder="ここに書く・貼り付けるだけ。自動で保存します。"></textarea>
+      <div id="shared-pad-images" class="shared-pad-images"></div>
+      <div class="shared-pad-actions">
+        <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-copy">📋 本文をコピー</button>
+        <label class="btn btn-secondary btn-sm">📸 スクショを追加<input id="shared-pad-files" type="file" accept="image/*" multiple hidden></label>
+        <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-sync">↻ 同期</button>
+      </div>
+      <div id="shared-pad-conflict" hidden>
+        <p>別のデバイスでも変更されています。下の内容を確認してから選んでください。現在の入力はこの端末に残っています。</p>
+        <pre id="shared-pad-remote"></pre>
+        <div id="shared-pad-remote-images" class="shared-pad-images"></div>
+        <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-use-remote">別デバイスの内容を使う</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-use-local">今の入力を共有する</button>
+      </div>
+    </section>
 
     <!-- Stats Ribbon -->
     <section class="stats-ribbon" id="stats-container">
@@ -838,6 +861,7 @@
   </button>
 
   <!-- Application Logic (v25) -->
-  <script src="app.js?v=20261021_v25"></script>
+  <script src="app.js?v=20261025_v26"></script>
+  <script src="shared-pad.js?v=20261025_v26"></script>
 </body>
 </html>

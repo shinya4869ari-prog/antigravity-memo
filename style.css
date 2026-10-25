@@ -3564,3 +3564,19 @@ details[open] .editor-details-summary {
 .speech-cleanup-preview textarea { display: block; width: 100%; box-sizing: border-box; margin-top: 4px; font-family: inherit; font-size: 16px; resize: vertical; }
 .speech-cleanup-preview button { margin: 4px 8px 4px 0; min-height: 44px; }
 @media (max-width: 600px) { .speech-cleanup-hint { display: block; margin-top: 4px; } }
+
+/* Always available cross-device scratchpad */
+.shared-pad { margin: 20px 0; padding: 20px; border: 1px solid rgba(52,211,153,.35); border-radius: 16px; background: var(--bg-card); }
+.shared-pad-heading, .shared-pad-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.shared-pad h2 { font-size: 1.1rem; margin: 0; }
+.shared-pad p, #shared-pad-status { color: var(--text-secondary); font-size: .85rem; }
+.shared-pad textarea { box-sizing: border-box; width: 100%; min-height: 180px; resize: vertical; margin: 12px 0; padding: 14px; border: 1px solid #475569; border-radius: 10px; background: var(--bg-primary); color: var(--text-primary); font: 16px/1.7 -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif; tab-size: 2; }
+.shared-pad textarea:focus { outline: 2px solid #34d399; outline-offset: 2px; }
+.shared-pad-actions { justify-content: flex-start; }
+.shared-pad-images { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.shared-pad-images img { width: 96px; height: 80px; object-fit: cover; border-radius: 8px; cursor: pointer; }
+.shared-pad-images button { display: block; }
+#shared-pad-conflict { margin-top: 16px; border-top: 1px solid #fbbf24; }
+#shared-pad-remote { max-height: 180px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 600px) { .shared-pad { padding: 14px; } .shared-pad-actions .btn { min-height: 44px; } }
+.shared-pad .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

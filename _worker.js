@@ -22,6 +22,35 @@ export default {
       });
     }
 
+    // Dedicated scratchpad: never modifies instruction memos.
+    if (url.pathname === '/api/shared-pad') {
+      const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
+      const reply = (body, status = 200) => new Response(JSON.stringify(body), { status, headers });
+      if (!['GET', 'POST'].includes(request.method)) return reply({ error: 'Method not allowed' }, 405);
+      if (!env?.MEMO_KV) return reply({ mode: 'local' });
+      try {
+        if (request.method === 'GET') {
+          return reply({ mode: 'kv', pad: await env.MEMO_KV.get('shared_pad', 'json') });
+        }
+        const raw = await request.text();
+        if (new TextEncoder().encode(raw).length > 3000000) return reply({ error: 'メモは画像込みで3MB以内にしてください' }, 413);
+        let body;
+        try { body = JSON.parse(raw); } catch { return reply({ error: 'Invalid JSON' }, 400); }
+        const pad = body.pad;
+        if (!pad || typeof pad.text !== 'string' || pad.text.length > 200000 ||
+            typeof pad.revision !== 'string' || pad.revision.length > 100 ||
+            !Array.isArray(pad.images) || pad.images.length > 8 ||
+            pad.images.some(src => typeof src !== 'string' || !/^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+/=]+$/.test(src)) ||
+            !(body.base === null || typeof body.base === 'string')) {
+          return reply({ error: 'Invalid scratchpad' }, 400);
+        }
+        const current = await env.MEMO_KV.get('shared_pad', 'json');
+        if ((current?.revision || null) !== body.base) return reply({ pad: current }, 409);
+        await env.MEMO_KV.put('shared_pad', JSON.stringify(pad));
+        return reply({ mode: 'kv', success: true });
+      } catch { return reply({ error: '共有メモの保存・取得に失敗しました' }, 500); }
+    }
+
     // API Route: Memos Endpoint (Cloudflare KV Cloud Storage)
     if (url.pathname === '/api/memos') {
       const corsHeaders = {
