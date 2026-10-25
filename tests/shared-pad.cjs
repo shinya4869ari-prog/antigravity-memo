@@ -49,8 +49,10 @@ test('offline edits and clear persist across reloads; cancellation preserves tex
   function page(confirmClear = false) {
     const elements = new Map();
     const element = () => ({ value: '', hidden: true, listeners: {},
+      classList: { values: new Set(), toggle(name, active) { if (active) this.values.add(name); else this.values.delete(name); }, contains(name) { return this.values.has(name); } },
+      setAttribute(name, value) { this[name] = value; }, focus() {},
       addEventListener(name, cb) { this.listeners[name] = cb; }, replaceChildren() {}, append() {} });
-    const document = { hidden: false, activeElement: null,
+    const document = { hidden: false, activeElement: null, documentElement: element(),
       getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); },
       createElement: element, addEventListener() {} };
     const context = { document, localStorage: { getItem: k => saved.get(k) || null, setItem: (k, v) => saved.set(k, v) },
@@ -62,6 +64,15 @@ test('offline edits and clear persist across reloads; cancellation preserves tex
   const first = page();
   const input = first.getElementById('shared-pad-text');
   input.value = 'スマホへ共有したいコード'; input.listeners.input();
+  const toggle = first.getElementById('shared-pad-maximize');
+  toggle.onclick();
+  assert.equal(first.getElementById('shared-pad').classList.contains('is-maximized'), true);
+  assert.equal(toggle['aria-pressed'], 'true');
+  assert.equal(input.value, 'スマホへ共有したいコード');
+  toggle.onclick();
+  assert.equal(first.getElementById('shared-pad').classList.contains('is-maximized'), false);
+  assert.equal(toggle['aria-pressed'], 'false');
+  assert.equal(input.value, 'スマホへ共有したいコード');
   const stored = JSON.parse(saved.get('antigravity-shared-pad-v1'));
   assert.equal(stored.dirty, true);
   assert.equal(stored.pad.text, input.value);

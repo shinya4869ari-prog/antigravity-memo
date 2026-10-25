@@ -5,6 +5,24 @@
   const text = document.getElementById('shared-pad-text');
   const status = document.getElementById('shared-pad-status');
   const conflict = document.getElementById('shared-pad-conflict');
+  const padSection = document.getElementById('shared-pad');
+  const maximize = document.getElementById('shared-pad-maximize');
+  function setMaximized(expanded) {
+    padSection.classList.toggle('is-maximized', expanded);
+    document.documentElement.classList.toggle('shared-pad-expanded', expanded);
+    maximize.setAttribute('aria-pressed', String(expanded));
+    maximize.textContent = expanded ? '↙ 元に戻す' : '⛶ 最大化';
+  }
+  maximize.onclick = () => setMaximized(!padSection.classList.contains('is-maximized'));
+  // Capture Escape before the existing modal handlers; an open image closes first.
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || e.isComposing || !padSection.classList.contains('is-maximized')) return;
+    if (document.querySelector('.modal-overlay.active')) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    setMaximized(false);
+    maximize.focus();
+  }, true);
   let state = { pad: { text: '', images: [], revision: null }, base: null, dirty: false };
   let remote = null, busy = false, timer, composing = false;
   let imageEpoch = 0;
