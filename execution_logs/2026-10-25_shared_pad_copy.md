@@ -31,3 +31,9 @@
 
 ## 次回アクション
 - プッシュ後、公開環境で本文＋スクショのコピーとAI入力欄への画像貼付を確認する。
+
+## プッシュ完了（2026-10-25 10:34 UTC）
+- 実装コミット `ce251f3`（feat(v29): copy shared memo text and screenshots together）。
+- git push origin main 成功: 83dfd8d..ce251f3 main -> main。
+- 本ログとロードマップの完了記録もコミット・プッシュする。
+- 次回は公開反映後、利用するAIの入力欄で画像貼付を確認する。
