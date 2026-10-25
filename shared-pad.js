@@ -45,6 +45,16 @@
       img.onclick = () => openLightbox(src);
       img.onkeydown = e => { if (e.key === 'Enter') openLightbox(src); };
       item.append(img);
+      const save = document.createElement('button');
+      save.type = 'button'; save.className = 'btn btn-secondary btn-sm'; save.textContent = '画像を保存';
+      save.onclick = async () => {
+        try {
+          const blob = await SharedPadTransfer.png('', [src]);
+          SharedPadTransfer.download(blob, `screenshot-${index + 1}.png`);
+          message('画像を保存しました');
+        } catch (error) { message(error.message); }
+      };
+      item.append(save);
       if (editable) {
         const remove = document.createElement('button');
         remove.type = 'button'; remove.className = 'btn btn-secondary btn-sm'; remove.textContent = '削除';
@@ -134,6 +144,22 @@
     if (images.length) { e.preventDefault(); addImages(images); }
   });
   document.getElementById('shared-pad-copy').onclick = async () => {
+    const body = text.value, images = [...state.pad.images];
+    try {
+      await SharedPadTransfer.copy(body, images);
+      message(images.length ? '本文とスクショをコピーしました。AIの入力欄に貼り付けてください（画像に本文も含まれます）' : '本文をコピーしました');
+    } catch (error) { message(error.message + '。貼れない場合は「まとめて画像保存」から添付してください'); }
+  };
+  document.getElementById('shared-pad-save').onclick = async () => {
+    const body = text.value, images = [...state.pad.images];
+    if (!body && !images.length) { message('保存する内容がありません'); return; }
+    try {
+      const blob = await SharedPadTransfer.png(body, images);
+      SharedPadTransfer.download(blob, 'shared-memo.png');
+      message('本文とスクショをまとめた画像を保存しました。AIに添付できます');
+    } catch (error) { message(error.message); }
+  };
+  document.getElementById('shared-pad-copy-text').onclick = async () => {
     try { await navigator.clipboard.writeText(text.value); message('本文をコピーしました'); }
     catch { text.focus(); text.select(); message('本文を選択しました。コピーしてください'); }
   };
