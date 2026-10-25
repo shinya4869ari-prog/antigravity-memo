@@ -7,6 +7,7 @@
   const conflict = document.getElementById('shared-pad-conflict');
   let state = { pad: { text: '', images: [], revision: null }, base: null, dirty: false };
   let remote = null, busy = false, timer, composing = false;
+  let imageEpoch = 0;
   try {
     const saved = JSON.parse(localStorage.getItem(key));
     if (saved?.pad && typeof saved.pad.text === 'string' && Array.isArray(saved.pad.images)) state = saved;
@@ -96,11 +97,13 @@
   text.addEventListener('compositionend', () => { composing = false; changed(); });
   text.addEventListener('blur', sync);
   async function addImages(files) {
+    const epoch = imageEpoch;
     for (const file of files) {
       if (!file.type.startsWith('image/')) continue;
       if (state.pad.images.length >= 8) { message('スクショは8枚まで追加できます'); break; }
       try {
         const src = await compressImage(file);
+        if (epoch !== imageEpoch) return;
         if (JSON.stringify(state.pad).length + src.length > 2800000) { message('画像容量の上限です。画像を減らしてください'); break; }
         state.pad.images.push(src); changed(); render();
       } catch { message('画像を読み込めませんでした'); }
@@ -115,6 +118,15 @@
   document.getElementById('shared-pad-copy').onclick = async () => {
     try { await navigator.clipboard.writeText(text.value); message('本文をコピーしました'); }
     catch { text.focus(); text.select(); message('本文を選択しました。コピーしてください'); }
+  };
+  document.getElementById('shared-pad-clear').onclick = () => {
+    if (!text.value && state.pad.images.length === 0) return;
+    if (!window.confirm('共有メモ帳の本文とスクショをすべて消去しますか？この変更は他のデバイスにも同期されます。')) return;
+    imageEpoch += 1;
+    text.value = '';
+    state.pad.images = [];
+    changed();
+    render();
   };
   document.getElementById('shared-pad-sync').onclick = sync;
   document.getElementById('shared-pad-use-remote').onclick = () => {

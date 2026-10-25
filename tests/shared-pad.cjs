@@ -26,6 +26,10 @@ test('round trip preserves text/images and leaves instruction memos untouched', 
   const conflict = await call('POST', { pad: { ...pad, revision: 'other' }, base: null }, env);
   assert.equal(conflict.status, 409);
   assert.deepEqual((await conflict.json()).pad, pad);
+  const empty = { text: '', images: [], revision: 'cleared' };
+  assert.equal((await call('POST', { pad: empty, base: pad.revision }, env)).status, 200);
+  assert.deepEqual((await (await call('GET', undefined, env)).json()).pad, empty);
+  assert.equal(kv.data.get('memos'), '[{"id":"existing"}]');
 });
 test('rejects malformed images, oversized content and unsupported methods', async () => {
   const env = { MEMO_KV: storage() };
@@ -39,10 +43,10 @@ test('storage failures return an error instead of claiming success', async () =>
   assert.equal((await call('GET', undefined, env)).status, 500);
 });
 
-test('offline edits persist locally and survive a page reload', async () => {
+test('offline edits and clear persist across reloads; cancellation preserves text and images', async () => {
   const vm = require('node:vm');
   const saved = new Map();
-  function page() {
+  function page(confirmClear = false) {
     const elements = new Map();
     const element = () => ({ value: '', hidden: true, listeners: {},
       addEventListener(name, cb) { this.listeners[name] = cb; }, replaceChildren() {}, append() {} });
@@ -51,7 +55,7 @@ test('offline edits persist locally and survive a page reload', async () => {
       createElement: element, addEventListener() {} };
     const context = { document, localStorage: { getItem: k => saved.get(k) || null, setItem: (k, v) => saved.set(k, v) },
       crypto: { randomUUID: () => 'offline-revision' }, fetch: async () => { throw Error('offline'); },
-      setTimeout: () => 1, clearTimeout() {}, setInterval() {}, window: { addEventListener() {} } };
+      setTimeout: () => 1, clearTimeout() {}, setInterval() {}, window: { addEventListener() {}, confirm: () => confirmClear } };
     vm.runInNewContext(fs.readFileSync('shared-pad.js', 'utf8'), context);
     return document;
   }
@@ -63,4 +67,17 @@ test('offline edits persist locally and survive a page reload', async () => {
   assert.equal(stored.pad.text, input.value);
   const second = page();
   assert.equal(second.getElementById('shared-pad-text').value, input.value);
+  stored.pad.images = ['data:image/png;base64,YQ=='];
+  saved.set('antigravity-shared-pad-v1', JSON.stringify(stored));
+  const cancelled = page(false);
+  cancelled.getElementById('shared-pad-clear').onclick();
+  assert.deepEqual(JSON.parse(saved.get('antigravity-shared-pad-v1')), stored);
+  const cleared = page(true);
+  cleared.getElementById('shared-pad-clear').onclick();
+  const empty = JSON.parse(saved.get('antigravity-shared-pad-v1'));
+  assert.equal(empty.pad.text, '');
+  assert.deepEqual(empty.pad.images, []);
+  assert.equal(empty.dirty, true);
+  assert.equal(empty.base, stored.base);
+  assert.equal(page().getElementById('shared-pad-text').value, '');
 });
