@@ -29,3 +29,7 @@
 - 実際のService Token入力・実HTTP検証は本人のconfigure実行後。MCP保存失敗の成功扱いは別課題で未修正。
 - 次回: 本人が既存configureを実行し、保存成功後verifyで認証付きHTTPを検証。
 - ユーザーの従来のプッシュ運用に従い、修正・テスト・関連記録をコミットしorigin/mainへ反映する。設定実行や本番デプロイはしない。
+
+## プッシュ完了（2026-10-26 22:00 UTC）
+- 修正コミットd5c4afe。git push origin main成功（2f87ac8..d5c4afe）。
+- 完了記録もコミットして反映する。実configure/verify・設定更新・デプロイは未実施。

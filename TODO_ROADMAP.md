@@ -572,3 +572,11 @@
 - 未解決: 本物の認証情報の入力とHTTP検証は未実行。実auth.jsonの内容/mtime/0700・0600がテスト前後不変と確認。MCP保存成否問題は未修正。
 - 次回最初に実施する作業: 本人がconfigureを実行。保存成功後verifyを実行する。入力値はチャットやログへ出さない。
 - 関連ログ: execution_logs/2026-10-26_oracle_input_error_improvement.md
+
+## 作業状況・引き継ぎ（2026-10-26 22:00 UTC 入力エラー改善プッシュ完了）
+- 最終更新日時: 2026-10-26 22:00 UTC
+- 直近で完了: 入力エラー表示改善・ダミー15テスト・関連調査記録をd5c4afeとしてorigin/mainへプッシュ成功。
+- 現在進行中: なし。
+- 未解決: 実Service Token設定とHTTP検証は本人実行待ち。実auth.jsonは未変更、MCP保存成否問題は別課題。
+- 次回最初に実施する作業: 本人がconfigureを実行し、成功後verify。失敗時は秘密値を含まない理由コードで切り分け。
+- 関連ログ: execution_logs/2026-10-26_oracle_input_error_improvement.md
