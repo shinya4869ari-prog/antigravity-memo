@@ -49,3 +49,8 @@ python3 scripts/oracle_access_setup.py verify
 - git fetch origin成功、HEADとorigin/mainの差0/0。git diff --check成功。
 - 追加対象ファイルに実auth.jsonの非空認証値が含まれないことをメモリ上で検査し成功。検査時も秘密値は出力しない。
 - configure/verifyは実行しない。入力方式の実行確認・本人端末での秘密値入力・実通信検証は引き続き未完了。
+
+## 準備ファイルのプッシュ完了（2026-10-26 13:12 UTC）
+- コミット2745879。git push origin main成功（a8cefac..2745879）。
+- スクリプト・テスト・関連記録のみ反映。実auth.jsonは未変更、configure/verifyは未実行。
+- 完了記録も追加コミットで反映する。次回は本人端末での入力と実HTTP検証。
