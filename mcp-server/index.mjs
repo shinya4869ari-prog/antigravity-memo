@@ -11,6 +11,7 @@
 
 import readline from 'readline';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -20,8 +21,56 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Cloudflare KV エンドポイント（環境変数 MEMO_API_URL、未指定時は本番Cloudflare KVエンドポイントへ直結）
-const MEMO_API_URL = process.env.MEMO_API_URL || 'https://antigravity-memo.shinya4869ari.workers.dev/api/memos';
+// 認証・接続設定ファイル (~/.config/antigravity-memo/auth.json)
+const MEMO_AUTH_CONFIG_FILE = path.join(os.homedir(), '.config', 'antigravity-memo', 'auth.json');
+
+/**
+ * 環境変数または ~/.config/antigravity-memo/auth.json からAPI接続・認証設定を読み込む
+ */
+function loadMemoAuthConfig() {
+  const cfg = {
+    memo_api_url: process.env.MEMO_API_URL || '',
+    memo_api_token: process.env.MEMO_API_TOKEN || '',
+    cf_access_client_id: process.env.CF_ACCESS_CLIENT_ID || '',
+    cf_access_client_secret: process.env.CF_ACCESS_CLIENT_SECRET || ''
+  };
+  if (fs.existsSync(MEMO_AUTH_CONFIG_FILE)) {
+    try {
+      const saved = JSON.parse(fs.readFileSync(MEMO_AUTH_CONFIG_FILE, 'utf-8'));
+      for (const k of Object.keys(cfg)) {
+        if (!cfg[k] && saved[k]) {
+          cfg[k] = String(saved[k]).trim();
+        }
+      }
+    } catch (e) {
+      // 設定ファイルの読み込み失敗時は環境変数・デフォルト値を使用
+    }
+  }
+  if (!cfg.memo_api_url) {
+    cfg.memo_api_url = 'https://anti-memo.seronworks.dev/api/memos';
+  }
+  return cfg;
+}
+
+/**
+ * 自動連携用の専用認証ヘッダー（Bearerトークン / Cloudflare Access Service Token）を構築
+ */
+function buildMemoAuthHeaders(extra = {}) {
+  const cfg = loadMemoAuthConfig();
+  const headers = { ...extra };
+  if (cfg.memo_api_token) {
+    headers['Authorization'] = `Bearer ${cfg.memo_api_token}`;
+    headers['X-Memo-Token'] = cfg.memo_api_token;
+  }
+  if (cfg.cf_access_client_id && cfg.cf_access_client_secret) {
+    headers['CF-Access-Client-Id'] = cfg.cf_access_client_id;
+    headers['CF-Access-Client-Secret'] = cfg.cf_access_client_secret;
+  }
+  return headers;
+}
+
+// Cloudflare KV エンドポイント（環境変数 MEMO_API_URL または auth.json）
+const MEMO_API_URL = loadMemoAuthConfig().memo_api_url;
 // ローカルバックアップ用キャッシュファイル
 const LOCAL_CACHE_FILE = path.resolve(__dirname, 'memos_local_cache.json');
 // ルートの MEMOS.md のパス
@@ -36,11 +85,12 @@ const WORKSPACE_MEMOS_MD = path.resolve(__dirname, '../MEMOS.md');
  * @returns {Promise<Array<object>>} メモ一覧配列
  */
 async function fetchMemos() {
+  const apiUrl = loadMemoAuthConfig().memo_api_url || MEMO_API_URL;
   // ① Cloudflare KV API が設定されている場合
-  if (MEMO_API_URL) {
+  if (apiUrl) {
     try {
-      const res = await fetch(MEMO_API_URL, {
-        headers: { 'Accept': 'application/json' }
+      const res = await fetch(apiUrl, {
+        headers: buildMemoAuthHeaders({ 'Accept': 'application/json' })
       });
       if (res.ok) {
         const text = await res.text();
@@ -88,12 +138,13 @@ async function saveMemos(memos) {
   // ローカルキャッシュに保存
   fs.writeFileSync(LOCAL_CACHE_FILE, JSON.stringify(memos, null, 2), 'utf-8');
 
+  const apiUrl = loadMemoAuthConfig().memo_api_url || MEMO_API_URL;
   // Cloudflare KV API へ送信
-  if (MEMO_API_URL) {
+  if (apiUrl) {
     try {
-      const res = await fetch(MEMO_API_URL, {
+      const res = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: buildMemoAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(memos)
       });
       if (!res.ok) {
