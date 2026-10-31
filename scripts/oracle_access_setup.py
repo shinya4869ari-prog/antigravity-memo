@@ -16,10 +16,12 @@ import warnings
 
 AUTH_PATH = Path.home() / '.config/antigravity-memo/auth.json'
 ENDPOINT = 'https://anti-memo.seronworks.dev/api/memos'
+USER_AGENT = 'antigravity-memo-oracle-verify/1.0'
 FIELDS = ('cf_access_client_id', 'cf_access_client_secret')
 
 
 ERROR_MESSAGES = {
+    'VERIFY_FAILED': 'HTTP応答またはメモ配列JSONが検証の成功条件を満たしていません。',
     'CLIENT_ID_EMPTY': 'Client IDが空です。',
     'CLIENT_ID_WHITESPACE': 'Client IDに空白が含まれています。入力は補正していません。',
     'CLIENT_ID_CONTROL': 'Client IDに制御文字が含まれています。入力は補正していません。',
@@ -175,7 +177,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 def http_probe(config, with_access):
-    headers = {'Accept': 'application/json', 'Authorization': 'Bearer ' + config['memo_api_token'],
+    headers = {'User-Agent': USER_AGENT, 'Accept': 'application/json', 'Authorization': 'Bearer ' + config['memo_api_token'],
                'X-Memo-Token': config['memo_api_token']}
     if with_access:
         headers.update({'CF-Access-Client-Id': config[FIELDS[0]], 'CF-Access-Client-Secret': config[FIELDS[1]]})
@@ -211,7 +213,7 @@ def verify():
     authenticated, valid = http_probe(config, True)
     print('Service Tokenあり: HTTP ' + str(authenticated) + ' / メモ配列JSON=' + ('確認済み' if valid else '未確認'))
     if baseline not in (301, 302, 303, 307, 308, 401, 403) or authenticated != 200 or not valid:
-        raise ValueError('Authentication verification did not meet success criteria')
+        raise SetupError('VERIFY_FAILED')
     print('認証付き実通信の検証成功。GETのみ使用。メモ本文・画像・トークンは出力していません。')
 
 

@@ -242,4 +242,56 @@ sys.exit(m.main(['configure']))
                     self.assertIn('保存・再読込検証成功', text)
                     self.assertEqual(json.loads(self.path.read_text())['cf_access_client_secret'], self.secret)
 
+class VerifyTests(unittest.TestCase):
+    def setUp(self):
+        self.config = dict(zip((*setup.FIELDS, 'memo_api_token'),
+                               ('dummy-id', 'dummy-secret', 'dummy-api-token')))
+
+    def test_http_errors_preserve_status_and_headers_without_reading_body(self):
+        from unittest.mock import Mock
+        for status in (301, 302, 401, 403, 429, 500):
+            for with_access in (False, True):
+                with self.subTest(status=status, with_access=with_access):
+                    body = Mock()
+                    error = setup.urllib.error.HTTPError(setup.ENDPOINT, status, 'private-message', {}, body)
+                    opener = Mock()
+                    opener.open.side_effect = error
+                    with patch.object(setup.urllib.request, 'build_opener', return_value=opener):
+                        self.assertEqual(setup.http_probe(self.config, with_access), (status, False))
+                    request = opener.open.call_args.args[0]
+                    headers = dict((k.lower(), v) for k, v in request.header_items())
+                    self.assertEqual(headers['user-agent'], setup.USER_AGENT)
+                    self.assertEqual(headers['authorization'], 'Bearer dummy-api-token')
+                    self.assertEqual(headers['x-memo-token'], 'dummy-api-token')
+                    self.assertEqual('cf-access-client-id' in headers, with_access)
+                    self.assertEqual('cf-access-client-secret' in headers, with_access)
+                    if with_access:
+                        self.assertEqual(headers['cf-access-client-id'], 'dummy-id')
+                        self.assertEqual(headers['cf-access-client-secret'], 'dummy-secret')
+                    body.read.assert_not_called()
+                    body.close.assert_called_once()
+
+    def test_verify_success_and_failure_are_redacted_and_never_save(self):
+        for baseline, authenticated, valid, expected in (
+            (302, 200, True, 0), (401, 200, True, 0), (403, 200, True, 0),
+            (302, 401, False, 1), (302, 403, False, 1),
+            (302, 500, False, 1), (302, 200, False, 1), (200, 200, True, 1),
+        ):
+            with self.subTest(baseline=baseline, authenticated=authenticated, valid=valid):
+                output = io.StringIO()
+                with patch.object(setup, 'read_config', return_value=('', self.config)), \
+                     patch.object(setup, 'http_probe', side_effect=[(baseline, False), (authenticated, valid)]) as probe, \
+                     patch.object(setup, 'save_config') as save, \
+                     patch.object(setup.resource, 'setrlimit'), \
+                     contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+                    self.assertEqual(setup.main(['verify']), expected)
+                self.assertEqual(probe.call_args_list, [unittest.mock.call(self.config, False), unittest.mock.call(self.config, True)])
+                save.assert_not_called()
+                for secret in self.config.values():
+                    self.assertNotIn(secret, output.getvalue())
+                self.assertIn('HTTP ' + str(authenticated), output.getvalue())
+                if expected:
+                    self.assertIn('[VERIFY_FAILED]', output.getvalue())
+                    self.assertNotIn('[UNEXPECTED_ERROR]', output.getvalue())
+
 if __name__ == '__main__': unittest.main()
