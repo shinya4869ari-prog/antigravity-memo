@@ -3626,21 +3626,448 @@ details[open] .editor-details-summary {
 .speech-cleanup-preview button { margin: 4px 8px 4px 0; min-height: 44px; }
 @media (max-width: 600px) { .speech-cleanup-hint { display: block; margin-top: 4px; } }
 
-/* Always available cross-device scratchpad */
-.shared-pad { margin: 20px 0; padding: 20px; border: 1px solid rgba(52,211,153,.35); border-radius: 16px; background: var(--bg-card); }
-.shared-pad-heading, .shared-pad-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.shared-pad h2 { font-size: 1.1rem; margin: 0; }
-.shared-pad p, #shared-pad-status { color: var(--text-secondary); font-size: .85rem; }
-.shared-pad textarea { box-sizing: border-box; width: 100%; min-height: 180px; resize: vertical; margin: 12px 0; padding: 14px; border: 1px solid #475569; border-radius: 10px; background: var(--bg-primary); color: var(--text-primary); font: 16px/1.7 -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif; tab-size: 2; }
-.shared-pad textarea:focus { outline: 2px solid #34d399; outline-offset: 2px; }
-.shared-pad-actions { justify-content: flex-start; }
-.shared-pad-images { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
-.shared-pad-images img { width: 96px; height: 80px; object-fit: cover; border-radius: 8px; cursor: pointer; }
-.shared-pad-images button { display: block; }
-#shared-pad-conflict { margin-top: 16px; border-top: 1px solid #fbbf24; }
-#shared-pad-remote { max-height: 180px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
-@media (max-width: 600px) { .shared-pad { padding: 14px; } .shared-pad-actions .btn { min-height: 44px; } }
-.shared-pad .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* ==========================================================================
+   Blackboard (黒板) v41 Redesign — 4-Tier Layout, Countdown, Toggle Switch, Settings Menu
+   ========================================================================== */
+.shared-pad [hidden] {
+  display: none !important;
+}
+
+.shared-pad {
+  margin: 20px 0;
+  padding: 18px 20px;
+  border: 1px solid rgba(52, 211, 153, 0.32);
+  border-radius: 16px;
+  background: var(--bg-card);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+/* 1段目：上段（タイトル・同期状態・カウントダウン / 右側：設定・最大化） */
+.shared-pad-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.shared-pad-heading-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.shared-pad-heading-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.shared-pad h2 {
+  font-size: 1.08rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+#shared-pad-status {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.shared-pad-countdown-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'JetBrains Mono', monospace, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.42);
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.shared-pad-fixed-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.shared-pad-util-btn {
+  min-height: 34px;
+  padding: 5px 11px;
+  font-size: 0.8rem;
+  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.shared-pad-util-btn:hover,
+.shared-pad-util-btn[aria-expanded="true"] {
+  color: var(--text-primary);
+  border-color: rgba(52, 211, 153, 0.55);
+  background: rgba(15, 23, 42, 0.9);
+}
+
+/* 鍵不一致エラー時の緊急バナー */
+.shared-pad-key-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  font-size: 0.83rem;
+}
+
+/* 設定メニューパネル（⚙ 設定押下時のみ表示） */
+.shared-pad-settings-menu {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+}
+
+.shared-pad-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.84rem;
+  color: var(--text-primary);
+}
+
+.shared-pad-settings-close {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.shared-pad-settings-close:hover {
+  color: var(--text-primary);
+  background: rgba(148, 163, 184, 0.15);
+}
+
+.shared-pad-settings-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.shared-pad-settings-note {
+  font-size: 0.78rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+/* 2段目：中段（本文入力エリア） */
+.shared-pad textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 170px;
+  resize: vertical;
+  margin: 12px 0 10px;
+  padding: 14px;
+  border: 1px solid rgba(71, 85, 105, 0.85);
+  border-radius: 10px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+  tab-size: 2;
+}
+
+.shared-pad textarea:focus {
+  outline: 2px solid #34d399;
+  outline-offset: 2px;
+}
+
+.shared-pad-images {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.shared-pad-images img {
+  width: 96px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.shared-pad-images button {
+  display: block;
+}
+
+/* 3段目：よく使う主要操作バー（落ち着いた統一トーン） */
+.shared-pad-primary-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.shared-pad-primary-actions .btn {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 0.83rem;
+  font-weight: 600;
+  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  color: #e2e8f0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+}
+
+.shared-pad-primary-actions .btn:hover {
+  background: rgba(51, 65, 85, 0.92);
+  border-color: rgba(52, 211, 153, 0.5);
+  color: #ffffff;
+}
+
+/* 4段目：下段（左：保存期間・トグルスイッチ / 右：全消去の分離） */
+.shared-pad-footer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+}
+
+.shared-pad-retention-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* スマホ設定画面風の本格スライド式トグルスイッチ */
+.shared-pad-switch-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  user-select: none;
+  padding: 5px 11px 5px 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  transition: all 0.2s ease;
+}
+
+.shared-pad-switch-wrap.is-active {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.55);
+}
+
+.shared-pad-switch-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.shared-pad-switch-slider {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  background: #334155;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  transition: background 0.22s ease, border-color 0.22s ease;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.shared-pad-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: #f8fafc;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  transition: transform 0.22s cubic-bezier(0.2, 0.85, 0.32, 1.1);
+}
+
+.shared-pad-switch-input:checked + .shared-pad-switch-slider {
+  background: #10b981;
+  border-color: #059669;
+}
+
+.shared-pad-switch-input:checked + .shared-pad-switch-slider .shared-pad-switch-thumb {
+  transform: translateX(20px);
+}
+
+.shared-pad-switch-input:focus-visible + .shared-pad-switch-slider {
+  outline: 2px solid #34d399;
+  outline-offset: 2px;
+}
+
+.shared-pad-switch-input:disabled + .shared-pad-switch-slider {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.shared-pad-switch-text {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.shared-pad-switch-wrap.is-active .shared-pad-switch-text {
+  color: #6ee7b7;
+}
+
+/* 削除時間セレクト */
+.shared-pad-ttl-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shared-pad-ttl-prefix {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.shared-pad-ttl-select {
+  min-height: 34px;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.shared-pad-ttl-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #6ee7b7;
+}
+
+.shared-pad-countdown-sub {
+  font-family: 'JetBrains Mono', monospace, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fbbf24;
+  white-space: nowrap;
+}
+
+.shared-pad-countdown-sub.is-fixed {
+  color: #34d399;
+  font-family: inherit;
+}
+
+/* 危険操作：全消去（右端へ分離・赤系トーン） */
+.shared-pad-danger-zone {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.shared-pad-clear-btn {
+  min-height: 36px;
+  padding: 6px 13px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.42);
+  color: #fca5a5;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+}
+
+.shared-pad-clear-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.24);
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+.shared-pad-clear-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+#shared-pad-conflict {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #fbbf24;
+}
+
+#shared-pad-remote {
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.shared-pad .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 
 /* Expand the existing editor without replacing its input or saved state. */
 html.shared-pad-expanded, html.shared-pad-expanded body { overflow: hidden; }
@@ -3654,9 +4081,40 @@ html.shared-pad-expanded, html.shared-pad-expanded body { overflow: hidden; }
 .shared-pad.is-maximized .shared-pad-heading { flex-shrink: 0; position: sticky; top: 0; z-index: 1; background: var(--bg-secondary); padding-bottom: 8px; }
 .shared-pad.is-maximized > textarea { flex: 1 0 200px; min-height: 200px; resize: none; margin: 0; }
 .shared-pad.is-maximized > .shared-pad-images { flex-shrink: 0; max-height: 25vh; overflow-y: auto; }
-.shared-pad.is-maximized > .shared-pad-actions { flex-shrink: 0; position: sticky; bottom: 0; background: var(--bg-secondary); padding-top: 8px; }
-#shared-pad-maximize { min-height: 44px; margin-left: auto; }
-.shared-pad-keep-label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; transition: all 0.2s ease; }
-.shared-pad-keep-label input[type="checkbox"] { accent-color: #10b981; width: 15px; height: 15px; margin: 0; cursor: pointer; }
-.shared-pad-keep-label.is-active { border-color: #10b981; background: rgba(16, 185, 129, 0.16); color: #6ee7b7; font-weight: 600; }
-#shared-pad-ttl:disabled { opacity: 0.78; cursor: not-allowed; border-color: rgba(16, 185, 129, 0.45); color: #6ee7b7; }
+.shared-pad.is-maximized > .shared-pad-primary-actions,
+.shared-pad.is-maximized > .shared-pad-footer-bar { flex-shrink: 0; background: var(--bg-secondary); }
+
+/* スマートフォン・小画面レスポンシブ最適化 */
+@media (max-width: 640px) {
+  .shared-pad {
+    padding: 14px;
+  }
+  .shared-pad-primary-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .shared-pad-primary-actions .btn {
+    min-height: 42px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .shared-pad-footer-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .shared-pad-retention-bar {
+    justify-content: space-between;
+    width: 100%;
+  }
+  .shared-pad-danger-zone {
+    margin-left: 0;
+    justify-content: flex-end;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(239, 68, 68, 0.25);
+  }
+  .shared-pad-clear-btn {
+    min-height: 40px;
+  }
+}

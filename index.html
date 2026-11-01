@@ -18,7 +18,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MissionHub">
 
-  <link rel="stylesheet" href="style.css?v=20261101_v40">
+  <link rel="stylesheet" href="style.css?v=20261101_v41">
   <script>
     // 緊急キャッシュリフレッシュ: app.js の読み込み成否に関わらず動作を保証
     window.emergencyCacheRefresh = async function(e) {
@@ -70,8 +70,8 @@
             </span>
             <!-- Environment Badge (ステージング/検証環境のみ明示表示) -->
             <span id="env-badge" class="env-badge" style="display: none;" title="動作環境">🧪 検証環境（本番データとは独立）</span>
-            <!-- App Version Badge & Cache Refresh Button (v40: 黒板ステータス表記整理・カテゴリ1行表示) -->
-            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v40</span>
+            <!-- App Version Badge & Cache Refresh Button (v41: 黒板UI全面再設計・カウントダウン・トグルスイッチ・設定メニュー収納) -->
+            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v41</span>
             <button id="btn-cache-refresh" class="btn-cache-refresh" onclick="window.emergencyCacheRefresh && window.emergencyCacheRefresh(event)" title="キャッシュをクリアして最新版に更新">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
@@ -146,34 +146,77 @@
     </header>
 
     <section class="shared-pad" id="shared-pad" aria-labelledby="shared-pad-title">
+      <!-- 1段目（上段：状態・設定） -->
       <div class="shared-pad-heading">
-        <h2 id="shared-pad-title">📋 黒板</h2>
-        <span id="shared-pad-status" role="status" aria-live="polite">読み込み中…</span>
-        <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-maximize" aria-pressed="false" aria-controls="shared-pad">⛶ 最大化</button>
+        <div class="shared-pad-heading-left">
+          <h2 id="shared-pad-title">📋 黒板</h2>
+          <span id="shared-pad-status" role="status" aria-live="polite">読み込み中…</span>
+          <span id="shared-pad-countdown" class="shared-pad-countdown-pill" aria-live="off" hidden>⏳ 自動削除まで 05:00</span>
+          <span id="shared-pad-fixed-badge" class="shared-pad-fixed-pill" hidden>📌 固定中</span>
+        </div>
+        <div class="shared-pad-heading-right">
+          <button type="button" class="btn btn-secondary btn-sm shared-pad-util-btn" id="shared-pad-settings-btn" aria-expanded="false" aria-controls="shared-pad-settings-menu" title="黒板の設定・鍵管理">⚙ 設定</button>
+          <button type="button" class="btn btn-secondary btn-sm shared-pad-util-btn" id="shared-pad-maximize" aria-pressed="false" aria-controls="shared-pad">⛶ 最大化</button>
+        </div>
       </div>
-      <p>コードも、ちょっとしたメモも、スクショも。ここに置いて別のデバイスで開けます。</p>
+
+      <!-- 鍵不一致エラー時の緊急導線（通常時は非表示） -->
+      <div id="shared-pad-key-alert" class="shared-pad-key-alert" hidden>
+        <span>🔒 暗号鍵が一致していません。相手端末の鍵を取り込んでください。</span>
+        <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-open-key-from-alert">⚙ 設定から鍵を同期</button>
+      </div>
+
+      <!-- 設定パネル（⚙ 設定押下時のみ表示） -->
+      <div id="shared-pad-settings-menu" class="shared-pad-settings-menu" hidden>
+        <div class="shared-pad-settings-header">
+          <strong>⚙ 黒板の設定</strong>
+          <button type="button" class="shared-pad-settings-close" id="shared-pad-settings-close" aria-label="設定を閉じる">✕</button>
+        </div>
+        <div class="shared-pad-settings-body">
+          <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-share-key" title="他端末へ暗号化鍵を安全に共有・同期">🔑 鍵を管理（共有URL / 鍵コード）</button>
+          <span class="shared-pad-settings-note">別デバイスと黒板を共有・復号するための暗号鍵を管理します</span>
+        </div>
+      </div>
+
+      <!-- 2段目（中段：本文入力） -->
       <label class="sr-only" for="shared-pad-text">黒板のメモ</label>
       <textarea id="shared-pad-text" lang="ja" spellcheck="true" placeholder="ここに書く・貼り付けるだけ。自動で保存します。"></textarea>
       <div id="shared-pad-images" class="shared-pad-images"></div>
-      <div class="shared-pad-actions">
-        <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-copy">📋 本文＋スクショをコピー</button>
-        <label class="btn btn-secondary btn-sm">📸 スクショを追加<input id="shared-pad-files" type="file" accept="image/*" multiple hidden></label>
-        <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-sync">↻ 同期</button>
-        <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-copy-text">本文のみコピー</button>
-        <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-save">⬇ まとめて画像保存</button>
-        <label class="btn btn-secondary btn-sm shared-pad-keep-label" id="shared-pad-keep-label" for="shared-pad-keep" title="ONにすると自動削除せず、手動で消去するまで暗号化保存します">
-          <input type="checkbox" id="shared-pad-keep">
-          <span id="shared-pad-keep-text">📌 消さずに残す</span>
-        </label>
-        <select id="shared-pad-ttl" class="btn btn-secondary btn-sm" title="自動消去までの時間（最後の実内容更新から計算）">
-          <option value="5" selected>⏳ 自動消去: 5分</option>
-          <option value="15">⏳ 自動消去: 15分</option>
-          <option value="30">⏳ 自動消去: 30分</option>
-        </select>
-        <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-share-key" title="他端末へ暗号化鍵を安全に共有・同期">🔑 鍵を管理</button>
-        <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-clear">🧹 全消去</button>
+
+      <!-- 3段目（入力欄の下：よく使う操作） -->
+      <div class="shared-pad-actions shared-pad-primary-actions">
+        <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-copy" title="本文とスクショをまとめてコピー">📋 コピー</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-copy-text" title="テキスト本文のみをコピー">📄 本文のみ</button>
+        <label class="btn btn-secondary btn-sm" title="スクリーンショットや画像を追加">📸 スクショ追加<input id="shared-pad-files" type="file" accept="image/*" multiple hidden></label>
+        <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-sync" title="クラウドの最新状態と同期">↻ 同期</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-save" title="本文とスクショを1枚の画像として保存">⬇ 画像保存</button>
       </div>
-      <p id="shared-pad-copy-hint">スクショがある場合は、本文と全画像を1枚の画像にまとめてコピーします。貼り付け先が文字だけを受け取る場合は「まとめて画像保存」から添付してください。</p>
+
+      <!-- 4段目（設定エリア：保存期間 ＋ 危険操作の分離） -->
+      <div class="shared-pad-footer-bar">
+        <div class="shared-pad-retention-bar">
+          <label class="shared-pad-switch-wrap" id="shared-pad-keep-label" for="shared-pad-keep" title="ONにすると自動削除せず、手動で消去するまで暗号化保存します">
+            <input type="checkbox" role="switch" id="shared-pad-keep" class="shared-pad-switch-input" aria-checked="false">
+            <span class="shared-pad-switch-slider" aria-hidden="true">
+              <span class="shared-pad-switch-thumb"></span>
+            </span>
+            <span class="shared-pad-switch-text" id="shared-pad-keep-text">自動削除しない</span>
+          </label>
+          <div class="shared-pad-ttl-group" id="shared-pad-ttl-group">
+            <label for="shared-pad-ttl" class="shared-pad-ttl-prefix">削除時間:</label>
+            <select id="shared-pad-ttl" class="shared-pad-ttl-select" title="自動削除までの時間（最後の実内容更新から計算）">
+              <option value="5" selected>5分</option>
+              <option value="15">15分</option>
+              <option value="30">30分</option>
+            </select>
+          </div>
+          <span id="shared-pad-countdown-sub" class="shared-pad-countdown-sub" hidden>⏳ 自動削除まで 05:00</span>
+        </div>
+        <div class="shared-pad-danger-zone">
+          <button type="button" class="btn btn-sm shared-pad-clear-btn" id="shared-pad-clear" title="黒板の本文と画像をすべて消去">🗑 全消去</button>
+        </div>
+      </div>
+
       <div id="shared-pad-conflict" hidden>
         <p>別のデバイスでも変更されています。下の内容を確認してから選んでください。現在の入力はこの端末に残っています。</p>
         <pre id="shared-pad-remote"></pre>
@@ -902,10 +945,10 @@
     </svg>
   </button>
 
-  <!-- Application Logic (v40) -->
-  <script src="app.js?v=20261101_v40"></script>
-  <script src="shared-pad-crypto.js?v=20261101_v40"></script>
-  <script src="shared-pad-transfer.js?v=20261101_v40"></script>
-  <script src="shared-pad.js?v=20261101_v40"></script>
+  <!-- Application Logic (v41) -->
+  <script src="app.js?v=20261101_v41"></script>
+  <script src="shared-pad-crypto.js?v=20261101_v41"></script>
+  <script src="shared-pad-transfer.js?v=20261101_v41"></script>
+  <script src="shared-pad.js?v=20261101_v41"></script>
 </body>
 </html>

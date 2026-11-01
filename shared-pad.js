@@ -12,6 +12,14 @@
   const ttlSelect = document.getElementById('shared-pad-ttl');
   const keepToggle = document.getElementById('shared-pad-keep');
   const keepLabel = document.getElementById('shared-pad-keep-label');
+  const countdownEl = document.getElementById('shared-pad-countdown');
+  const countdownSubEl = document.getElementById('shared-pad-countdown-sub');
+  const fixedBadgeEl = document.getElementById('shared-pad-fixed-badge');
+  const settingsBtn = document.getElementById('shared-pad-settings-btn');
+  const settingsMenu = document.getElementById('shared-pad-settings-menu');
+  const settingsCloseBtn = document.getElementById('shared-pad-settings-close');
+  const keyAlertEl = document.getElementById('shared-pad-key-alert');
+  const openKeyFromAlertBtn = document.getElementById('shared-pad-open-key-from-alert');
 
   // Purge deprecated v1 plaintext storage
   try {
@@ -41,7 +49,10 @@
     base: null,
     dirty: false,
     modeChangeOnly: false,
-    keyMismatch: false
+    keyMismatch: false,
+    serverConfirmed: false,
+    confirmedExpiresAt: null,
+    confirmedKeepForever: false
   };
   let remote = null, busy = false, timer, composing = false;
   let imageEpoch = 0;
@@ -50,46 +61,148 @@
   const cryptoMod = window.SharedPadCrypto;
   const message = value => { if (status) status.textContent = value; };
 
+  function setSettingsOpen(open) {
+    if (!settingsMenu) return;
+    const isOpen = Boolean(open);
+    settingsMenu.hidden = !isOpen;
+    if (settingsBtn) {
+      settingsBtn.setAttribute('aria-expanded', String(isOpen));
+    }
+  }
+
+  if (settingsBtn) {
+    settingsBtn.onclick = () => {
+      const nextOpen = settingsMenu ? Boolean(settingsMenu.hidden) : false;
+      setSettingsOpen(nextOpen);
+    };
+  }
+  if (settingsCloseBtn) {
+    settingsCloseBtn.onclick = () => setSettingsOpen(false);
+  }
+
+  function formatRemainingMmSs(expiresAtMs) {
+    if (!expiresAtMs || typeof expiresAtMs !== 'number') return null;
+    const diffMs = expiresAtMs - Date.now();
+    if (diffMs <= 0) return '00:00';
+    const totalSec = Math.max(1, Math.floor(diffMs / 1000));
+    const mins = Math.floor(totalSec / 60);
+    const secs = totalSec % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+
+  function updateCountdownUi() {
+    if (state.keyMismatch) {
+      if (countdownEl) countdownEl.hidden = true;
+      if (fixedBadgeEl) fixedBadgeEl.hidden = true;
+      if (countdownSubEl) {
+        countdownSubEl.hidden = true;
+        countdownSubEl.classList?.toggle?.('is-fixed', false);
+      }
+      return;
+    }
+
+    const hasContent = Boolean(
+      state.pad?.text ||
+      (state.pad?.images && state.pad.images.length > 0) ||
+      state.base
+    );
+
+    if (state.pad?.keepForever) {
+      if (countdownEl) countdownEl.hidden = true;
+      const isConfirmedKeep = !hasContent || (state.serverConfirmed && state.confirmedKeepForever && !state.dirty);
+      if (fixedBadgeEl) {
+        fixedBadgeEl.hidden = false;
+        fixedBadgeEl.textContent = isConfirmedKeep ? '📌 固定中' : '📌 固定変更中（未同期）';
+      }
+      if (countdownSubEl) {
+        countdownSubEl.hidden = false;
+        countdownSubEl.classList?.toggle?.('is-fixed', true);
+        countdownSubEl.textContent = isConfirmedKeep ? '📌 自動削除なし' : '📌 自動削除なし（同期待ち）';
+      }
+      return;
+    }
+
+    const isConfirmedAutoDelete = Boolean(
+      state.serverConfirmed &&
+      hasContent &&
+      !state.confirmedKeepForever &&
+      typeof state.confirmedExpiresAt === 'number' &&
+      state.confirmedExpiresAt > Date.now()
+    );
+
+    if (isConfirmedAutoDelete) {
+      const mmss = formatRemainingMmSs(state.confirmedExpiresAt);
+      const label = `⏳ 自動削除まで ${mmss}`;
+      if (countdownEl) {
+        countdownEl.hidden = false;
+        countdownEl.textContent = label;
+      }
+      if (fixedBadgeEl) fixedBadgeEl.hidden = true;
+      if (countdownSubEl) {
+        countdownSubEl.hidden = false;
+        countdownSubEl.classList?.toggle?.('is-fixed', false);
+        countdownSubEl.textContent = label;
+      }
+      return;
+    }
+
+    if (countdownEl) countdownEl.hidden = true;
+    if (fixedBadgeEl) fixedBadgeEl.hidden = true;
+    if (countdownSubEl) {
+      countdownSubEl.hidden = true;
+      countdownSubEl.classList?.toggle?.('is-fixed', false);
+    }
+  }
+
   function syncModeUi() {
     const keepForever = Boolean(state.pad?.keepForever);
     const currentTtl = [5, 15, 30].includes(state.pad?.ttlMinutes) ? state.pad.ttlMinutes : 5;
     if (keepToggle) {
       keepToggle.checked = keepForever;
+      keepToggle.setAttribute('aria-checked', String(keepForever));
       keepToggle.disabled = Boolean(state.keyMismatch);
     }
     if (keepLabel && keepLabel.classList) {
       keepLabel.classList.toggle('is-active', keepForever);
     }
+    if (keyAlertEl) {
+      keyAlertEl.hidden = !state.keyMismatch;
+    }
     if (ttlSelect) {
       ttlSelect.value = String(currentTtl);
       ttlSelect.disabled = keepForever || Boolean(state.keyMismatch);
       ttlSelect.title = keepForever
-        ? '「消さずに残す」がONのため自動削除なし'
-        : '自動消去までの時間（最後の実内容更新から計算）';
+        ? '「自動削除しない」がONのため自動削除なし'
+        : '自動削除までの時間（最後の実内容更新から計算）';
       if (ttlSelect.options && ttlSelect.options.length) {
         for (let i = 0; i < ttlSelect.options.length; i++) {
           const opt = ttlSelect.options[i];
-          opt.textContent = keepForever ? '📌 自動削除なし' : `⏳ 自動消去: ${opt.value}分`;
+          opt.textContent = keepForever ? '自動削除なし' : `${opt.value}分`;
         }
       }
     }
     if (text && !state.keyMismatch) {
       text.placeholder = keepForever
-        ? '文字や画像を貼り付けてデバイス間で共有（自動削除なし・手動で全消去するまで保持）'
-        : '文字や画像を貼り付けてデバイス間で共有（5分/15分/30分で自動消去）';
+        ? 'ここに書く・貼り付けるだけ。自動で保存します（現在：自動削除なし）'
+        : 'ここに書く・貼り付けるだけ。自動で保存します。';
     }
+    updateCountdownUi();
   }
 
   /**
    * Check TTL expiration and purge if overdue (when keepForever is OFF)
    */
   function checkExpiration() {
-    if (!state.pad?.keepForever && state.pad?.expiresAt && Date.now() >= state.pad.expiresAt) {
+    const activeExpiresAt = state.confirmedExpiresAt || state.pad?.expiresAt;
+    if (!state.pad?.keepForever && activeExpiresAt && Date.now() >= activeExpiresAt) {
       const configuredTtl = [5, 15, 30].includes(state.pad.ttlMinutes) ? state.pad.ttlMinutes : 5;
       state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever: false };
       state.dirty = false;
       state.modeChangeOnly = false;
       state.base = null;
+      state.serverConfirmed = false;
+      state.confirmedExpiresAt = null;
+      state.confirmedKeepForever = false;
       try { localStorage.removeItem(encKey); } catch {}
       render();
       message(`⌛ ${configuredTtl}分経過により自動消去しました`);
@@ -98,22 +211,15 @@
     return false;
   }
 
-  function getRemainingMinutes() {
-    if (state.pad?.keepForever) return null;
-    if (!state.pad?.expiresAt) return null;
-    const diffMs = state.pad.expiresAt - Date.now();
-    if (diffMs <= 0) return 0;
-    return Math.ceil(diffMs / 60000);
-  }
-
   /**
    * Update Blackboard status display
-   * Never claims "保存成功" or "接続・同期済" when eventType === 'idle' or state.dirty is true.
+   * Never claims "保存済" or "同期済" when eventType === 'idle' or state.dirty is true.
    * @param {string} [defaultMsg] fallback message
    * @param {'sync'|'save'|'idle'} [eventType='sync'] distinguish fetch/sync vs save/post vs pending/offline
    */
   function updateStatusDisplay(defaultMsg, eventType = 'sync') {
     if (checkExpiration()) return;
+    updateCountdownUi();
     if (state.keyMismatch) {
       message('🔒 鍵不一致（要鍵同期）');
       return;
@@ -139,12 +245,11 @@
       return;
     }
 
-    const mins = getRemainingMinutes();
-    if (mins !== null && mins > 0) {
+    if (hasActiveContent && state.confirmedExpiresAt && state.confirmedExpiresAt > Date.now()) {
       if (eventType === 'save') {
-        message(`🔒 保存成功（残り約${mins}分）`);
+        message('🔒 保存成功');
       } else {
-        message(`🔒 接続・同期済（残り約${mins}分）`);
+        message('🔒 接続・同期済');
       }
     } else if (defaultMsg) {
       message(defaultMsg);
@@ -315,21 +420,28 @@
         if (decrypted.deleted || decrypted.expired) {
           state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: 5, keepForever: false };
           state.base = null;
+          state.serverConfirmed = false;
+          state.confirmedExpiresAt = null;
+          state.confirmedKeepForever = false;
           try { localStorage.removeItem(encKey); } catch {}
           render();
           message('⌛ 消去済みのメモでした');
         } else {
           const ttl = [5, 15, 30].includes(remotePad?.ttlMinutes) ? remotePad.ttlMinutes : 5;
           const keepForever = Boolean(remotePad?.keepForever ?? decrypted?.keepForever ?? false);
+          const confirmedExp = keepForever ? null : (remotePad.expiresAt || null);
           state.pad = {
             text: decrypted.text,
             images: decrypted.images,
             revision: decrypted.revision,
-            expiresAt: keepForever ? null : (remotePad.expiresAt || null),
+            expiresAt: confirmedExp,
             ttlMinutes: ttl,
             keepForever
           };
           state.base = decrypted.revision;
+          state.serverConfirmed = true;
+          state.confirmedExpiresAt = confirmedExp;
+          state.confirmedKeepForever = keepForever;
           await persist(false);
           render();
           updateStatusDisplay(null, 'sync');
@@ -435,6 +547,9 @@
       encrypted.expiresAt = keepForever ? null : state.pad.expiresAt;
       encrypted.ttlMinutes = ttl;
       encrypted.keepForever = keepForever;
+      encrypted.serverConfirmed = Boolean(state.serverConfirmed);
+      encrypted.confirmedExpiresAt = state.confirmedExpiresAt ?? null;
+      encrypted.confirmedKeepForever = Boolean(state.confirmedKeepForever);
       localStorage.setItem(encKey, JSON.stringify(encrypted));
       return true;
     } catch {
@@ -460,14 +575,20 @@
         if (!decrypted.expired && !decrypted.deleted) {
           const ttl = [5, 15, 30].includes(encrypted.ttlMinutes) ? encrypted.ttlMinutes : 5;
           const keepForever = Boolean(encrypted.keepForever ?? decrypted.keepForever ?? false);
+          const restoredExp = keepForever ? null : (encrypted.expiresAt ?? null);
           state.pad = {
             text: decrypted.text,
             images: decrypted.images,
             revision: decrypted.revision,
-            expiresAt: keepForever ? null : (encrypted.expiresAt ?? null),
+            expiresAt: restoredExp,
             ttlMinutes: ttl,
             keepForever
           };
+          if (encrypted.serverConfirmed) {
+            state.serverConfirmed = true;
+            state.confirmedKeepForever = Boolean(encrypted.confirmedKeepForever ?? keepForever);
+            state.confirmedExpiresAt = state.confirmedKeepForever ? null : (encrypted.confirmedExpiresAt ?? restoredExp);
+          }
           render();
         }
       }
@@ -572,6 +693,9 @@
           state.modeChangeOnly = false;
           state.base = null;
           state.keyMismatch = false;
+          state.serverConfirmed = false;
+          state.confirmedExpiresAt = null;
+          state.confirmedKeepForever = false;
           if (text) text.readOnly = false;
           if (clearBtn) clearBtn.disabled = false;
           try { localStorage.removeItem(encKey); } catch {}
@@ -606,6 +730,9 @@
               state.dirty = false;
               state.modeChangeOnly = false;
               state.base = null;
+              state.serverConfirmed = false;
+              state.confirmedExpiresAt = null;
+              state.confirmedKeepForever = false;
               try { localStorage.removeItem(encKey); } catch {}
               render();
               message('⌛ 消去されました');
@@ -618,12 +745,12 @@
           state.keyMismatch = true;
           if (text) {
             text.readOnly = true;
-            text.placeholder = '🔒 別端末の暗号鍵が異なるため編集できません。「🔑 鍵を管理」から鍵を合わせてください';
+            text.placeholder = '🔒 別端末の暗号鍵が異なるため編集できません。「⚙ 設定」から鍵を合わせてください';
           }
           if (clearBtn) clearBtn.disabled = true;
           syncModeUi();
-          updateStatusDisplay('🔒 鍵不一致（要鍵同期）', 'idle');
-          message('🔒 別デバイスの暗号キーが異なります（「🔑 鍵を管理」から鍵を同期してください）');
+          updateStatusDisplay('🔒 鍵不一致（設定から鍵を同期してください）', 'idle');
+          message('🔒 別デバイスの暗号キーが異なります（「⚙ 設定」→「🔑 鍵を管理」から鍵を同期してください）');
           return;
         }
       } else if (remotePad && typeof remotePad.text === 'string') {
@@ -643,6 +770,9 @@
           state.dirty = false;
           state.modeChangeOnly = false;
           state.base = null;
+          state.serverConfirmed = false;
+          state.confirmedExpiresAt = null;
+          state.confirmedKeepForever = false;
           try { localStorage.removeItem(encKey); } catch {}
           render();
           message(result.expired ? '⌛ すでに期限切れのため変更できませんでした' : '⌛ すでに消去済みのため変更できませんでした');
@@ -655,9 +785,16 @@
           return; // Never overwrite server data with mismatched key!
         }
         if (remotePad?.revision === state.pad.revision) {
+          const rKeep = Boolean(remotePad?.keepForever ?? state.pad.keepForever);
+          const rExp = rKeep ? null : (remotePad?.expiresAt ?? state.pad.expiresAt ?? null);
           state.base = remotePad.revision;
           state.dirty = false;
           state.modeChangeOnly = false;
+          state.serverConfirmed = true;
+          state.confirmedKeepForever = rKeep;
+          state.confirmedExpiresAt = rExp;
+          state.pad.keepForever = rKeep;
+          state.pad.expiresAt = rExp;
           await persist(false);
           render();
           updateStatusDisplay(null, 'sync');
@@ -669,17 +806,21 @@
           if (state.modeChangeOnly && decryptedRemote) {
             const ttl = [5, 15, 30].includes(remotePad?.ttlMinutes) ? remotePad.ttlMinutes : (state.pad.ttlMinutes || 5);
             const keepForever = Boolean(remotePad?.keepForever ?? decryptedRemote?.keepForever ?? false);
+            const confirmedExp = keepForever ? null : (remotePad?.expiresAt || null);
             state.pad = {
               text: decryptedRemote.text,
               images: decryptedRemote.images,
               revision: decryptedRemote.revision,
-              expiresAt: keepForever ? null : (remotePad?.expiresAt || null),
+              expiresAt: confirmedExp,
               ttlMinutes: ttl,
               keepForever
             };
             state.base = decryptedRemote.revision;
             state.dirty = false;
             state.modeChangeOnly = false;
+            state.serverConfirmed = true;
+            state.confirmedKeepForever = keepForever;
+            state.confirmedExpiresAt = confirmedExp;
             await persist(false);
             render();
             updateStatusDisplay('🔒 他端末の最新設定を反映しました', 'sync');
@@ -730,6 +871,9 @@
           state.dirty = false;
           state.modeChangeOnly = false;
           state.base = null;
+          state.serverConfirmed = false;
+          state.confirmedExpiresAt = null;
+          state.confirmedKeepForever = false;
           try { localStorage.removeItem(encKey); } catch {}
           render();
           message('⌛ すでに消去または期限切れのため保存できませんでした');
@@ -744,17 +888,21 @@
           if (state.modeChangeOnly && conflictPad && !conflictPad.deleted && !conflictPad.expired) {
             const rTtl = [5, 15, 30].includes(body.pad?.ttlMinutes) ? body.pad.ttlMinutes : 5;
             const rKeep = Boolean(body.pad?.keepForever ?? conflictPad?.keepForever ?? false);
+            const rExp = rKeep ? null : (body.pad?.expiresAt || null);
             state.pad = {
               text: conflictPad.text,
               images: conflictPad.images,
               revision: conflictPad.revision,
-              expiresAt: rKeep ? null : (body.pad?.expiresAt || null),
+              expiresAt: rExp,
               ttlMinutes: rTtl,
               keepForever: rKeep
             };
             state.base = conflictPad.revision;
             state.dirty = false;
             state.modeChangeOnly = false;
+            state.serverConfirmed = true;
+            state.confirmedKeepForever = rKeep;
+            state.confirmedExpiresAt = rExp;
             await persist(false);
             render();
             updateStatusDisplay('🔒 他端末の最新設定を反映しました', 'sync');
@@ -769,16 +917,19 @@
           return;
         }
 
-        if (body.pad && typeof body.pad === 'object') {
-          state.pad.keepForever = Boolean(body.pad.keepForever);
-          if ([5, 15, 30].includes(body.pad.ttlMinutes)) {
-            state.pad.ttlMinutes = body.pad.ttlMinutes;
-          }
-          state.pad.expiresAt = state.pad.keepForever ? null : (body.pad.expiresAt ?? state.pad.expiresAt);
+        const confirmedKeep = Boolean(body.pad?.keepForever ?? state.pad.keepForever);
+        if ([5, 15, 30].includes(body.pad?.ttlMinutes)) {
+          state.pad.ttlMinutes = body.pad.ttlMinutes;
         }
+        const confirmedExp = confirmedKeep ? null : (body.pad?.expiresAt ?? state.pad.expiresAt ?? null);
+        state.pad.keepForever = confirmedKeep;
+        state.pad.expiresAt = confirmedExp;
         state.base = encryptedOut.revision;
         state.dirty = false;
         state.modeChangeOnly = false;
+        state.serverConfirmed = true;
+        state.confirmedKeepForever = confirmedKeep;
+        state.confirmedExpiresAt = confirmedExp;
         await persist(false);
         render();
         updateStatusDisplay('🔒 保存成功', 'save');
@@ -790,16 +941,20 @@
         if (decryptedRemote) {
           const ttl = [5, 15, 30].includes(remotePad?.ttlMinutes) ? remotePad.ttlMinutes : (state.pad.ttlMinutes || 5);
           const keepForever = Boolean(remotePad?.keepForever ?? decryptedRemote?.keepForever ?? false);
+          const confirmedExp = keepForever ? null : (remotePad?.expiresAt ?? decryptedRemote?.expiresAt ?? null);
           state.pad = {
             text: decryptedRemote.text,
             images: decryptedRemote.images,
             revision: decryptedRemote.revision,
-            expiresAt: keepForever ? null : (remotePad?.expiresAt || null),
+            expiresAt: confirmedExp,
             ttlMinutes: ttl,
             keepForever
           };
           state.base = decryptedRemote.revision;
           state.modeChangeOnly = false;
+          state.serverConfirmed = true;
+          state.confirmedKeepForever = keepForever;
+          state.confirmedExpiresAt = confirmedExp;
           await persist(false);
           render();
           updateStatusDisplay('🔒 接続・同期済', 'sync');
@@ -809,6 +964,9 @@
           state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever };
           state.base = null;
           state.modeChangeOnly = false;
+          state.serverConfirmed = false;
+          state.confirmedExpiresAt = null;
+          state.confirmedKeepForever = false;
           try { localStorage.removeItem(encKey); } catch {}
           render();
           updateStatusDisplay(
@@ -932,6 +1090,9 @@
       state.dirty = false;
       state.modeChangeOnly = false;
       state.base = null;
+      state.serverConfirmed = false;
+      state.confirmedExpiresAt = null;
+      state.confirmedKeepForever = false;
       try { localStorage.removeItem(encKey); } catch {}
       render();
 
@@ -1120,6 +1281,12 @@
   if (shareKeyBtn) {
     shareKeyBtn.onclick = showKeyModal;
   }
+  if (openKeyFromAlertBtn) {
+    openKeyFromAlertBtn.onclick = () => {
+      setSettingsOpen(true);
+      showKeyModal();
+    };
+  }
 
   const syncBtn = document.getElementById('shared-pad-sync');
   if (syncBtn) syncBtn.onclick = sync;
@@ -1127,12 +1294,17 @@
   const useRemoteBtn = document.getElementById('shared-pad-use-remote');
   if (useRemoteBtn) {
     useRemoteBtn.onclick = async () => {
+      const rKeep = Boolean(remote?.keepForever);
+      const rExp = rKeep ? null : (remote?.expiresAt || null);
       state = {
         pad: remote || { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: 5, keepForever: false },
         base: remote?.revision || null,
         dirty: false,
         modeChangeOnly: false,
-        keyMismatch: false
+        keyMismatch: false,
+        serverConfirmed: Boolean(remote),
+        confirmedExpiresAt: rExp,
+        confirmedKeepForever: rKeep
       };
       if (conflict) conflict.hidden = true;
       await persist(false);
@@ -1173,6 +1345,13 @@
       sync();
     }
   });
+
+  // 1-second local countdown display ticker (no server communication)
+  setInterval(() => {
+    if (!checkExpiration()) {
+      updateCountdownUi();
+    }
+  }, 1000);
 
   // Regular expiration check & sync interval
   setInterval(() => {
