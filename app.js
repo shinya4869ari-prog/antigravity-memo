@@ -456,7 +456,12 @@ async function fetchMemosFromCloud(quiet = false) {
 
     if (res.status === 401 || res.status === 403) {
       console.warn('Cloudflare Access 認証エラー (要ログイン):', res.status);
-      setCloudStatus('local', '通常メモ: 認証期限切 (要ログイン)');
+      setCloudStatus('local', '通常メモ: 再ログインが必要です');
+      const badge = document.getElementById('cloud-sync-badge');
+      if (badge) {
+        badge.style.cursor = 'pointer';
+        badge.onclick = () => window.location.reload();
+      }
       return;
     }
 

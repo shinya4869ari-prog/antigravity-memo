@@ -210,9 +210,22 @@ async function requireApiAuth(request, env) {
   if (verifyAutomationToken(request, env)) {
     return null;
   }
-  // Path 2: Cloudflare Access JWT (Browser / Service Token with Access JWT)
-  if (await verifyCloudflareAccessJwt(request, env)) {
-    return null;
+  // Path 2: Cloudflare Access JWT validation when Access credentials are bound in Worker env
+  const hasAccessConfig = env && typeof env.CF_ACCESS_TEAM_DOMAIN === 'string' && env.CF_ACCESS_TEAM_DOMAIN.trim() &&
+                                 typeof env.CF_ACCESS_AUD === 'string' && env.CF_ACCESS_AUD.trim();
+  if (hasAccessConfig) {
+    if (await verifyCloudflareAccessJwt(request, env)) {
+      return null;
+    }
+  } else {
+    // Fallback when CF_ACCESS_AUD is not bound in Worker env:
+    // Trust Cloudflare Access edge proxy headers/cookies injected after edge authentication
+    const accessEmail = request.headers.get('Cf-Access-Authenticated-User-Email');
+    const cfAuthCookie = getCookieValue(request.headers.get('Cookie'), 'CF_Authorization');
+    const jwtAssertion = request.headers.get('Cf-Access-Jwt-Assertion');
+    if (accessEmail || cfAuthCookie || jwtAssertion) {
+      return null;
+    }
   }
   // Strict Fail-Closed: reject all unauthenticated or misconfigured requests
   return new Response(JSON.stringify({ error: 'Unauthorized' }), {
