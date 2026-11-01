@@ -1,5 +1,5 @@
-// Antigravity Mission Hub - Progressive Web App Service Worker (v41)
-const CACHE_NAME = 'antigravity-hub-v41';
+// Antigravity Mission Hub - Progressive Web App Service Worker (v42)
+const CACHE_NAME = 'antigravity-hub-v42';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -45,19 +45,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 1. Cloudflare Workers KV API: Network Only (LocalStorage handles offline fallback)
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(request).catch(() => {
-        return new Response(JSON.stringify({
-          error: 'Offline - Changes will sync when online',
-          offline: true
-        }), {
-          status: 503,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      })
-    );
+  // 1. Cloudflare Workers KV / Durable Objects API & Access endpoints:
+  // Bypass Service Worker interception so the browser handles API requests directly
+  // with native Cloudflare Access session context and client-side timeout/retry logic.
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/cdn-cgi/')) {
     return;
   }
 

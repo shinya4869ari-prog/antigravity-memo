@@ -925,13 +925,24 @@
 - 次回最初に実施する作業: 本番サイト（v41）での表示確認。
 - 関連する作業ログ: execution_logs/2026-11-01_blackboard_keep_toggle.md
 
-## 作業状況・引き継ぎ（2026-11-01 03:36 UTC 静的配信除外ガード強化・.assetsignore更新・Gitプッシュ）
-- 最終更新日時: 2026-11-01 03:36 UTC
-- 直近で完了した作業: Gitコミット履歴および管理対象ファイルのセキュリティ総点検を実施（生キー・.env等の混入なし、CLEAN確認）。セキュリティ向上のため、Cloudflare Static Assetsからの一般直接アクセスが不要な内部ファイル（`AGENTS.md`, `docs/`, `execution_logs/`, `mcp-server/`, `scripts/`, `tests/`）を `.assetsignore` に追加して配信除外を設定。ユーザー承認のもとGitコミット＆プッシュを実施。
-- 現在進行中の作業: Cloudflare本番環境への自動反映。
-- 未解決の問題: なし。
-- 次回最初に実施する作業: ユーザー指示に基づく次期機能開発または保守。
-- 関連する作業ログ: execution_logs/2026-11-01_security_assetsignore_guard.md
+## 作業状況・引き継ぎ（2026-11-01 06:13 UTC 全3台オフライン表示固定・1台暗号鍵不一致の原因解消・v42本番デプロイ）
+- 最終更新日時: 2026-11-01 06:13 UTC
+- 直近で完了した作業:
+  1. **全3台オフライン表示固定の解消 (`shared-pad.js`, `app.js`, `sw.js`)**:
+     - `shared-pad.js` の `updateStatusDisplay` で空メモ/期限未確定時に `defaultMsg === null` で呼ばれた際、過去の `⚠️ 未接続・未同期（再接続待ち）` 表示が消えずに残るバグを修正。
+     - `shared-pad.js` の `/api/shared-pad` 通信に8秒タイムアウト（`AbortController`）と `credentials: 'same-origin'` を追加し、スリープまたぎの `busy` ロック残留を防止。
+     - `app.js` と `shared-pad.js` の双方に、通信失敗後およびスリープ復帰（`visibilitychange` / `focus` / `online`）後の自動再接続リトライ（1.5秒後・4.5秒後）を追加し、画面更新なしで自動的にオンライン表示へ復帰するよう改善。
+     - Cloudflare Access 認証期限切れ（401/403/HTMLリダイレクト）を「オフライン」と誤表示せず「再ログインが必要です」と明示。
+     - `sw.js`（v42）で `/api/`・`/cdn-cgi/` を Service Worker 介入対象から外し、擬似503応答を廃止。
+  2. **1台だけ更新後に「暗号キーが一致していません」になる問題の恒久対策 (`shared-pad-crypto.js`, `shared-pad.js`)**:
+     - `KeyStore` を `IndexedDB` + `localStorage`（`antigravity-shared-pad-key-v2`）の二重永続化に強化し、既存の `IndexedDB` 鍵も起動時に `localStorage` へ自動バックアップ。
+     - `IndexedDB` トランザクション完了時の `db.close()` 徹底および `indexedDB.open()` の1.5秒タイムアウト保護を追加。
+     - `initKey()` で鍵未検出時に即座にランダム鍵でストレージを上書きせず、サーバー上の既存メモと競合しないことを確認してから保存する保護を追加。
+  3. **検証**: 既存テスト＋新規自動復帰・二重鍵保護テスト計17件全パス、および3台独立環境シミュレーションでオフライン自動復帰と鍵維持を確認。
+- 現在進行中の作業: Git push（v42）およびCloudflare本番環境での反映確認。
+- 未解決の問題: なし（既に鍵不一致状態になっていた1台のみ、一度だけ「⚙ 設定」→「🔑 鍵を管理」で共通鍵を取り込めば以降は二重保存で維持される）。
+- 次回最初に実施する作業: 本番サイト（v42）の反映確認と3台での安定稼働確認。
+- 関連する作業ログ: execution_logs/2026-11-01_v42_offline_recovery_and_key_persistence.md
 
 
 

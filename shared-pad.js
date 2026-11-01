@@ -50,16 +50,60 @@
     dirty: false,
     modeChangeOnly: false,
     keyMismatch: false,
+    keyPersisted: false,
     serverConfirmed: false,
     confirmedExpiresAt: null,
     confirmedKeepForever: false
   };
   let remote = null, busy = false, timer, composing = false;
+  let reconnectTimer1 = null, reconnectTimer2 = null;
   let imageEpoch = 0;
   let cryptoKey = null, keyInitPromise = null;
 
   const cryptoMod = window.SharedPadCrypto;
   const message = value => { if (status) status.textContent = value; };
+
+  function clearReconnectTimers() {
+    if (reconnectTimer1) { clearTimeout(reconnectTimer1); reconnectTimer1 = null; }
+    if (reconnectTimer2) { clearTimeout(reconnectTimer2); reconnectTimer2 = null; }
+  }
+
+  function scheduleReconnectRetries() {
+    clearReconnectTimers();
+    reconnectTimer1 = setTimeout(() => {
+      reconnectTimer1 = null;
+      if (typeof document === 'undefined' || !document.hidden) sync();
+    }, 1500);
+    reconnectTimer2 = setTimeout(() => {
+      reconnectTimer2 = null;
+      if (typeof document === 'undefined' || !document.hidden) sync();
+    }, 4500);
+  }
+
+  async function fetchPadApi(url, options = {}, timeoutMs = 8000) {
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+    try {
+      const fetchOpts = {
+        cache: 'no-store',
+        credentials: 'same-origin',
+        ...options
+      };
+      if (controller) {
+        fetchOpts.signal = controller.signal;
+      }
+      const res = await fetch(url, fetchOpts);
+      const contentType = (res.headers?.get?.('content-type') || '').toLowerCase();
+      if (res.status === 401 || res.status === 403 || res.redirected || contentType.includes('text/html')) {
+        const authErr = new Error('AUTH_REQUIRED');
+        authErr.code = 'AUTH_REQUIRED';
+        throw authErr;
+      }
+      return res;
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  }
 
   function setSettingsOpen(open) {
     if (!settingsMenu) return;
@@ -253,6 +297,8 @@
       }
     } else if (defaultMsg) {
       message(defaultMsg);
+    } else {
+      message(eventType === 'save' ? '🔒 保存成功' : '接続済（空）');
     }
   }
 
@@ -386,7 +432,7 @@
 
     try {
       if (notify) message('🔍 相手端末の黒板データとの適合性を検証中...');
-      const response = await fetch('/api/shared-pad', { cache: 'no-store' });
+      const response = await fetchPadApi('/api/shared-pad');
       if (!response.ok && response.status !== 410) {
         throw new Error(`サーバー通信エラー (HTTP ${response.status})`);
       }
@@ -411,6 +457,7 @@
 
         await cryptoMod.KeyStore.saveKey(candidateKey);
         cryptoKey = candidateKey;
+        state.keyPersisted = true;
         state.keyMismatch = false;
         state.dirty = false;
         state.modeChangeOnly = false;
@@ -461,6 +508,7 @@
 
         await cryptoMod.KeyStore.saveKey(candidateKey);
         cryptoKey = candidateKey;
+        state.keyPersisted = true;
         state.keyMismatch = false;
         if (text) text.readOnly = false;
         if (clearBtn) clearBtn.disabled = false;
@@ -498,6 +546,7 @@
         await cryptoMod.KeyStore.saveKey(imported);
         history.replaceState(null, '', window.location.pathname + window.location.search);
         cryptoKey = imported;
+        state.keyPersisted = true;
         message('🔗 共有キーを取り込みました');
         return cryptoKey;
       }
@@ -505,12 +554,14 @@
       const stored = await cryptoMod.KeyStore.loadKey();
       if (stored) {
         cryptoKey = stored;
+        state.keyPersisted = true;
         return cryptoKey;
       }
 
+      // Generate provisional key in memory; only persist once confirmed safe (not conflicting with active remote pad)
       const generated = await cryptoMod.generatePadKey(true);
-      await cryptoMod.KeyStore.saveKey(generated);
       cryptoKey = generated;
+      state.keyPersisted = false;
       return cryptoKey;
     } catch (err) {
       message('暗号キー初期化エラー: ' + err.message);
@@ -528,6 +579,10 @@
     }
     if (!cryptoKey || !cryptoMod) return false;
     try {
+      if (!state.keyPersisted && !state.keyMismatch) {
+        await cryptoMod.KeyStore.saveKey(cryptoKey);
+        state.keyPersisted = true;
+      }
       const ttl = [5, 15, 30].includes(state.pad.ttlMinutes) ? state.pad.ttlMinutes : 5;
       const keepForever = Boolean(state.pad.keepForever);
       const opts = {
@@ -684,9 +739,10 @@
     busy = true;
 
     try {
-      const response = await fetch('/api/shared-pad', { cache: 'no-store' });
+      const response = await fetchPadApi('/api/shared-pad');
       if (!response.ok) {
         if (response.status === 410) {
+          clearReconnectTimers();
           const configuredTtl = [5, 15, 30].includes(state.pad?.ttlMinutes) ? state.pad.ttlMinutes : 5;
           state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever: false };
           state.dirty = false;
@@ -712,13 +768,34 @@
         return;
       }
 
+      clearReconnectTimers();
+
       let remotePad = result.pad;
       let decryptedRemote = null;
       const serverDeletedOrExpired = Boolean(result.deleted || result.expired);
 
       if (remotePad && remotePad.v === 2 && cryptoKey) {
         try {
-          decryptedRemote = await cryptoMod.decryptPad(cryptoKey, remotePad);
+          try {
+            decryptedRemote = await cryptoMod.decryptPad(cryptoKey, remotePad);
+          } catch (firstErr) {
+            if (!state.keyPersisted) {
+              const recoveredKey = await cryptoMod.KeyStore.loadKey();
+              if (recoveredKey) {
+                decryptedRemote = await cryptoMod.decryptPad(recoveredKey, remotePad);
+                cryptoKey = recoveredKey;
+                state.keyPersisted = true;
+              } else {
+                throw firstErr;
+              }
+            } else {
+              throw firstErr;
+            }
+          }
+          if (!state.keyPersisted && cryptoKey) {
+            await cryptoMod.KeyStore.saveKey(cryptoKey);
+            state.keyPersisted = true;
+          }
           state.keyMismatch = false;
           if (text) text.readOnly = false;
           if (clearBtn) clearBtn.disabled = false;
@@ -759,6 +836,10 @@
         if (text) text.readOnly = false;
         if (clearBtn) clearBtn.disabled = false;
       } else if (!remotePad) {
+        if (!state.keyPersisted && cryptoKey) {
+          await cryptoMod.KeyStore.saveKey(cryptoKey);
+          state.keyPersisted = true;
+        }
         state.keyMismatch = false;
         if (text) text.readOnly = false;
         if (clearBtn) clearBtn.disabled = false;
@@ -856,7 +937,7 @@
           encryptedOut.modeChangeOnly = true;
         }
 
-        const saved = await fetch('/api/shared-pad', {
+        const saved = await fetchPadApi('/api/shared-pad', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ pad: encryptedOut, base: state.base })
@@ -977,8 +1058,13 @@
           );
         }
       }
-    } catch {
-      updateStatusDisplay('⚠️ 未接続・未同期（再接続待ち）', 'idle');
+    } catch (err) {
+      if (err && err.code === 'AUTH_REQUIRED') {
+        updateStatusDisplay('🔐 再ログインが必要です（画面を更新してください）', 'idle');
+      } else {
+        updateStatusDisplay('⚠️ 未接続・未同期（再接続待ち）', 'idle');
+      }
+      scheduleReconnectRetries();
     } finally {
       busy = false;
     }
@@ -1302,6 +1388,7 @@
         dirty: false,
         modeChangeOnly: false,
         keyMismatch: false,
+        keyPersisted: true,
         serverConfirmed: Boolean(remote),
         confirmedExpiresAt: rExp,
         confirmedKeepForever: rKeep
@@ -1329,7 +1416,17 @@
     };
   }
 
-  window.addEventListener('online', sync);
+  window.addEventListener('online', () => {
+    sync();
+    scheduleReconnectRetries();
+  });
+  window.addEventListener('focus', () => {
+    if (!document.hidden) {
+      checkExpiration();
+      sync();
+      scheduleReconnectRetries();
+    }
+  });
   window.addEventListener('hashchange', async () => {
     const hash = window.location.hash || '';
     const keyFromHash = extractKeyString(hash);
@@ -1343,6 +1440,7 @@
     if (!document.hidden) {
       checkExpiration();
       sync();
+      scheduleReconnectRetries();
     }
   });
 

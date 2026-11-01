@@ -425,6 +425,29 @@ function updateEnvironmentDisplay() {
 
 // Optimistic Concurrency Control (OCC) Server Revision Tracking
 let currentServerRevision = (typeof localStorage !== 'undefined' ? localStorage.getItem('agy_server_memo_revision') : null);
+let memoReconnectTimer1 = null;
+let memoReconnectTimer2 = null;
+
+function clearMemoReconnectTimers() {
+  if (memoReconnectTimer1) { clearTimeout(memoReconnectTimer1); memoReconnectTimer1 = null; }
+  if (memoReconnectTimer2) { clearTimeout(memoReconnectTimer2); memoReconnectTimer2 = null; }
+}
+
+function scheduleMemoReconnectRetries() {
+  clearMemoReconnectTimers();
+  memoReconnectTimer1 = setTimeout(() => {
+    memoReconnectTimer1 = null;
+    if (typeof document === 'undefined' || document.visibilityState !== 'hidden') {
+      fetchMemosFromCloud(true);
+    }
+  }, 1500);
+  memoReconnectTimer2 = setTimeout(() => {
+    memoReconnectTimer2 = null;
+    if (typeof document === 'undefined' || document.visibilityState !== 'hidden') {
+      fetchMemosFromCloud(true);
+    }
+  }, 4500);
+}
 
 function setCurrentServerRevision(rev) {
   currentServerRevision = rev ? String(rev).trim() : null;
@@ -450,11 +473,16 @@ async function fetchMemosFromCloud(quiet = false) {
   const timeoutId = controller ? setTimeout(() => controller.abort(), 8000) : null;
 
   try {
-    const fetchOptions = controller ? { signal: controller.signal } : {};
+    const fetchOptions = {
+      cache: 'no-store',
+      credentials: 'same-origin',
+      ...(controller ? { signal: controller.signal } : {})
+    };
     const res = await fetch('/api/memos', fetchOptions);
     if (timeoutId) clearTimeout(timeoutId);
 
-    if (res.status === 401 || res.status === 403) {
+    const contentType = (res.headers?.get?.('content-type') || '').toLowerCase();
+    if (res.status === 401 || res.status === 403 || res.redirected || contentType.includes('text/html')) {
       console.warn('Cloudflare Access 認証エラー (要ログイン):', res.status);
       setCloudStatus('local', '通常メモ: 再ログインが必要です');
       const badge = document.getElementById('cloud-sync-badge');
@@ -462,15 +490,17 @@ async function fetchMemosFromCloud(quiet = false) {
         badge.style.cursor = 'pointer';
         badge.onclick = () => window.location.reload();
       }
+      scheduleMemoReconnectRetries();
       return;
     }
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    const storageModeHeader = res.headers.get('X-Storage-Mode');
+    clearMemoReconnectTimers();
+    const storageModeHeader = res.headers?.get?.('X-Storage-Mode') || null;
 
     // サーバーの現在世代（Revision / ETag）を取得・記録
-    const serverRevision = res.headers.get('ETag')?.replace(/["']/g, '').trim() || res.headers.get('X-Memo-Revision');
+    const serverRevision = res.headers?.get?.('ETag')?.replace(/["']/g, '').trim() || res.headers?.get?.('X-Memo-Revision');
     if (serverRevision) {
       setCurrentServerRevision(serverRevision);
     }
@@ -566,6 +596,7 @@ async function fetchMemosFromCloud(quiet = false) {
     } else {
       setCloudStatus('local', '通常メモ: ローカル保存 (オフライン)');
     }
+    scheduleMemoReconnectRetries();
   } finally {
     isSyncing = false;
   }
@@ -3083,16 +3114,24 @@ if (btnSaveVoiceMemo) {
   });
 }
 
-// Auto-sync when switching back to this tab / waking phone
+// Auto-sync when switching back to this tab / waking phone / network recovery
+window.addEventListener('online', () => {
+  fetchMemosFromCloud(true);
+  syncCustomAppsWithCloud();
+  scheduleMemoReconnectRetries();
+});
+
 window.addEventListener('focus', () => {
   fetchMemosFromCloud(true);
   syncCustomAppsWithCloud();
+  scheduleMemoReconnectRetries();
 });
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     fetchMemosFromCloud(true);
     syncCustomAppsWithCloud();
+    scheduleMemoReconnectRetries();
   }
 });
 

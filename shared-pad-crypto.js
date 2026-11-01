@@ -196,55 +196,162 @@
     DB_NAME: 'antigravity-pad-keystore',
     STORE_NAME: 'keys',
     KEY_NAME: 'active-pad-key',
+    LS_KEY_NAME: 'antigravity-shared-pad-key-v2',
 
     open() {
-      return new Promise((resolve, reject) => {
-        if (typeof indexedDB === 'undefined') {
+      return new Promise((resolve) => {
+        if (typeof indexedDB === 'undefined' || !indexedDB) {
           return resolve(null);
         }
-        const req = indexedDB.open(this.DB_NAME, 1);
-        req.onupgradeneeded = () => {
-          const db = req.result;
-          if (!db.objectStoreNames.contains(this.STORE_NAME)) {
-            db.createObjectStore(this.STORE_NAME);
+        let settled = false;
+        const finish = (val) => {
+          if (!settled) {
+            settled = true;
+            resolve(val);
           }
         };
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
+        const timer = setTimeout(() => finish(null), 1500);
+        try {
+          const req = indexedDB.open(this.DB_NAME, 1);
+          req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(this.STORE_NAME)) {
+              db.createObjectStore(this.STORE_NAME);
+            }
+          };
+          req.onsuccess = () => {
+            clearTimeout(timer);
+            const db = req.result;
+            if (db && typeof db.onversionchange !== 'undefined') {
+              db.onversionchange = () => { try { db.close(); } catch {} };
+            }
+            finish(db);
+          };
+          req.onerror = () => {
+            clearTimeout(timer);
+            finish(null);
+          };
+          req.onblocked = () => {
+            clearTimeout(timer);
+            finish(null);
+          };
+        } catch {
+          clearTimeout(timer);
+          finish(null);
+        }
       });
+    },
+
+    async loadFromLocalStorage() {
+      try {
+        if (typeof localStorage === 'undefined' || !localStorage) return null;
+        const raw = localStorage.getItem(this.LS_KEY_NAME);
+        if (!raw || typeof raw !== 'string') return null;
+        return await importPadKey(raw.trim(), true);
+      } catch {
+        return null;
+      }
+    },
+
+    async saveToLocalStorage(cryptoKey) {
+      try {
+        if (!cryptoKey || typeof localStorage === 'undefined' || !localStorage) return;
+        const raw = await exportPadKey(cryptoKey);
+        if (raw) {
+          localStorage.setItem(this.LS_KEY_NAME, raw);
+        }
+      } catch {}
     },
 
     async loadKey() {
-      const db = await this.open();
-      if (!db) return null;
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(this.STORE_NAME, 'readonly');
-        const req = tx.objectStore(this.STORE_NAME).get(this.KEY_NAME);
-        req.onsuccess = () => resolve(req.result || null);
-        req.onerror = () => reject(req.error);
-      });
+      let idbKey = null;
+      try {
+        const db = await this.open();
+        if (db) {
+          idbKey = await new Promise((resolve) => {
+            try {
+              const tx = db.transaction(this.STORE_NAME, 'readonly');
+              const req = tx.objectStore(this.STORE_NAME).get(this.KEY_NAME);
+              req.onsuccess = () => resolve(req.result || null);
+              req.onerror = () => resolve(null);
+              tx.oncomplete = () => { try { db.close(); } catch {} };
+              tx.onerror = () => { try { db.close(); } catch {} };
+            } catch {
+              try { db.close(); } catch {}
+              resolve(null);
+            }
+          });
+        }
+      } catch {}
+
+      if (idbKey) {
+        if (typeof idbKey === 'string') {
+          try {
+            const imported = await importPadKey(idbKey, true);
+            await this.saveToLocalStorage(imported);
+            return imported;
+          } catch {}
+        } else {
+          // Ensure existing IndexedDB key is also mirrored into localStorage for redundancy
+          await this.saveToLocalStorage(idbKey);
+          return idbKey;
+        }
+      }
+
+      // Fallback: recover key from localStorage if IndexedDB was blocked/cleared/unavailable
+      const lsKey = await this.loadFromLocalStorage();
+      if (lsKey) {
+        try { await this.saveKey(lsKey); } catch {}
+        return lsKey;
+      }
+      return null;
     },
 
     async saveKey(cryptoKey) {
-      const db = await this.open();
-      if (!db) return;
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(this.STORE_NAME, 'readwrite');
-        const req = tx.objectStore(this.STORE_NAME).put(cryptoKey, this.KEY_NAME);
-        req.onsuccess = () => resolve();
-        req.onerror = () => reject(req.error);
-      });
+      if (!cryptoKey) return;
+      await this.saveToLocalStorage(cryptoKey);
+      try {
+        const db = await this.open();
+        if (!db) return;
+        await new Promise((resolve) => {
+          try {
+            const tx = db.transaction(this.STORE_NAME, 'readwrite');
+            const req = tx.objectStore(this.STORE_NAME).put(cryptoKey, this.KEY_NAME);
+            req.onsuccess = () => resolve();
+            req.onerror = () => resolve();
+            tx.oncomplete = () => { try { db.close(); } catch {} };
+            tx.onerror = () => { try { db.close(); } catch {} };
+          } catch {
+            try { db.close(); } catch {}
+            resolve();
+          }
+        });
+      } catch {}
     },
 
     async clearKey() {
-      const db = await this.open();
-      if (!db) return;
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(this.STORE_NAME, 'readwrite');
-        const req = tx.objectStore(this.STORE_NAME).delete(this.KEY_NAME);
-        req.onsuccess = () => resolve();
-        req.onerror = () => reject(req.error);
-      });
+      try {
+        if (typeof localStorage !== 'undefined' && localStorage) {
+          localStorage.removeItem(this.LS_KEY_NAME);
+        }
+      } catch {}
+      try {
+        const db = await this.open();
+        if (!db) return;
+        await new Promise((resolve) => {
+          try {
+            const tx = db.transaction(this.STORE_NAME, 'readwrite');
+            const req = tx.objectStore(this.STORE_NAME).delete(this.KEY_NAME);
+            req.onsuccess = () => resolve();
+            req.onerror = () => resolve();
+            tx.oncomplete = () => { try { db.close(); } catch {} };
+            tx.onerror = () => { try { db.close(); } catch {} };
+          } catch {
+            try { db.close(); } catch {}
+            resolve();
+          }
+        });
+      } catch {}
     }
   };
 

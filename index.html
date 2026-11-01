@@ -18,7 +18,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MissionHub">
 
-  <link rel="stylesheet" href="style.css?v=20261101_v41">
+  <link rel="stylesheet" href="style.css?v=20261101_v42">
   <script>
     // 緊急キャッシュリフレッシュ: app.js の読み込み成否に関わらず動作を保証
     window.emergencyCacheRefresh = async function(e) {
@@ -70,8 +70,8 @@
             </span>
             <!-- Environment Badge (ステージング/検証環境のみ明示表示) -->
             <span id="env-badge" class="env-badge" style="display: none;" title="動作環境">🧪 検証環境（本番データとは独立）</span>
-            <!-- App Version Badge & Cache Refresh Button (v41: 黒板UI全面再設計・カウントダウン・トグルスイッチ・設定メニュー収納) -->
-            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v41</span>
+            <!-- App Version Badge & Cache Refresh Button (v42: オフライン自動復帰・暗号鍵二重永続化・SW API透過) -->
+            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v42</span>
             <button id="btn-cache-refresh" class="btn-cache-refresh" onclick="window.emergencyCacheRefresh && window.emergencyCacheRefresh(event)" title="キャッシュをクリアして最新版に更新">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
@@ -945,10 +945,10 @@
     </svg>
   </button>
 
-  <!-- Application Logic (v41) -->
-  <script src="app.js?v=20261101_v41"></script>
-  <script src="shared-pad-crypto.js?v=20261101_v41"></script>
-  <script src="shared-pad-transfer.js?v=20261101_v41"></script>
-  <script src="shared-pad.js?v=20261101_v41"></script>
+  <!-- Application Logic (v42) -->
+  <script src="app.js?v=20261101_v42"></script>
+  <script src="shared-pad-crypto.js?v=20261101_v42"></script>
+  <script src="shared-pad-transfer.js?v=20261101_v42"></script>
+  <script src="shared-pad.js?v=20261101_v42"></script>
 </body>
 </html>
