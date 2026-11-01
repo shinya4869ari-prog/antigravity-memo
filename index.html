@@ -18,7 +18,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MissionHub">
 
-  <link rel="stylesheet" href="style.css?v=20261101_v37">
+  <link rel="stylesheet" href="style.css?v=20261101_v38">
   <script>
     // 緊急キャッシュリフレッシュ: app.js の読み込み成否に関わらず動作を保証
     window.emergencyCacheRefresh = async function(e) {
@@ -70,8 +70,8 @@
             </span>
             <!-- Environment Badge (ステージング/検証環境のみ明示表示) -->
             <span id="env-badge" class="env-badge" style="display: none;" title="動作環境">🧪 検証環境（本番データとは独立）</span>
-            <!-- App Version Badge & Cache Refresh Button (v37: Cloudflare Access Edge Auth対応・47件完全同期) -->
-            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v37</span>
+            <!-- App Version Badge & Cache Refresh Button (v38: 鍵管理機能復元・E2EE暗号化・47件完全同期) -->
+            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v38</span>
             <button id="btn-cache-refresh" class="btn-cache-refresh" onclick="window.emergencyCacheRefresh && window.emergencyCacheRefresh(event)" title="キャッシュをクリアして最新版に更新">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
@@ -161,6 +161,12 @@
         <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-sync">↻ 同期</button>
         <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-copy-text">本文のみコピー</button>
         <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-save">⬇ まとめて画像保存</button>
+        <select id="shared-pad-ttl" class="btn btn-secondary btn-sm" title="自動消去までの時間（最後の実内容更新から計算）">
+          <option value="5" selected>⏳ 自動消去: 5分</option>
+          <option value="15">⏳ 自動消去: 15分</option>
+          <option value="30">⏳ 自動消去: 30分</option>
+        </select>
+        <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-share-key" title="他端末へ暗号化鍵を安全に共有・同期">🔑 鍵を管理</button>
         <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-clear">🧹 全消去</button>
       </div>
       <p id="shared-pad-copy-hint">スクショがある場合は、本文と全画像を1枚の画像にまとめてコピーします。貼り付け先が文字だけを受け取る場合は「まとめて画像保存」から添付してください。</p>
@@ -892,9 +898,10 @@
     </svg>
   </button>
 
-  <!-- Application Logic (v37) -->
-  <script src="app.js?v=20261101_v37"></script>
-  <script src="shared-pad-transfer.js?v=20261101_v37"></script>
-  <script src="shared-pad.js?v=20261101_v37"></script>
+  <!-- Application Logic (v38) -->
+  <script src="app.js?v=20261101_v38"></script>
+  <script src="shared-pad-crypto.js?v=20261101_v38"></script>
+  <script src="shared-pad-transfer.js?v=20261101_v38"></script>
+  <script src="shared-pad.js?v=20261101_v38"></script>
 </body>
 </html>

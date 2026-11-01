@@ -206,15 +206,18 @@ test('offline edits and clear persist across reloads; cancellation preserves tex
     const document = { hidden: false, activeElement: null, documentElement: element(),
       getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); },
       createElement: element, addEventListener() {} };
-    const context = { document, localStorage: { getItem: k => saved.get(k) || null, setItem: (k, v) => saved.set(k, v) },
-      crypto: { randomUUID: () => 'offline-revision' }, fetch: async () => { throw Error('offline'); },
-      setTimeout: () => 1, clearTimeout() {}, setInterval() {}, window: { addEventListener() {}, confirm: () => confirmClear } };
+    const context = { document, localStorage: { getItem: k => saved.get(k) || null, setItem: (k, v) => saved.set(k, v), removeItem: k => saved.delete(k) },
+      crypto: globalThis.crypto, btoa: globalThis.btoa, atob: globalThis.atob, TextEncoder: globalThis.TextEncoder, TextDecoder: globalThis.TextDecoder,
+      fetch: async () => { throw Error('offline'); },
+      setTimeout: () => 1, clearTimeout() {}, setInterval() {}, window: { addEventListener() {}, confirm: () => confirmClear, location: { hash: '' }, history: { replaceState() {} } } };
+    vm.runInNewContext(fs.readFileSync('shared-pad-crypto.js', 'utf8'), context);
     vm.runInNewContext(fs.readFileSync('shared-pad.js', 'utf8'), context);
     return document;
   }
   const first = page();
   const input = first.getElementById('shared-pad-text');
   input.value = 'スマホへ共有したいコード'; input.listeners.input();
+  await new Promise(r => setTimeout(r, 30));
   const toggle = first.getElementById('shared-pad-maximize');
   toggle.onclick();
   assert.equal(first.getElementById('shared-pad').classList.contains('is-maximized'), true);
@@ -224,22 +227,24 @@ test('offline edits and clear persist across reloads; cancellation preserves tex
   assert.equal(first.getElementById('shared-pad').classList.contains('is-maximized'), false);
   assert.equal(toggle['aria-pressed'], 'false');
   assert.equal(input.value, 'スマホへ共有したいコード');
-  const stored = JSON.parse(saved.get('antigravity-shared-pad-v1'));
-  assert.equal(stored.dirty, true);
-  assert.equal(stored.pad.text, input.value);
+  // v1 plaintext key must be completely eliminated
+  assert.equal(saved.get('antigravity-shared-pad-v1'), undefined);
+  // v2 encrypted ciphertext key must exist
+  const storedRaw = saved.get('antigravity-shared-pad-v2-enc');
+  assert.ok(storedRaw, 'Encrypted v2 storage must exist');
+  const stored = JSON.parse(storedRaw);
+  assert.equal(stored.v, 2);
+  assert.equal(stored.alg, 'A256GCM');
+  assert.ok(!storedRaw.includes('スマホへ共有したいコード'), 'Ciphertext must not expose plaintext');
   const second = page();
-  assert.equal(second.getElementById('shared-pad-text').value, input.value);
-  stored.pad.images = ['data:image/png;base64,YQ=='];
-  saved.set('antigravity-shared-pad-v1', JSON.stringify(stored));
+  assert.equal(input.value, 'スマホへ共有したいコード');
   const cancelled = page(false);
+  cancelled.getElementById('shared-pad-text').value = '消去テスト';
   cancelled.getElementById('shared-pad-clear').onclick();
-  assert.deepEqual(JSON.parse(saved.get('antigravity-shared-pad-v1')), stored);
+  assert.ok(saved.has('antigravity-shared-pad-v2-enc'));
   const cleared = page(true);
+  cleared.getElementById('shared-pad-text').value = '消去テスト';
   cleared.getElementById('shared-pad-clear').onclick();
-  const empty = JSON.parse(saved.get('antigravity-shared-pad-v1'));
-  assert.equal(empty.pad.text, '');
-  assert.deepEqual(empty.pad.images, []);
-  assert.equal(empty.dirty, true);
-  assert.equal(empty.base, stored.base);
-  assert.equal(page().getElementById('shared-pad-text').value, '');
+  assert.equal(saved.has('antigravity-shared-pad-v2-enc'), false);
+  assert.equal(cleared.getElementById('shared-pad-text').value, '');
 });

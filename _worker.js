@@ -286,12 +286,21 @@ export default {
         let body;
         try { body = JSON.parse(raw); } catch { return reply({ error: 'Invalid JSON' }, 400); }
         const pad = body.pad;
-        if (!pad || typeof pad.text !== 'string' || pad.text.length > 200000 ||
-            typeof pad.revision !== 'string' || pad.revision.length > 100 ||
-            !Array.isArray(pad.images) || pad.images.length > 8 ||
-            pad.images.some(src => typeof src !== 'string' || !/^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+/=]+$/.test(src)) ||
-            !(body.base === null || typeof body.base === 'string')) {
+        if (!pad || typeof pad !== 'object' || !(body.base === null || typeof body.base === 'string')) {
           return reply({ error: 'Invalid scratchpad' }, 400);
+        }
+        if (pad.v === 2) {
+          if (typeof pad.iv !== 'string' || typeof pad.ct !== 'string' ||
+              typeof pad.revision !== 'string' || pad.revision.length > 100) {
+            return reply({ error: 'Invalid encrypted scratchpad' }, 400);
+          }
+        } else {
+          if (typeof pad.text !== 'string' || pad.text.length > 200000 ||
+              typeof pad.revision !== 'string' || pad.revision.length > 100 ||
+              !Array.isArray(pad.images) || pad.images.length > 8 ||
+              pad.images.some(src => typeof src !== 'string' || !/^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+/=]+$/.test(src))) {
+            return reply({ error: 'Invalid scratchpad' }, 400);
+          }
         }
         const current = await env.MEMO_KV.get('shared_pad', 'json');
         if ((current?.revision || null) !== body.base) return reply({ pad: current }, 409);
