@@ -18,7 +18,32 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MissionHub">
 
-  <link rel="stylesheet" href="style.css?v=20261101_v35">
+  <link rel="stylesheet" href="style.css?v=20261101_v36">
+  <script>
+    // 緊急キャッシュリフレッシュ: app.js の読み込み成否に関わらず動作を保証
+    window.emergencyCacheRefresh = async function(e) {
+      if (e) e.preventDefault();
+      const btn = document.getElementById('btn-cache-refresh');
+      if (btn) {
+        btn.disabled = true;
+        const textSpan = btn.querySelector('span');
+        if (textSpan) textSpan.textContent = '更新中...';
+      }
+      try {
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+        }
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(r => r.unregister()));
+        }
+      } catch (err) {
+        console.warn('Cache purge failed:', err);
+      }
+      window.location.reload(true);
+    };
+  </script>
 </head>
 <body>
   <div class="app-container">
@@ -45,9 +70,9 @@
             </span>
             <!-- Environment Badge (ステージング/検証環境のみ明示表示) -->
             <span id="env-badge" class="env-badge" style="display: none;" title="動作環境">🧪 検証環境（本番データとは独立）</span>
-            <!-- App Version Badge & Cache Refresh Button (v35: 構文エラー修正・タイムアウト保護・通常メモ復旧) -->
-            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v35</span>
-            <button id="btn-cache-refresh" class="btn-cache-refresh" title="キャッシュをクリアして最新版に更新">
+            <!-- App Version Badge & Cache Refresh Button (v36: Network-First SW・インラインキャッシュ解除) -->
+            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v36</span>
+            <button id="btn-cache-refresh" class="btn-cache-refresh" onclick="window.emergencyCacheRefresh && window.emergencyCacheRefresh(event)" title="キャッシュをクリアして最新版に更新">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
                 <path d="M21 3v5h-5"/>
@@ -867,9 +892,9 @@
     </svg>
   </button>
 
-  <!-- Application Logic (v35) -->
-  <script src="app.js?v=20261101_v35"></script>
-  <script src="shared-pad-transfer.js?v=20261101_v35"></script>
-  <script src="shared-pad.js?v=20261101_v35"></script>
+  <!-- Application Logic (v36) -->
+  <script src="app.js?v=20261101_v36"></script>
+  <script src="shared-pad-transfer.js?v=20261101_v36"></script>
+  <script src="shared-pad.js?v=20261101_v36"></script>
 </body>
 </html>

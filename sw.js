@@ -1,5 +1,5 @@
-// Antigravity Mission Hub - Progressive Web App Service Worker (v35)
-const CACHE_NAME = 'antigravity-hub-v35';
+// Antigravity Mission Hub - Progressive Web App Service Worker (v36)
+const CACHE_NAME = 'antigravity-hub-v36';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -44,7 +44,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 1. Cloudflare Workers KV API: Network Only / Network First (LocalStorage handles offline fallback)
+  // 1. Cloudflare Workers KV API: Network Only (LocalStorage handles offline fallback)
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(request).catch(() => {
@@ -75,23 +75,25 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. Navigation requests (HTML document): Stale-While-Revalidate with / fallback
-  if (request.mode === 'navigate') {
+  // 3. Navigation requests (HTML) & Core Scripts/Styles: Network First (Ensures immediate update)
+  if (request.mode === 'navigate' || url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname === '/') {
     event.respondWith(
       fetch(request).then((networkResponse) => {
-        const cloned = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, cloned));
+        if (networkResponse && networkResponse.status === 200) {
+          const cloned = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, cloned));
+        }
         return networkResponse;
       }).catch(() => {
         return caches.match(request).then((cachedResponse) => {
-          return cachedResponse || caches.match('/');
+          return cachedResponse || (request.mode === 'navigate' ? caches.match('/') : null);
         });
       })
     );
     return;
   }
 
-  // 4. Static assets (CSS, JS, Icons): Stale-While-Revalidate
+  // 4. Other static assets (Images, Icons): Stale-While-Revalidate
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       const fetchPromise = fetch(request).then((networkResponse) => {
