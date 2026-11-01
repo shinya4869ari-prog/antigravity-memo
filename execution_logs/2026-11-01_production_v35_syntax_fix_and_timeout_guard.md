@@ -25,3 +25,14 @@
 - `GET /api/memos`: HTTP 200 OK
 - 件数: 47件（欠落ゼロ・完全保持）
 - SHA-256: `4b3ee9c558a04fb405687280c973049a61c6327c57fe60a57ad6a5340070ec10` (158,111 bytes)
+
+## 5. 本番デプロイおよび本番配信検証結果
+- **プッシュコミット**: `5282a5b` (`fix(app): remove syntax error, add timeout guard, and release v35`)
+- **Cloudflare本番デプロイ**: 成功（約30秒で反映完了）
+- **本番配信コードの実測検証 (`https://anti-memo.seronworks.dev/`)**:
+  - `app.js`: 本番から実ダウンロードし `node --check` で構文エラーなしを実証。
+  - `sw.js`: `antigravity-hub-v35` キャッシュがアクティブであることを確認。
+  - `index.html`: `v35` バージョンバッジ、クエリバスター（`?v=20261101_v35`）を確認。
+  - `/api/memos`: HTTP 200 OK、47件完全一致（ハッシュ `4b3ee9c5...` 一致）。
+  - 環境バッジ: 本番環境ドメイン判定により非表示（`display: none;`）維持。
+
