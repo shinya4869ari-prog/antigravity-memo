@@ -8,5 +8,7 @@ node_modules/
 mcp-server/memos_local_cache.json
 __pycache__/
 *.py[cod]
+migration_backups/
+*.zip
 
 
