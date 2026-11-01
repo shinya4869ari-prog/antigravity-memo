@@ -45,7 +45,7 @@
   }, true);
 
   let state = {
-    pad: { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: 5, keepForever: false },
+    pad: { text: '', images: [], files: [], revision: null, expiresAt: null, ttlMinutes: 5, keepForever: false },
     base: null,
     dirty: false,
     modeChangeOnly: false,
@@ -148,6 +148,7 @@
     const hasContent = Boolean(
       state.pad?.text ||
       (state.pad?.images && state.pad.images.length > 0) ||
+      (state.pad?.files && state.pad.files.length > 0) ||
       state.base
     );
 
@@ -227,8 +228,8 @@
     }
     if (text && !state.keyMismatch) {
       text.placeholder = keepForever
-        ? 'ここに書く・貼り付けるだけ。自動で保存します（現在：自動削除なし）'
-        : 'ここに書く・貼り付けるだけ。自動で保存します。';
+        ? 'ここに書く・貼り付ける・ファイルをドロップするだけ。自動で保存します（現在：自動削除なし）'
+        : 'ここに書く・貼り付ける・ファイルをドロップするだけ。自動で保存します。';
     }
     updateCountdownUi();
   }
@@ -240,7 +241,7 @@
     const activeExpiresAt = state.confirmedExpiresAt || state.pad?.expiresAt;
     if (!state.pad?.keepForever && activeExpiresAt && Date.now() >= activeExpiresAt) {
       const configuredTtl = [5, 15, 30].includes(state.pad.ttlMinutes) ? state.pad.ttlMinutes : 5;
-      state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever: false };
+      state.pad = { text: '', images: [], files: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever: false };
       state.dirty = false;
       state.modeChangeOnly = false;
       state.base = null;
@@ -279,7 +280,12 @@
       return;
     }
 
-    const hasActiveContent = Boolean(state.pad?.text || (state.pad?.images && state.pad.images.length > 0) || state.base);
+    const hasActiveContent = Boolean(
+      state.pad?.text ||
+      (state.pad?.images && state.pad.images.length > 0) ||
+      (state.pad?.files && state.pad.files.length > 0) ||
+      state.base
+    );
     if (hasActiveContent && state.pad?.keepForever) {
       if (eventType === 'save') {
         message('🔒 保存成功（自動削除なし）');
@@ -320,7 +326,12 @@
       if (Boolean(state.pad.keepForever) === nextKeep) return;
 
       const currentText = text ? text.value : (state.pad.text || '');
-      const hasContent = Boolean(currentText || (state.pad.images && state.pad.images.length > 0) || state.base);
+      const hasContent = Boolean(
+        currentText ||
+        (state.pad.images && state.pad.images.length > 0) ||
+        (state.pad.files && state.pad.files.length > 0) ||
+        state.base
+      );
       const selectedTtl = ttlSelect ? parseInt(ttlSelect.value, 10) : state.pad.ttlMinutes;
       const ttl = [5, 15, 30].includes(selectedTtl) ? selectedTtl : ([5, 15, 30].includes(state.pad.ttlMinutes) ? state.pad.ttlMinutes : 5);
 
@@ -367,7 +378,12 @@
       }
       state.pad.ttlMinutes = nextTtl;
       const currentText = text ? text.value : (state.pad.text || '');
-      const hasContent = Boolean(currentText || (state.pad.images && state.pad.images.length > 0) || state.base);
+      const hasContent = Boolean(
+        currentText ||
+        (state.pad.images && state.pad.images.length > 0) ||
+        (state.pad.files && state.pad.files.length > 0) ||
+        state.base
+      );
       if (!hasContent) {
         render();
         message(`⏳ 自動消去を${nextTtl}分に設定`);
@@ -465,7 +481,7 @@
         if (clearBtn) clearBtn.disabled = false;
 
         if (decrypted.deleted || decrypted.expired) {
-          state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: 5, keepForever: false };
+          state.pad = { text: '', images: [], files: [], revision: null, expiresAt: null, ttlMinutes: 5, keepForever: false };
           state.base = null;
           state.serverConfirmed = false;
           state.confirmedExpiresAt = null;
@@ -479,7 +495,8 @@
           const confirmedExp = keepForever ? null : (remotePad.expiresAt || null);
           state.pad = {
             text: decrypted.text,
-            images: decrypted.images,
+            images: decrypted.images || [],
+            files: decrypted.files || [],
             revision: decrypted.revision,
             expiresAt: confirmedExp,
             ttlMinutes: ttl,
@@ -513,7 +530,7 @@
         if (text) text.readOnly = false;
         if (clearBtn) clearBtn.disabled = false;
         render();
-        if (state.pad.text || (state.pad.images && state.pad.images.length)) {
+        if (state.pad.text || (state.pad.images && state.pad.images.length) || (state.pad.files && state.pad.files.length)) {
           await persist(true);
         }
         updateStatusDisplay('鍵を設定しました（新規）', 'sync');
@@ -633,7 +650,8 @@
           const restoredExp = keepForever ? null : (encrypted.expiresAt ?? null);
           state.pad = {
             text: decrypted.text,
-            images: decrypted.images,
+            images: decrypted.images || [],
+            files: decrypted.files || [],
             revision: decrypted.revision,
             expiresAt: restoredExp,
             ttlMinutes: ttl,
@@ -685,10 +703,105 @@
     });
   }
 
+  function formatFileSize(bytes) {
+    const n = Number(bytes) || 0;
+    if (n < 1024) return `${n} B`;
+    if (n < 1048576) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / 1048576).toFixed(2)} MB`;
+  }
+
+  function downloadFileItem(item) {
+    if (!item || typeof item.data !== 'string' || !item.data.startsWith('data:')) {
+      message('ファイルデータが不正です');
+      return;
+    }
+    const safeName = (item.name || 'shared-file').replace(/[\\/:*?"<>|]/g, '_');
+    try {
+      const commaIdx = item.data.indexOf(',');
+      if (commaIdx !== -1 && typeof atob === 'function' && typeof Blob !== 'undefined') {
+        const header = item.data.slice(0, commaIdx);
+        const mimeMatch = header.match(/^data:([^;]+)/);
+        const mime = mimeMatch ? mimeMatch[1] : (item.type || 'application/octet-stream');
+        const b64 = item.data.slice(commaIdx + 1);
+        const bin = atob(b64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const blob = new Blob([bytes], { type: mime });
+        if (typeof SharedPadTransfer !== 'undefined' && typeof SharedPadTransfer.download === 'function') {
+          SharedPadTransfer.download(blob, safeName);
+          message(`📥 「${safeName}」を保存しました`);
+          return;
+        }
+      }
+      const a = document.createElement('a');
+      a.href = item.data;
+      a.download = safeName;
+      if (document.body?.appendChild) document.body.appendChild(a);
+      if (typeof a.click === 'function') a.click();
+      if (typeof a.remove === 'function') a.remove();
+      message(`📥 「${safeName}」を保存しました`);
+    } catch (err) {
+      message('ファイルの保存に失敗しました: ' + err.message);
+    }
+  }
+
+  function filesInto(container, fileList, editable) {
+    if (!container) return;
+    container.replaceChildren();
+    (Array.isArray(fileList) ? fileList : []).forEach((fileObj, index) => {
+      if (!fileObj || typeof fileObj.data !== 'string' || !fileObj.data.startsWith('data:')) return;
+      const card = document.createElement('div');
+      card.className = 'shared-pad-file-card';
+
+      const info = document.createElement('div');
+      info.className = 'shared-pad-file-info';
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'shared-pad-file-name';
+      nameEl.textContent = `📎 ${fileObj.name || `file-${index + 1}`}`;
+      nameEl.title = fileObj.name || '';
+
+      const sizeEl = document.createElement('span');
+      sizeEl.className = 'shared-pad-file-size';
+      sizeEl.textContent = formatFileSize(fileObj.size);
+
+      info.append(nameEl, sizeEl);
+
+      const actions = document.createElement('div');
+      actions.className = 'shared-pad-file-actions';
+
+      const dlBtn = document.createElement('button');
+      dlBtn.type = 'button';
+      dlBtn.className = 'btn btn-secondary btn-sm';
+      dlBtn.textContent = '⬇ 保存';
+      dlBtn.onclick = () => downloadFileItem(fileObj);
+      actions.append(dlBtn);
+
+      if (editable) {
+        const rmBtn = document.createElement('button');
+        rmBtn.type = 'button';
+        rmBtn.className = 'btn btn-secondary btn-sm';
+        rmBtn.textContent = '削除';
+        rmBtn.onclick = async () => {
+          state.pad.files.splice(index, 1);
+          await changed(true);
+          render();
+        };
+        actions.append(rmBtn);
+      }
+
+      card.append(info, actions);
+      container.append(card);
+    });
+  }
+
   function render() {
     if (text) text.value = state.pad.text || '';
+    if (!Array.isArray(state.pad.images)) state.pad.images = [];
+    if (!Array.isArray(state.pad.files)) state.pad.files = [];
     syncModeUi();
-    imagesInto(document.getElementById('shared-pad-images'), state.pad.images || [], true);
+    imagesInto(document.getElementById('shared-pad-images'), state.pad.images, true);
+    filesInto(document.getElementById('shared-pad-attachments'), state.pad.files, true);
   }
 
   async function changed(contentModified = true) {
@@ -718,14 +831,17 @@
     remote = decryptedPad
       ? {
           ...decryptedPad,
+          images: decryptedPad.images || [],
+          files: decryptedPad.files || [],
           keepForever,
           ttlMinutes: ttl,
           expiresAt: keepForever ? null : (rawRemote?.expiresAt ?? decryptedPad?.expiresAt ?? null)
         }
-      : { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: 5, keepForever: false };
+      : { text: '', images: [], files: [], revision: null, expiresAt: null, ttlMinutes: 5, keepForever: false };
     const remoteEl = document.getElementById('shared-pad-remote');
     if (remoteEl) remoteEl.textContent = decryptedPad?.text || '（空のメモ）';
     imagesInto(document.getElementById('shared-pad-remote-images'), decryptedPad?.images || [], false);
+    filesInto(document.getElementById('shared-pad-remote-attachments'), decryptedPad?.files || [], false);
     if (conflict) conflict.hidden = false;
     message('⚠️ 別デバイスの変更を確認してください');
   }
@@ -744,7 +860,7 @@
         if (response.status === 410) {
           clearReconnectTimers();
           const configuredTtl = [5, 15, 30].includes(state.pad?.ttlMinutes) ? state.pad.ttlMinutes : 5;
-          state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever: false };
+          state.pad = { text: '', images: [], files: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever: false };
           state.dirty = false;
           state.modeChangeOnly = false;
           state.base = null;
@@ -803,7 +919,7 @@
           if (decryptedRemote.deleted || decryptedRemote.expired) {
             if (!state.dirty || state.modeChangeOnly) {
               const configuredTtl = [5, 15, 30].includes(state.pad?.ttlMinutes) ? state.pad.ttlMinutes : 5;
-              state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever: false };
+              state.pad = { text: '', images: [], files: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever: false };
               state.dirty = false;
               state.modeChangeOnly = false;
               state.base = null;
@@ -847,7 +963,7 @@
         // If the server record was deleted or expired, never allow a toggle operation to resurrect it
         if (serverDeletedOrExpired && state.dirty && state.modeChangeOnly) {
           const configuredTtl = [5, 15, 30].includes(state.pad?.ttlMinutes) ? state.pad.ttlMinutes : 5;
-          state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever: false };
+          state.pad = { text: '', images: [], files: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever: false };
           state.dirty = false;
           state.modeChangeOnly = false;
           state.base = null;
@@ -890,7 +1006,8 @@
             const confirmedExp = keepForever ? null : (remotePad?.expiresAt || null);
             state.pad = {
               text: decryptedRemote.text,
-              images: decryptedRemote.images,
+              images: decryptedRemote.images || [],
+              files: decryptedRemote.files || [],
               revision: decryptedRemote.revision,
               expiresAt: confirmedExp,
               ttlMinutes: ttl,
@@ -948,7 +1065,7 @@
 
         if (saved.status === 410) {
           const configuredTtl = [5, 15, 30].includes(state.pad?.ttlMinutes) ? state.pad.ttlMinutes : 5;
-          state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever: false };
+          state.pad = { text: '', images: [], files: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever: false };
           state.dirty = false;
           state.modeChangeOnly = false;
           state.base = null;
@@ -972,7 +1089,8 @@
             const rExp = rKeep ? null : (body.pad?.expiresAt || null);
             state.pad = {
               text: conflictPad.text,
-              images: conflictPad.images,
+              images: conflictPad.images || [],
+              files: conflictPad.files || [],
               revision: conflictPad.revision,
               expiresAt: rExp,
               ttlMinutes: rTtl,
@@ -1025,7 +1143,8 @@
           const confirmedExp = keepForever ? null : (remotePad?.expiresAt ?? decryptedRemote?.expiresAt ?? null);
           state.pad = {
             text: decryptedRemote.text,
-            images: decryptedRemote.images,
+            images: decryptedRemote.images || [],
+            files: decryptedRemote.files || [],
             revision: decryptedRemote.revision,
             expiresAt: confirmedExp,
             ttlMinutes: ttl,
@@ -1042,7 +1161,7 @@
         } else {
           const configuredTtl = [5, 15, 30].includes(state.pad?.ttlMinutes) ? state.pad.ttlMinutes : 5;
           const keepForever = (serverDeletedOrExpired || state.base !== null) ? false : Boolean(state.pad?.keepForever);
-          state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever };
+          state.pad = { text: '', images: [], files: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever };
           state.base = null;
           state.modeChangeOnly = false;
           state.serverConfirmed = false;
@@ -1098,11 +1217,76 @@
     }
   }
 
+  function readFileAsDataUrl(file) {
+    if (file && typeof file.dataUrl === 'string') return Promise.resolve(file.dataUrl);
+    if (typeof FileReader !== 'undefined') {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('File read error'));
+        reader.readAsDataURL(file);
+      });
+    }
+    if (file && typeof file.arrayBuffer === 'function') {
+      return file.arrayBuffer().then(buf => {
+        const bytes = new Uint8Array(buf);
+        let bin = '';
+        for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
+        const mime = file.type || 'application/octet-stream';
+        return `data:${mime};base64,${btoa(bin)}`;
+      });
+    }
+    return Promise.reject(new Error('Unsupported file object'));
+  }
+
+  async function addAttachments(fileList) {
+    if (state.keyMismatch) {
+      message('🔒 別端末の暗号鍵が一致しないためファイルを追加できません');
+      return;
+    }
+    const epoch = imageEpoch;
+    if (!Array.isArray(state.pad.files)) state.pad.files = [];
+    for (const file of fileList) {
+      if (!file) continue;
+      if (state.pad.files.length >= 8) {
+        message('ファイルは8個まで追加できます');
+        break;
+      }
+      try {
+        const dataUrl = await readFileAsDataUrl(file);
+        if (epoch !== imageEpoch) return;
+        if (JSON.stringify(state.pad).length + dataUrl.length > 2800000) {
+          message('容量の上限（約2MB）を超えています。小さいファイルにしてください');
+          break;
+        }
+        state.pad.files.push({
+          name: file.name || `file-${state.pad.files.length + 1}`,
+          type: file.type || 'application/octet-stream',
+          size: Number(file.size) || 0,
+          data: dataUrl
+        });
+        await changed(true);
+        render();
+        message(`📎 「${file.name || 'ファイル'}」を追加しました（暗号化保存済）`);
+      } catch {
+        message('ファイルを読み込めませんでした');
+      }
+    }
+  }
+
   const files = document.getElementById('shared-pad-files');
   if (files) {
     files.onchange = async () => {
       await addImages(Array.from(files.files));
       files.value = '';
+    };
+  }
+
+  const attachFilesInput = document.getElementById('shared-pad-attach-files');
+  if (attachFilesInput) {
+    attachFilesInput.onchange = async () => {
+      await addAttachments(Array.from(attachFilesInput.files || []));
+      attachFilesInput.value = '';
     };
   }
 
@@ -1115,6 +1299,26 @@
       if (images.length) {
         e.preventDefault();
         addImages(images);
+      }
+    });
+
+    padSection.addEventListener('dragover', e => {
+      if (e.dataTransfer?.types && Array.from(e.dataTransfer.types).includes('Files')) {
+        e.preventDefault();
+        padSection.classList?.add?.('is-dragover');
+      }
+    });
+    padSection.addEventListener('dragleave', e => {
+      if (!e.relatedTarget || !padSection.contains?.(e.relatedTarget)) {
+        padSection.classList?.remove?.('is-dragover');
+      }
+    });
+    padSection.addEventListener('drop', async e => {
+      padSection.classList?.remove?.('is-dragover');
+      const droppedFiles = Array.from(e.dataTransfer?.files || []);
+      if (droppedFiles.length > 0) {
+        e.preventDefault();
+        await addAttachments(droppedFiles);
       }
     });
   }
@@ -1165,13 +1369,14 @@
         message('🔒 別端末の暗号鍵が一致しないため、全消去できません');
         return;
       }
-      if (!text?.value && state.pad.images.length === 0 && !state.base) return;
-      if (!window.confirm('黒板の本文とスクショをすべて消去しますか？この変更は他のデバイスにも同期されます。')) return;
+      const hasFiles = Array.isArray(state.pad.files) && state.pad.files.length > 0;
+      if (!text?.value && state.pad.images.length === 0 && !hasFiles && !state.base) return;
+      if (!window.confirm('黒板の本文・スクショ・添付ファイルをすべて消去しますか？この変更は他のデバイスにも同期されます。')) return;
       imageEpoch += 1;
       const prevBase = state.base;
       const delRevision = crypto.randomUUID();
       const configuredTtl = [5, 15, 30].includes(state.pad?.ttlMinutes) ? state.pad.ttlMinutes : 5;
-      state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever: false };
+      state.pad = { text: '', images: [], files: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever: false };
       if (text) text.value = '';
       state.dirty = false;
       state.modeChangeOnly = false;
@@ -1196,7 +1401,7 @@
             keepForever: false,
             deleted: true
           };
-          await fetch('/api/shared-pad', {
+          await fetchPadApi('/api/shared-pad', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pad: tombstone, base: prevBase })
@@ -1383,7 +1588,7 @@
       const rKeep = Boolean(remote?.keepForever);
       const rExp = rKeep ? null : (remote?.expiresAt || null);
       state = {
-        pad: remote || { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: 5, keepForever: false },
+        pad: remote || { text: '', images: [], files: [], revision: null, expiresAt: null, ttlMinutes: 5, keepForever: false },
         base: remote?.revision || null,
         dirty: false,
         modeChangeOnly: false,

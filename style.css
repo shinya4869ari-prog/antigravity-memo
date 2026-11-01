@@ -4118,3 +4118,63 @@ html.shared-pad-expanded, html.shared-pad-expanded body { overflow: hidden; }
     min-height: 40px;
   }
 }
+
+/* 黒板ファイル添付カード & ドラッグ＆ドロップ表示 (v43) */
+.shared-pad.is-dragover {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35), 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+.shared-pad-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.shared-pad-attachments:empty {
+  display: none;
+  margin-top: 0;
+}
+
+.shared-pad-file-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: rgba(24, 24, 27, 0.85);
+  border: 1px solid rgba(63, 63, 70, 0.85);
+  color: #f4f4f5;
+  font-size: 12.5px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.shared-pad-file-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.shared-pad-file-name {
+  font-weight: 600;
+  color: #fbbf24;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
+}
+
+.shared-pad-file-size {
+  font-size: 11px;
+  color: #a1a1aa;
+}
+
+.shared-pad-file-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}

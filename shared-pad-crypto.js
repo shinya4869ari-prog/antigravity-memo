@@ -88,9 +88,11 @@
       ? (options.ttlMinutes ?? padData.ttlMinutes)
       : 5;
     const images = Array.isArray(padData.images) ? padData.images : [];
+    const files = Array.isArray(padData.files) ? padData.files : [];
     const plaintextJson = JSON.stringify({
       text: padData.text,
       images: images,
+      files: files,
       keepForever,
       ttlMinutes
     });
@@ -133,6 +135,7 @@
       return {
         text: '',
         images: [],
+        files: [],
         revision: encryptedPayload.revision || '',
         keepForever: false,
         ttlMinutes: 5,
@@ -146,6 +149,7 @@
       return {
         text: '',
         images: [],
+        files: [],
         revision: encryptedPayload.revision || '',
         keepForever: false,
         ttlMinutes: encryptedPayload.ttlMinutes || 5,
@@ -183,6 +187,7 @@
     return {
       text: typeof data.text === 'string' ? data.text : '',
       images: Array.isArray(data.images) ? data.images : [],
+      files: Array.isArray(data.files) ? data.files : [],
       revision: encryptedPayload.revision || '',
       keepForever,
       ttlMinutes,

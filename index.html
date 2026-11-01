@@ -18,7 +18,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MissionHub">
 
-  <link rel="stylesheet" href="style.css?v=20261101_v42">
+  <link rel="stylesheet" href="style.css?v=20261101_v43">
   <script>
     // 緊急キャッシュリフレッシュ: app.js の読み込み成否に関わらず動作を保証
     window.emergencyCacheRefresh = async function(e) {
@@ -70,8 +70,8 @@
             </span>
             <!-- Environment Badge (ステージング/検証環境のみ明示表示) -->
             <span id="env-badge" class="env-badge" style="display: none;" title="動作環境">🧪 検証環境（本番データとは独立）</span>
-            <!-- App Version Badge & Cache Refresh Button (v42: オフライン自動復帰・暗号鍵二重永続化・SW API透過) -->
-            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v42</span>
+            <!-- App Version Badge & Cache Refresh Button (v43: 黒板ファイル転送機能・ドラッグ＆ドロップ対応) -->
+            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v43</span>
             <button id="btn-cache-refresh" class="btn-cache-refresh" onclick="window.emergencyCacheRefresh && window.emergencyCacheRefresh(event)" title="キャッシュをクリアして最新版に更新">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
@@ -182,12 +182,14 @@
       <label class="sr-only" for="shared-pad-text">黒板のメモ</label>
       <textarea id="shared-pad-text" lang="ja" spellcheck="true" placeholder="ここに書く・貼り付けるだけ。自動で保存します。"></textarea>
       <div id="shared-pad-images" class="shared-pad-images"></div>
+      <div id="shared-pad-attachments" class="shared-pad-attachments"></div>
 
       <!-- 3段目（入力欄の下：よく使う操作） -->
       <div class="shared-pad-actions shared-pad-primary-actions">
         <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-copy" title="本文とスクショをまとめてコピー">📋 コピー</button>
         <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-copy-text" title="テキスト本文のみをコピー">📄 本文のみ</button>
         <label class="btn btn-secondary btn-sm" title="スクリーンショットや画像を追加">📸 スクショ追加<input id="shared-pad-files" type="file" accept="image/*" multiple hidden></label>
+        <label class="btn btn-secondary btn-sm" title="小容量ファイル（テキスト・PDF・ZIP・JSON等）を追加して暗号化共有">📎 ファイル追加<input id="shared-pad-attach-files" type="file" multiple hidden></label>
         <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-sync" title="クラウドの最新状態と同期">↻ 同期</button>
         <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-save" title="本文とスクショを1枚の画像として保存">⬇ 画像保存</button>
       </div>
@@ -213,7 +215,7 @@
           <span id="shared-pad-countdown-sub" class="shared-pad-countdown-sub" hidden>⏳ 自動削除まで 05:00</span>
         </div>
         <div class="shared-pad-danger-zone">
-          <button type="button" class="btn btn-sm shared-pad-clear-btn" id="shared-pad-clear" title="黒板の本文と画像をすべて消去">🗑 全消去</button>
+          <button type="button" class="btn btn-sm shared-pad-clear-btn" id="shared-pad-clear" title="黒板の本文と画像・ファイルをすべて消去">🗑 全消去</button>
         </div>
       </div>
 
@@ -221,6 +223,7 @@
         <p>別のデバイスでも変更されています。下の内容を確認してから選んでください。現在の入力はこの端末に残っています。</p>
         <pre id="shared-pad-remote"></pre>
         <div id="shared-pad-remote-images" class="shared-pad-images"></div>
+        <div id="shared-pad-remote-attachments" class="shared-pad-attachments"></div>
         <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-use-remote">別デバイスの内容を使う</button>
         <button type="button" class="btn btn-secondary btn-sm" id="shared-pad-use-local">今の入力を共有する</button>
       </div>
@@ -945,10 +948,10 @@
     </svg>
   </button>
 
-  <!-- Application Logic (v42) -->
-  <script src="app.js?v=20261101_v42"></script>
-  <script src="shared-pad-crypto.js?v=20261101_v42"></script>
-  <script src="shared-pad-transfer.js?v=20261101_v42"></script>
-  <script src="shared-pad.js?v=20261101_v42"></script>
+  <!-- Application Logic (v43) -->
+  <script src="app.js?v=20261101_v43"></script>
+  <script src="shared-pad-crypto.js?v=20261101_v43"></script>
+  <script src="shared-pad-transfer.js?v=20261101_v43"></script>
+  <script src="shared-pad.js?v=20261101_v43"></script>
 </body>
 </html>
