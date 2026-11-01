@@ -5,3 +5,9 @@ TODO_ROADMAP.md
 .git
 .gitignore
 .assetsignore
+AGENTS.md
+docs/
+execution_logs/
+mcp-server/
+scripts/
+tests/
