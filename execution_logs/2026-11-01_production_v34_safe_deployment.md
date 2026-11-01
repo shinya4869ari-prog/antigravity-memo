@@ -20,3 +20,18 @@
 ## 3. テスト実行結果
 - `tests/shared-pad.cjs`: 8 PASS / 0 FAIL
 - `test_memos_sync_safety.mjs`: 10 PASS / 0 FAIL（空配列保護、上書き防止、全件削除競合保護、TOCTOU保護、本番非ステージング判定すべて合格）
+
+## 4. 本番デプロイおよび稼働検証結果
+- **プッシュコミット**: `be67dd3` (`fix(memos): add empty array guard, local data protection and v34 release`)
+- **Cloudflare 自動デプロイ**: 成功（約30秒で本番反映完了）
+- **本番サイト稼働確認 (`https://anti-memo.seronworks.dev/`)**:
+  - HTMLバージョン表示: `v34` 反映確認（`<span class="app-version-badge" id="app-version-badge">v34</span>`）
+  - アセットクエリバスター: `style.css?v=20261101_v34`, `app.js?v=20261101_v34` 確認
+  - PWA Service Worker: `sw.js` が `antigravity-hub-v34` でキャッシュ更新確認
+  - 環境バッジ: 本番環境判定により非表示（`display: none;`）維持確認
+- **本番KV（MEMO_KV）の保全確認**:
+  - `GET /api/memos` レスポンス: HTTP 200 OK
+  - メモ件数: **47件完全保持**
+  - バイト数: 158,111 bytes
+  - SHA-256 ハッシュ: `4b3ee9c558a04fb4...`（デプロイ前と完全一致・破損なし）
+
