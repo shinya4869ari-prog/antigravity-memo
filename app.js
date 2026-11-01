@@ -355,6 +355,7 @@ function loadMemos() {
   localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
   updateStats();
   render();
+  updateEnvironmentDisplay();
 
   // 1.5 Load custom apps presets
   loadCustomAppsFromStorage();
@@ -368,6 +369,73 @@ function loadMemos() {
 let isSyncing = false;
 let localVersion = 0;
 let lastLocalSaveTime = 0;
+// Track storage backend for normal memos (e.g. 'kv', 'staging-memory', 'local')
+let memoStorageMode = 'kv';
+
+// Persistent tracking of local dirty state (un-synced local changes)
+let localMemosDirty = (typeof localStorage !== 'undefined' && localStorage.getItem('agy_mission_memos_dirty') === 'true');
+
+function setLocalMemosDirty(val) {
+  localMemosDirty = !!val;
+  if (typeof localStorage !== 'undefined') {
+    if (localMemosDirty) {
+      localStorage.setItem('agy_mission_memos_dirty', 'true');
+    } else {
+      localStorage.removeItem('agy_mission_memos_dirty');
+    }
+  }
+}
+
+// Track whether the current memos in memory are only the initial default templates
+function isInitialDefaultOnly() {
+  if (typeof localStorage !== 'undefined' && localStorage.getItem('agy_mission_memos_user_created') === 'true') {
+    return false;
+  }
+  if (Array.isArray(memos) && Array.isArray(INITIAL_MEMOS) && memos.length === INITIAL_MEMOS.length) {
+    const initialIds = new Set(INITIAL_MEMOS.map(m => m.id));
+    if (memos.every(m => initialIds.has(m.id))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Environment detection: Check if running on Staging / Testing origin
+function isStagingEnvironment() {
+  const host = typeof window !== 'undefined' ? (window.location.hostname || '') : '';
+  const port = typeof window !== 'undefined' ? (window.location.port || '') : '';
+  // Production Cloudflare domains are strictly NEVER staging
+  if (host.includes('seronworks.dev') || host.endsWith('.pages.dev')) {
+    return false;
+  }
+  return port === '8788' || host.includes('oracle-vm') || host.includes('ainu-newton.ts.net') || memoStorageMode === 'staging-memory';
+}
+
+function updateEnvironmentDisplay() {
+  if (typeof document === 'undefined') return;
+  const envBadge = document.getElementById('env-badge');
+  if (!envBadge) return;
+  if (isStagingEnvironment()) {
+    envBadge.style.display = 'inline-flex';
+    envBadge.textContent = '🧪 ステージング検証環境（本番データとは独立）';
+  } else {
+    envBadge.style.display = 'none';
+  }
+}
+
+// Optimistic Concurrency Control (OCC) Server Revision Tracking
+let currentServerRevision = (typeof localStorage !== 'undefined' ? localStorage.getItem('agy_server_memo_revision') : null);
+
+function setCurrentServerRevision(rev) {
+  currentServerRevision = rev ? String(rev).trim() : null;
+  if (typeof localStorage !== 'undefined') {
+    if (currentServerRevision) {
+      localStorage.setItem('agy_server_memo_revision', currentServerRevision);
+    } else {
+      localStorage.removeItem('agy_server_memo_revision');
+    }
+  }
+}
 
 async function fetchMemosFromCloud(quiet = false) {
   if (isSyncing) return;
@@ -376,33 +444,106 @@ async function fetchMemosFromCloud(quiet = false) {
 
   const currentVersion = localVersion;
   isSyncing = true;
-  if (!quiet) setCloudStatus('syncing', '同期中...');
+  if (!quiet) setCloudStatus('syncing', '通常メモ: 同期確認中...');
 
   try {
     const res = await fetch('/api/memos');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    const storageModeHeader = res.headers.get('X-Storage-Mode');
+
+    // サーバーの現在世代（Revision / ETag）を取得・記録
+    const serverRevision = res.headers.get('ETag')?.replace(/["']/g, '').trim() || res.headers.get('X-Memo-Revision');
+    if (serverRevision) {
+      setCurrentServerRevision(serverRevision);
+    }
 
     // Guard: If local state was mutated while fetch was in-flight, discard stale response
     if (localVersion !== currentVersion) return;
     if (Date.now() - lastLocalSaveTime < 4000) return;
 
+    if (storageModeHeader === 'staging-memory' || (data && data.mode === 'staging-memory')) {
+      memoStorageMode = 'staging-memory';
+    } else if (storageModeHeader === 'kv' || (data && data.mode === 'kv')) {
+      memoStorageMode = 'kv';
+    }
+    updateEnvironmentDisplay();
+
+    // 1. 未初期化状態 (Server is virgin / uninitialized)
     if (data && data.uninitialized) {
-      // KV is bound but empty: seed initial memos to cloud
-      setCloudStatus('syncing', '初期同期中...');
-      await saveMemosToCloud();
-    } else if (Array.isArray(data)) {
+      if (memoStorageMode === 'staging-memory') {
+        setCloudStatus('staging', '通常メモ: ステージング未初期化 (ローカル保持)');
+      } else {
+        setCloudStatus('local', '通常メモ: サーバー未初期化 (ローカル保持)');
+      }
+      return;
+    }
+
+    // 2. サーバーから配列データを受信した場合
+    if (Array.isArray(data)) {
+      // ケース A: サーバーが空配列 [] を返してきた場合
+      if (data.length === 0) {
+        // 端末に既存のユーザーメモが存在する場合:
+        // 端末データを勝手に消去せず、サーバーへも勝手に自動POSTせず、ローカルデータを保護して同期停止
+        if (memos.length > 0 && !isInitialDefaultOnly()) {
+          console.warn('サーバーから空のメモ一覧を受信しました。ローカルメモを保護し、自動上書きを停止します。');
+          if (memoStorageMode === 'staging-memory') {
+            setCloudStatus('staging', '通常メモ: ステージング空 (端末メモ保護中・本番無傷)');
+          } else {
+            setCloudStatus('protected', '通常メモ: サーバー空 (端末メモ保護中)');
+          }
+          return;
+        }
+
+        // 端末も空、または初期サンプルのみの場合:
+        memos = [];
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
+        }
+        updateStats();
+        render();
+        if (memoStorageMode === 'staging-memory') {
+          setCloudStatus('staging', '通常メモ: ステージング空 (本番47件は無傷)');
+        } else {
+          setCloudStatus('synced', '通常メモ: Cloud KV 空 (0件)');
+        }
+        return;
+      }
+
+      // ケース B: サーバーにデータが存在する場合 (data.length > 0)
+      // 端末に未送信の変更がある場合 -> 同期競合 (Sync Conflict)
+      if (localMemosDirty) {
+        console.warn('端末に未送信のローカルメモ変更が存在するため、サーバーデータによる上書きを停止しました。');
+        if (memoStorageMode === 'staging-memory') {
+          setCloudStatus('conflict', '通常メモ: 同期競合 (端末に未送信変更あり・ステージング)');
+        } else {
+          setCloudStatus('conflict', '通常メモ: 同期競合 (端末に未送信変更あり)');
+        }
+        return;
+      }
+
+      // 端末に未送信変更がない場合 -> 安全にサーバー最新データでローカル更新
       memos = deduplicateMemos(data);
-      localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
+      }
       updateStats();
       render();
-      setCloudStatus('synced', 'Cloud KV 同期済');
-    } else if (data && data.mode === 'local') {
-      setCloudStatus('local', 'ローカル保存 (KV未接続)');
+      if (memoStorageMode === 'staging-memory') {
+        setCloudStatus('staging', '通常メモ: ステージング (ローカルメモリ)');
+      } else {
+        setCloudStatus('synced', '通常メモ: Cloud KV 接続済');
+      }
+      return;
+    }
+
+    if (data && data.mode === 'local') {
+      memoStorageMode = 'local';
+      setCloudStatus('local', '通常メモ: ローカル保存 (KV未接続)');
     }
   } catch (err) {
     console.warn('Cloud sync offline / error:', err);
-    setCloudStatus('local', 'ローカル保存 (オフライン)');
+    setCloudStatus('local', '通常メモ: ローカル保存 (オフライン)');
   } finally {
     isSyncing = false;
   }
@@ -412,33 +553,74 @@ async function fetchMemosFromCloud(quiet = false) {
 let cloudSaveTimer = null;
 async function saveMemosToCloud() {
   lastLocalSaveTime = Date.now();
-  setCloudStatus('syncing', 'クラウド保存中...');
+  setCloudStatus('syncing', '通常メモ: 保存中...');
   try {
+    const postHeaders = { 'Content-Type': 'application/json' };
+    if (currentServerRevision) {
+      postHeaders['If-Match'] = currentServerRevision;
+      postHeaders['X-Base-Revision'] = currentServerRevision;
+    }
+
     const res = await fetch('/api/memos', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: postHeaders,
       body: JSON.stringify(memos)
     });
+
+    if (res.status === 409) {
+      // 409 Conflict: サーバー側で別端末の更新があり世代不一致！
+      console.warn('サーバーで世代不一致（409 Conflict）を検知しました。別端末の最新更新を保護します。');
+      setLocalMemosDirty(true);
+      setCloudStatus('conflict', '通常メモ: 同期競合 (サーバーに新しい更新あり・409)');
+      await fetchMemosFromCloud(true);
+      return;
+    }
+
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const result = await res.json();
+    const storageModeHeader = res.headers.get('X-Storage-Mode');
 
-    if (result.mode === 'kv') {
-      setCloudStatus('synced', 'Cloud KV 同期済');
-    } else {
-      setCloudStatus('local', 'ローカル保存 (KV未接続)');
+    // レスポンスの最新 revision を記録
+    const newRevision = res.headers.get('ETag')?.replace(/["']/g, '').trim() || res.headers.get('X-Memo-Revision') || result.revision;
+    if (newRevision) {
+      setCurrentServerRevision(newRevision);
     }
+
+    // 正常保存時は未送信フラグをクリア
+    setLocalMemosDirty(false);
+
+    if (result.mode === 'staging-memory' || storageModeHeader === 'staging-memory' || memoStorageMode === 'staging-memory') {
+      memoStorageMode = 'staging-memory';
+      setCloudStatus('staging', '通常メモ: ステージング (メモリ保存済)');
+    } else if (result.mode === 'kv' || memoStorageMode === 'kv') {
+      memoStorageMode = 'kv';
+      setCloudStatus('synced', '通常メモ: Cloud KV 保存済');
+    } else {
+      memoStorageMode = 'local';
+      setCloudStatus('local', '通常メモ: ローカル保存 (KV未接続)');
+    }
+    updateEnvironmentDisplay();
   } catch (err) {
     console.warn('Failed to save to cloud:', err);
-    setCloudStatus('local', 'ローカル保存 (オフライン)');
+    // 送信失敗時は未送信フラグを立てて保護
+    setLocalMemosDirty(true);
+    setCloudStatus('local', '通常メモ: ローカル保存 (オフライン)');
   }
+}
 }
 
 // Main save dispatcher (local first + cloud upload)
 function saveMemos(immediate = false) {
   localVersion++;
   lastLocalSaveTime = Date.now();
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('agy_mission_memos_user_created', 'true');
+  }
+  setLocalMemosDirty(true);
   memos = deduplicateMemos(memos);
-  localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
+  }
   updateStats();
   render();
 
@@ -2069,14 +2251,123 @@ document.getElementById('btn-load-sample').addEventListener('click', () => {
 });
 
 // Clear All
-document.getElementById('btn-clear-all').addEventListener('click', () => {
-  if (confirm('本当にすべてのメモを消去しますか？この操作は元に戻せません。')) {
-    lastLocalSaveTime = Date.now();
-    localVersion++;
+document.getElementById('btn-clear-all').addEventListener('click', async () => {
+  if (!confirm('本当にすべてのメモを消去しますか？この操作は元に戻せません。')) {
+    return;
+  }
+
+  // 世代・更新確認ガード: サーバー側に別端末の新しいメモや更新が存在するか事前照合
+  setCloudStatus('syncing', '通常メモ: サーバー状態を確認中...');
+  let confirmedRevision = null;
+  try {
+    const res = await fetch('/api/memos');
+    if (res.ok) {
+      confirmedRevision = res.headers.get('ETag')?.replace(/["']/g, '').trim() || res.headers.get('X-Memo-Revision') || currentServerRevision;
+      if (confirmedRevision) {
+        setCurrentServerRevision(confirmedRevision);
+      }
+      const remoteData = await res.json();
+      if (Array.isArray(remoteData) && remoteData.length > 0) {
+        // ローカルメモの最新更新世代
+        const localLatest = memos.reduce((max, m) => {
+          const t = new Date(m.updatedAt || m.createdAt || 0).getTime();
+          return isNaN(t) ? max : Math.max(max, t);
+        }, 0);
+
+        // サーバーメモの最新更新世代
+        const remoteLatest = remoteData.reduce((max, m) => {
+          const t = new Date(m.updatedAt || m.createdAt || 0).getTime();
+          return isNaN(t) ? max : Math.max(max, t);
+        }, 0);
+
+        // 端末に存在しない別端末の新規メモ
+        const localIdSet = new Set(memos.map(m => m.id));
+        const newOnRemote = remoteData.filter(m => !localIdSet.has(m.id));
+
+        // 端末より新しく更新されたメモ
+        const localMap = new Map(memos.map(m => [m.id, m]));
+        const updatedOnRemote = remoteData.filter(m => {
+          const l = localMap.get(m.id);
+          if (!l) return false;
+          const rTime = new Date(m.updatedAt || 0).getTime();
+          const lTime = new Date(l.updatedAt || 0).getTime();
+          return rTime > lTime;
+        });
+
+        // 競合判定: サーバー側に別端末の新規メモ、更新メモ、または新しい世代が存在する場合
+        if (newOnRemote.length > 0 || updatedOnRemote.length > 0 || remoteLatest > localLatest) {
+          console.warn('サーバー側に別端末の新しい更新が存在するため、全件削除を競合として停止しました。', {
+            newOnRemote: newOnRemote.length,
+            updatedOnRemote: updatedOnRemote.length,
+            remoteLatest,
+            localLatest
+          });
+          setCloudStatus('conflict', '通常メモ: 削除停止 (サーバーに別端末の最新更新あり)');
+          alert(`サーバー側に別端末の新しい更新が存在します（新規: ${newOnRemote.length}件、更新: ${updatedOnRemote.length}件）。\nデータ保護のため全件削除を中止しました。最新データを同期して確認してください。`);
+          await fetchMemosFromCloud();
+          modalData.classList.remove('active');
+          return;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('全件削除前のサーバー確認に失敗:', err);
+    setCloudStatus('local', '通常メモ: 削除停止 (サーバー確認不可・オフライン)');
+    alert('サーバーとの通信に失敗したため、安全のため全件削除を中止しました。');
+    return;
+  }
+
+  // サーバー側での原子的照合（OCC: If-Match）付き全件削除を実行
+  lastLocalSaveTime = Date.now();
+  localVersion++;
+  setCloudStatus('syncing', '通常メモ: 全件削除中...');
+
+  try {
+    const deleteHeaders = { 'Content-Type': 'application/json' };
+    if (confirmedRevision) {
+      deleteHeaders['If-Match'] = confirmedRevision;
+      deleteHeaders['X-Base-Revision'] = confirmedRevision;
+    }
+
+    const delRes = await fetch('/api/memos', {
+      method: 'POST',
+      headers: deleteHeaders,
+      body: JSON.stringify([])
+    });
+
+    if (delRes.status === 409) {
+      // TOCTOU競合検知！GET直後からPOST直前の間に別端末が更新した！
+      console.warn('GET直後に別端末が更新した競合を検知しました（409 Conflict）。全件削除を中止してデータを保護します。');
+      setLocalMemosDirty(true);
+      setCloudStatus('conflict', '通常メモ: 削除停止 (削除直前に別端末が更新・409)');
+      alert('削除直前に別端末が新しいメモを保存したため、全件削除を中止しました。\n最新のデータを保護しました。');
+      await fetchMemosFromCloud();
+      modalData.classList.remove('active');
+      return;
+    }
+
+    if (!delRes.ok) throw new Error(`HTTP ${delRes.status}`);
+
+    const delResult = await delRes.json();
+    const newRev = delRes.headers.get('ETag')?.replace(/["']/g, '').trim() || delRes.headers.get('X-Memo-Revision') || delResult.revision;
+    if (newRev) setCurrentServerRevision(newRev);
+
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('agy_mission_memos_user_created', 'true');
+    }
+    setLocalMemosDirty(false);
     memos = [];
-    saveMemos(true);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
+    }
+    updateStats();
+    render();
     showToast('すべてのメモをクリアしました', '⚠️');
     modalData.classList.remove('active');
+  } catch (delErr) {
+    console.warn('全件削除の送信に失敗:', delErr);
+    setCloudStatus('local', '通常メモ: 削除失敗 (オフライン)');
+    alert('全件削除の通信に失敗しました。ローカルデータは保持されています。');
   }
 });
 

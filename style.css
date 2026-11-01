@@ -266,6 +266,17 @@ body {
   animation: pulse-cloud 1.2s infinite ease-in-out;
 }
 
+.cloud-badge.status-staging {
+  background: rgba(168, 85, 247, 0.12);
+  border-color: rgba(168, 85, 247, 0.45);
+  color: #c084fc;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.15);
+}
+.cloud-badge.status-staging .cloud-svg-icon {
+  color: #a855f7;
+  filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.6));
+}
+
 .cloud-badge.status-local {
   background: rgba(245, 158, 11, 0.1);
   border-color: rgba(245, 158, 11, 0.35);
@@ -273,6 +284,40 @@ body {
 }
 .cloud-badge.status-local .cloud-svg-icon {
   color: #f59e0b;
+}
+
+.cloud-badge.status-conflict {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #f87171;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.15);
+}
+.cloud-badge.status-conflict .cloud-svg-icon {
+  color: #ef4444;
+}
+
+.cloud-badge.status-protected {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.15);
+}
+.cloud-badge.status-protected .cloud-svg-icon {
+  color: #f59e0b;
+}
+
+.env-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: #c084fc;
 }
 
 @keyframes pulse-cloud {
