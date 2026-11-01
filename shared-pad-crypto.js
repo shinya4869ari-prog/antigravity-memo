@@ -83,10 +83,16 @@
       throw new Error('Invalid pad data: text string required');
     }
 
+    const keepForever = Boolean(options.keepForever ?? padData.keepForever ?? false);
+    const ttlMinutes = [5, 15, 30].includes(options.ttlMinutes ?? padData.ttlMinutes)
+      ? (options.ttlMinutes ?? padData.ttlMinutes)
+      : 5;
     const images = Array.isArray(padData.images) ? padData.images : [];
     const plaintextJson = JSON.stringify({
       text: padData.text,
-      images: images
+      images: images,
+      keepForever,
+      ttlMinutes
     });
 
     const plainBytes = TE.encode(plaintextJson);
@@ -98,8 +104,7 @@
       plainBytes
     );
 
-    const now = options.now ?? Date.now();
-    const ttlMinutes = options.ttlMinutes ?? 5;
+    const now = typeof options === 'number' ? options : (options?.now ?? Date.now());
     const revision = options.revision ?? (typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : String(now));
 
     return {
@@ -109,7 +114,9 @@
       ct: bytesToBase64(new Uint8Array(cipherBuffer)),
       revision,
       updatedAt: now,
-      expiresAt: now + ttlMinutes * 60 * 1000,
+      keepForever,
+      ttlMinutes,
+      expiresAt: keepForever ? null : (now + ttlMinutes * 60 * 1000),
       deleted: false
     };
   }
@@ -120,23 +127,29 @@
       throw new Error('Unsupported or invalid encrypted payload version');
     }
 
-    const now = options.now ?? Date.now();
+    const now = typeof options === 'number' ? options : (options?.now ?? Date.now());
 
     if (encryptedPayload.deleted) {
       return {
         text: '',
         images: [],
         revision: encryptedPayload.revision || '',
+        keepForever: false,
+        ttlMinutes: 5,
+        expiresAt: null,
         expired: false,
         deleted: true
       };
     }
 
-    if (encryptedPayload.expiresAt && now >= encryptedPayload.expiresAt) {
+    if (!encryptedPayload.keepForever && encryptedPayload.expiresAt && now >= encryptedPayload.expiresAt) {
       return {
         text: '',
         images: [],
         revision: encryptedPayload.revision || '',
+        keepForever: false,
+        ttlMinutes: encryptedPayload.ttlMinutes || 5,
+        expiresAt: encryptedPayload.expiresAt,
         expired: true,
         deleted: false
       };
@@ -162,10 +175,18 @@
     const plainJson = TD.decode(decryptedBuffer);
     const data = JSON.parse(plainJson);
 
+    const keepForever = Boolean(encryptedPayload.keepForever ?? data.keepForever ?? false);
+    const ttlMinutes = [5, 15, 30].includes(encryptedPayload.ttlMinutes ?? data.ttlMinutes)
+      ? (encryptedPayload.ttlMinutes ?? data.ttlMinutes)
+      : 5;
+
     return {
       text: typeof data.text === 'string' ? data.text : '',
       images: Array.isArray(data.images) ? data.images : [],
       revision: encryptedPayload.revision || '',
+      keepForever,
+      ttlMinutes,
+      expiresAt: keepForever ? null : (encryptedPayload.expiresAt || null),
       expired: false,
       deleted: false
     };

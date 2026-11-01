@@ -1,5 +1,6 @@
 /* Local drafts survive reloads and failed requests.
-   E2EE (AES-256-GCM) with 30-minute auto-expiry and Zero-Knowledge cloud sync. */
+   E2EE (AES-256-GCM) Blackboard ("黒板") with 5/15/30-minute auto-expiry,
+   "消さずに残す" (keepForever) toggle, and Zero-Knowledge cloud sync. */
 (() => {
   const encKey = 'antigravity-shared-pad-v2-enc';
   const text = document.getElementById('shared-pad-text');
@@ -9,6 +10,8 @@
   const maximize = document.getElementById('shared-pad-maximize');
   const shareKeyBtn = document.getElementById('shared-pad-share-key');
   const ttlSelect = document.getElementById('shared-pad-ttl');
+  const keepToggle = document.getElementById('shared-pad-keep');
+  const keepLabel = document.getElementById('shared-pad-keep-label');
 
   // Purge deprecated v1 plaintext storage
   try {
@@ -33,45 +36,70 @@
     if (maximize) maximize.focus();
   }, true);
 
-  let state = { pad: { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: 5 }, base: null, dirty: false, keyMismatch: false };
+  let state = {
+    pad: { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: 5, keepForever: false },
+    base: null,
+    dirty: false,
+    modeChangeOnly: false,
+    keyMismatch: false
+  };
   let remote = null, busy = false, timer, composing = false;
   let imageEpoch = 0;
   let cryptoKey = null, keyInitPromise = null;
 
   const cryptoMod = window.SharedPadCrypto;
-
-  if (ttlSelect) {
-    ttlSelect.value = '5';
-    const handleTtlChange = async () => {
-      const val = parseInt(ttlSelect.value) || 5;
-      state.pad.ttlMinutes = [5, 15, 30].includes(val) ? val : 5;
-      await persist(false);
-      updateStatusDisplay(`消去期限を${state.pad.ttlMinutes}分に設定`);
-    };
-    ttlSelect.onchange = handleTtlChange;
-    ttlSelect.addEventListener('change', handleTtlChange);
-  }
-
   const message = value => { if (status) status.textContent = value; };
 
+  function syncModeUi() {
+    const keepForever = Boolean(state.pad?.keepForever);
+    const currentTtl = [5, 15, 30].includes(state.pad?.ttlMinutes) ? state.pad.ttlMinutes : 5;
+    if (keepToggle) {
+      keepToggle.checked = keepForever;
+      keepToggle.disabled = Boolean(state.keyMismatch);
+    }
+    if (keepLabel && keepLabel.classList) {
+      keepLabel.classList.toggle('is-active', keepForever);
+    }
+    if (ttlSelect) {
+      ttlSelect.value = String(currentTtl);
+      ttlSelect.disabled = keepForever || Boolean(state.keyMismatch);
+      ttlSelect.title = keepForever
+        ? '「消さずに残す」がONのため自動削除なし'
+        : '自動消去までの時間（最後の実内容更新から計算）';
+      if (ttlSelect.options && ttlSelect.options.length) {
+        for (let i = 0; i < ttlSelect.options.length; i++) {
+          const opt = ttlSelect.options[i];
+          opt.textContent = keepForever ? '📌 自動削除なし' : `⏳ 自動消去: ${opt.value}分`;
+        }
+      }
+    }
+    if (text && !state.keyMismatch) {
+      text.placeholder = keepForever
+        ? '文字や画像を貼り付けてデバイス間で共有（自動削除なし・手動で全消去するまで保持）'
+        : '文字や画像を貼り付けてデバイス間で共有（5分/15分/30分で自動消去）';
+    }
+  }
+
   /**
-   * Check TTL expiration and purge if overdue (5m default, or 15m/30m)
+   * Check TTL expiration and purge if overdue (when keepForever is OFF)
    */
   function checkExpiration() {
-    if (state.pad?.expiresAt && Date.now() >= state.pad.expiresAt) {
-      const configuredTtl = state.pad.ttlMinutes || 5;
-      state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl };
+    if (!state.pad?.keepForever && state.pad?.expiresAt && Date.now() >= state.pad.expiresAt) {
+      const configuredTtl = [5, 15, 30].includes(state.pad.ttlMinutes) ? state.pad.ttlMinutes : 5;
+      state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever: false };
       state.dirty = false;
+      state.modeChangeOnly = false;
       state.base = null;
       try { localStorage.removeItem(encKey); } catch {}
       render();
-      message(`⌛ ${configuredTtl}分経過により自動消去しました`);
+      message(`⌛ 黒板: ${configuredTtl}分経過により自動消去しました`);
       return true;
     }
     return false;
   }
 
   function getRemainingMinutes() {
+    if (state.pad?.keepForever) return null;
     if (!state.pad?.expiresAt) return null;
     const diffMs = state.pad.expiresAt - Date.now();
     if (diffMs <= 0) return 0;
@@ -79,26 +107,133 @@
   }
 
   /**
-   * Update Shared Pad status display
+   * Update Blackboard status display
+   * Never claims "保存成功" or "接続・同期済" when eventType === 'idle' or state.dirty is true.
    * @param {string} [defaultMsg] fallback message
-   * @param {'sync'|'save'|'idle'} [eventType='sync'] distinguish fetch/sync vs save/post
+   * @param {'sync'|'save'|'idle'} [eventType='sync'] distinguish fetch/sync vs save/post vs pending/offline
    */
   function updateStatusDisplay(defaultMsg, eventType = 'sync') {
     if (checkExpiration()) return;
     if (state.keyMismatch) {
-      message('🔒 共有メモ: 鍵不一致（要鍵同期）');
+      message('🔒 黒板: 鍵不一致（要鍵同期）');
       return;
     }
+    if (eventType === 'idle' || state.dirty) {
+      if (defaultMsg) {
+        message(defaultMsg);
+      } else if (state.pad?.keepForever) {
+        message('黒板: 端末保存済・同期待ち（自動削除なし）');
+      } else {
+        message('黒板: 端末保存済・同期待ち');
+      }
+      return;
+    }
+
+    const hasActiveContent = Boolean(state.pad?.text || (state.pad?.images && state.pad.images.length > 0) || state.base);
+    if (hasActiveContent && state.pad?.keepForever) {
+      if (eventType === 'save') {
+        message('🔒 黒板: 保存成功（自動削除なし）');
+      } else {
+        message('🔒 黒板: 接続・同期済（自動削除なし）');
+      }
+      return;
+    }
+
     const mins = getRemainingMinutes();
     if (mins !== null && mins > 0) {
       if (eventType === 'save') {
-        message(`🔒 共有メモ: 保存成功（残り約${mins}分）`);
+        message(`🔒 黒板: 保存成功（残り約${mins}分）`);
       } else {
-        message(`🔒 共有メモ: 接続・同期済（残り約${mins}分）`);
+        message(`🔒 黒板: 接続・同期済（残り約${mins}分）`);
       }
     } else if (defaultMsg) {
       message(defaultMsg);
     }
+  }
+
+  if (keepToggle) {
+    keepToggle.checked = false;
+    const handleKeepToggleChange = async () => {
+      if (state.keyMismatch) {
+        keepToggle.checked = Boolean(state.pad.keepForever);
+        message('🔒 黒板: 別端末の暗号鍵が一致しないため設定を変更できません');
+        return;
+      }
+      // Never resurrect an already expired memo via toggle operation
+      if (checkExpiration()) {
+        keepToggle.checked = false;
+        render();
+        return;
+      }
+      const nextKeep = Boolean(keepToggle.checked);
+      if (Boolean(state.pad.keepForever) === nextKeep) return;
+
+      const currentText = text ? text.value : (state.pad.text || '');
+      const hasContent = Boolean(currentText || (state.pad.images && state.pad.images.length > 0) || state.base);
+      const selectedTtl = ttlSelect ? parseInt(ttlSelect.value, 10) : state.pad.ttlMinutes;
+      const ttl = [5, 15, 30].includes(selectedTtl) ? selectedTtl : ([5, 15, 30].includes(state.pad.ttlMinutes) ? state.pad.ttlMinutes : 5);
+
+      state.pad.keepForever = nextKeep;
+      state.pad.ttlMinutes = ttl;
+
+      if (!hasContent) {
+        state.pad.expiresAt = null;
+        render();
+        message(nextKeep ? '📌 黒板: 自動削除なしに設定（入力時に保存）' : `⏳ 黒板: 自動消去を${ttl}分に設定`);
+        return;
+      }
+
+      if (nextKeep) {
+        state.pad.expiresAt = null;
+      } else {
+        state.pad.expiresAt = Date.now() + ttl * 60000;
+      }
+      state.pad.revision = crypto.randomUUID();
+      state.dirty = true;
+      state.modeChangeOnly = true;
+      render();
+      await persist(true);
+      updateStatusDisplay(
+        nextKeep ? '黒板: 自動削除なしへ変更（サーバー確認中…）' : `黒板: 自動消去（${ttl}分）へ変更（サーバー確認中…）`,
+        'idle'
+      );
+      clearTimeout(timer);
+      await sync();
+    };
+    keepToggle.onchange = handleKeepToggleChange;
+    keepToggle.addEventListener('change', handleKeepToggleChange);
+  }
+
+  if (ttlSelect) {
+    ttlSelect.value = '5';
+    const handleTtlChange = async () => {
+      if (state.keyMismatch || state.pad.keepForever) return;
+      if (checkExpiration()) return;
+      const val = parseInt(ttlSelect.value, 10) || 5;
+      const nextTtl = [5, 15, 30].includes(val) ? val : 5;
+      if (state.pad.ttlMinutes === nextTtl && state.pad.expiresAt) {
+        return;
+      }
+      state.pad.ttlMinutes = nextTtl;
+      const currentText = text ? text.value : (state.pad.text || '');
+      const hasContent = Boolean(currentText || (state.pad.images && state.pad.images.length > 0) || state.base);
+      if (!hasContent) {
+        render();
+        message(`⏳ 黒板: 自動消去を${nextTtl}分に設定`);
+        return;
+      }
+      state.pad.expiresAt = Date.now() + nextTtl * 60000;
+      state.pad.revision = crypto.randomUUID();
+      state.dirty = true;
+      state.modeChangeOnly = true;
+      render();
+      await persist(true);
+      updateStatusDisplay(`黒板: 消去期限を${nextTtl}分に変更（サーバー確認中…）`, 'idle');
+      clearTimeout(timer);
+      await sync();
+    };
+    ttlSelect.onchange = handleTtlChange;
+    ttlSelect.addEventListener('change', handleTtlChange);
   }
 
   /**
@@ -108,10 +243,8 @@
     if (!input || typeof input !== 'string') return null;
     let s = input.trim();
     try { s = decodeURIComponent(s); } catch {}
-    // If it contains #padkey= or padkey=
     const match = s.match(/padkey=([a-zA-Z0-9_-]{40,60})/i);
     if (match && match[1]) return match[1];
-    // If it's a standalone Base64URL string of roughly 43 chars
     const directMatch = s.match(/^[a-zA-Z0-9_-]{40,60}$/);
     if (directMatch) return directMatch[0];
     return null;
@@ -119,11 +252,6 @@
 
   /**
    * Safely import and apply a key (without destroying user's unconfirmed data or cache)
-   * 1. Protect unsaved edits (prompt before discard)
-   * 2. Import into memory only (do NOT save to IndexedDB yet)
-   * 3. Fetch latest encrypted remote memo and test decryption
-   *    - If decryption fails: keep existing key and local cache intact!
-   *    - If decryption succeeds: safely commit key to IndexedDB and update state.
    */
   async function applyKey(rawInput, notify = true) {
     if (!cryptoMod) return false;
@@ -133,7 +261,6 @@
       return false;
     }
 
-    // 1. Protect uncommitted local edits
     const currentText = text ? text.value : (state.pad?.text || '');
     const hasUnsavedEdits = state.dirty || (currentText && currentText !== (state.pad?.text || ''));
     if (hasUnsavedEdits) {
@@ -144,7 +271,6 @@
       }
     }
 
-    // 2. Validate key format and import into memory ONLY (NOT saved to IndexedDB yet!)
     let candidateKey = null;
     try {
       candidateKey = await cryptoMod.importPadKey(keyStr, true);
@@ -153,9 +279,8 @@
       return false;
     }
 
-    // 3. Fetch latest server memo to test decryption before committing
     try {
-      if (notify) message('🔍 相手端末の暗号化メモとの適合性を検証中...');
+      if (notify) message('🔍 相手端末の黒板データとの適合性を検証中...');
       const response = await fetch('/api/shared-pad', { cache: 'no-store' });
       if (!response.ok && response.status !== 410) {
         throw new Error(`サーバー通信エラー (HTTP ${response.status})`);
@@ -167,46 +292,42 @@
         remotePad = result?.pad || null;
       }
 
-      // 4. Decryption verification
       if (remotePad && remotePad.v === 2) {
-        // Try decrypting with candidateKey
         let decrypted = null;
         try {
           decrypted = await cryptoMod.decryptPad(candidateKey, remotePad);
         } catch {
-          // Decryption failed! The key does not match the server's ciphertext!
-          // PRESERVE existing key in IndexedDB and memory! PRESERVE existing local cache!
           if (notify) {
-            message('❌ 入力された鍵では共有メモを復号できません（既存の鍵とキャッシュを保持）');
-            alert('❌ 入力された鍵ではサーバーの暗号化メモを復号できませんでした。\n相手端末の最新の鍵コードまたはURLを確認してください。\n（※既存の暗号鍵やローカルキャッシュは保護されました）');
+            message('❌ 入力された鍵では黒板を復号できません（既存の鍵とキャッシュを保持）');
+            alert('❌ 入力された鍵ではサーバーの黒板データを復号できませんでした。\n相手端末の最新の鍵コードまたはURLを確認してください。\n（※既存の暗号鍵やローカルキャッシュは保護されました）');
           }
           return false;
         }
 
-        // Decryption SUCCESS! Now and only now, safely commit the key to IndexedDB
         await cryptoMod.KeyStore.saveKey(candidateKey);
         cryptoKey = candidateKey;
         state.keyMismatch = false;
         state.dirty = false;
-        if (text) {
-          text.readOnly = false;
-          text.placeholder = '文字や画像を貼り付けてデバイス間で共有（5分/15分/30分で自動消去）';
-        }
+        state.modeChangeOnly = false;
+        if (text) text.readOnly = false;
         if (clearBtn) clearBtn.disabled = false;
 
         if (decrypted.deleted || decrypted.expired) {
-          state.pad = { text: '', images: [], revision: null, expiresAt: null };
+          state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: 5, keepForever: false };
+          state.base = null;
           try { localStorage.removeItem(encKey); } catch {}
           render();
-          message('⌛ 共有メモ: 消去済みのメモでした');
+          message('⌛ 黒板: 消去済みのメモでした');
         } else {
           const ttl = [5, 15, 30].includes(remotePad?.ttlMinutes) ? remotePad.ttlMinutes : 5;
+          const keepForever = Boolean(remotePad?.keepForever ?? decrypted?.keepForever ?? false);
           state.pad = {
             text: decrypted.text,
             images: decrypted.images,
             revision: decrypted.revision,
-            expiresAt: remotePad.expiresAt || null,
-            ttlMinutes: ttl
+            expiresAt: keepForever ? null : (remotePad.expiresAt || null),
+            ttlMinutes: ttl,
+            keepForever
           };
           state.base = decrypted.revision;
           await persist(false);
@@ -214,14 +335,12 @@
           updateStatusDisplay(null, 'sync');
         }
 
-        if (notify) message('🔑 共有メモ: 暗号鍵を取り込み、最新メモを正常に復号しました！');
+        if (notify) message('🔑 黒板: 暗号鍵を取り込み、最新メモを正常に復号しました！');
         return true;
       } else {
-        // Server has no active memo (empty or newly purged)
-        // If local has existing ciphertext, prompt before replacing key
         const hasExistingCache = Boolean(localStorage.getItem(encKey));
         if (hasExistingCache) {
-          const proceed = confirm('サーバー上に暗号化メモがありません。\nこの鍵を新しい共有暗号鍵として確定保存しますか？\n（※既存の端末内キャッシュは新しい鍵で再暗号化されます）');
+          const proceed = confirm('サーバー上に黒板のメモがありません。\nこの鍵を新しい共有暗号鍵として確定保存しますか？\n（※既存の端末内キャッシュは新しい鍵で再暗号化されます）');
           if (!proceed) {
             if (notify) message('鍵の確定をキャンセルしました（既存の鍵を保持）');
             return false;
@@ -231,15 +350,13 @@
         await cryptoMod.KeyStore.saveKey(candidateKey);
         cryptoKey = candidateKey;
         state.keyMismatch = false;
-        if (text) {
-          text.readOnly = false;
-          text.placeholder = '文字や画像を貼り付けてデバイス間で共有（5分/15分/30分で自動消去）';
-        }
+        if (text) text.readOnly = false;
         if (clearBtn) clearBtn.disabled = false;
+        render();
         if (state.pad.text || (state.pad.images && state.pad.images.length)) {
           await persist(true);
         }
-        updateStatusDisplay('共有メモ: 鍵を設定しました（新規）', 'sync');
+        updateStatusDisplay('黒板: 鍵を設定しました（新規）', 'sync');
         if (notify) message('🔑 新しい共有暗号鍵を確定保存しました');
         return true;
       }
@@ -253,10 +370,7 @@
   }
 
   /**
-   * Initialize E2EE Key:
-   * 1. URL fragment (#padkey=...) takes precedence -> import, save to IndexedDB, purge hash
-   * 2. Load from IndexedDB
-   * 3. Generate new key and save to IndexedDB
+   * Initialize E2EE Key
    */
   async function initKey() {
     if (!cryptoMod) {
@@ -265,27 +379,23 @@
     }
 
     try {
-      // 1. Check URL fragment
       const hash = window.location.hash || '';
       const keyFromHash = extractKeyString(hash);
       if (keyFromHash) {
         const imported = await cryptoMod.importPadKey(keyFromHash, true);
         await cryptoMod.KeyStore.saveKey(imported);
-        // Clear fragment immediately for security
         history.replaceState(null, '', window.location.pathname + window.location.search);
         cryptoKey = imported;
         message('🔗 共有キーを取り込みました');
         return cryptoKey;
       }
 
-      // 2. Load from IndexedDB
       const stored = await cryptoMod.KeyStore.loadKey();
       if (stored) {
         cryptoKey = stored;
         return cryptoKey;
       }
 
-      // 3. Generate fresh key
       const generated = await cryptoMod.generatePadKey(true);
       await cryptoMod.KeyStore.saveKey(generated);
       cryptoKey = generated;
@@ -298,7 +408,7 @@
 
   /**
    * Persist encrypted ciphertext to LocalStorage (Zero-Knowledge)
-   * @param {boolean} [contentModified=false] Only resets expiration upon meaningful content change
+   * @param {boolean} [contentModified=false] Only resets expiration upon meaningful content/mode change
    */
   async function persist(contentModified = false) {
     if (!cryptoKey && keyInitPromise) {
@@ -306,20 +416,25 @@
     }
     if (!cryptoKey || !cryptoMod) return false;
     try {
-      const ttl = state.pad.ttlMinutes || 5;
+      const ttl = [5, 15, 30].includes(state.pad.ttlMinutes) ? state.pad.ttlMinutes : 5;
+      const keepForever = Boolean(state.pad.keepForever);
       const opts = {
         revision: state.pad.revision,
-        ttlMinutes: ttl
+        ttlMinutes: ttl,
+        keepForever
       };
-      if (!contentModified && state.pad.expiresAt) {
+      if (!keepForever && !contentModified && state.pad.expiresAt) {
         opts.now = state.pad.expiresAt - ttl * 60 * 1000;
       }
       const encrypted = await cryptoMod.encryptPad(cryptoKey, state.pad, opts);
-      if (contentModified || !state.pad.expiresAt) {
+      if (keepForever) {
+        state.pad.expiresAt = null;
+      } else if (contentModified || !state.pad.expiresAt) {
         state.pad.expiresAt = encrypted.expiresAt;
       }
-      encrypted.expiresAt = state.pad.expiresAt;
+      encrypted.expiresAt = keepForever ? null : state.pad.expiresAt;
       encrypted.ttlMinutes = ttl;
+      encrypted.keepForever = keepForever;
       localStorage.setItem(encKey, JSON.stringify(encrypted));
       return true;
     } catch {
@@ -336,7 +451,7 @@
       const raw = localStorage.getItem(encKey);
       if (!raw) return;
       const encrypted = JSON.parse(raw);
-      if (encrypted.expiresAt && Date.now() >= encrypted.expiresAt) {
+      if (!encrypted.keepForever && encrypted.expiresAt && Date.now() >= encrypted.expiresAt) {
         localStorage.removeItem(encKey);
         return;
       }
@@ -344,14 +459,15 @@
         const decrypted = await cryptoMod.decryptPad(cryptoKey, encrypted);
         if (!decrypted.expired && !decrypted.deleted) {
           const ttl = [5, 15, 30].includes(encrypted.ttlMinutes) ? encrypted.ttlMinutes : 5;
+          const keepForever = Boolean(encrypted.keepForever ?? decrypted.keepForever ?? false);
           state.pad = {
             text: decrypted.text,
             images: decrypted.images,
             revision: decrypted.revision,
-            expiresAt: encrypted.expiresAt,
-            ttlMinutes: ttl
+            expiresAt: keepForever ? null : (encrypted.expiresAt ?? null),
+            ttlMinutes: ttl,
+            keepForever
           };
-          if (ttlSelect) ttlSelect.value = String(ttl);
           render();
         }
       }
@@ -395,13 +511,13 @@
 
   function render() {
     if (text) text.value = state.pad.text || '';
-    if (ttlSelect && state.pad.ttlMinutes) ttlSelect.value = String(state.pad.ttlMinutes);
+    syncModeUi();
     imagesInto(document.getElementById('shared-pad-images'), state.pad.images || [], true);
   }
 
   async function changed(contentModified = true) {
     if (state.keyMismatch) {
-      message('🔒 共有メモ: 別端末の暗号鍵が一致しないため編集できません。「🔑 鍵を管理」から鍵を合わせてください');
+      message('🔒 黒板: 別端末の暗号鍵が一致しないため編集できません。「🔑 鍵を管理」から鍵を合わせてください');
       return;
     }
     if (checkExpiration()) return;
@@ -411,21 +527,31 @@
     if (contentModified || textChanged) {
       state.pad.revision = crypto.randomUUID();
       state.dirty = true;
-      if (await persist(true)) updateStatusDisplay('共有メモ: 暗号化保存済・同期待ち', 'idle');
+      state.modeChangeOnly = false;
+      if (await persist(true)) updateStatusDisplay('黒板: 暗号化保存済・同期待ち', 'idle');
     } else {
-      if (await persist(false)) updateStatusDisplay('共有メモ: 暗号化保存済', 'idle');
+      if (await persist(false)) updateStatusDisplay('黒板: 暗号化保存済', 'idle');
     }
     clearTimeout(timer);
     if (!composing) timer = setTimeout(sync, 1000);
   }
 
   function showConflict(decryptedPad, rawRemote) {
-    remote = decryptedPad;
+    const keepForever = Boolean(rawRemote?.keepForever ?? decryptedPad?.keepForever ?? false);
+    const ttl = [5, 15, 30].includes(rawRemote?.ttlMinutes) ? rawRemote.ttlMinutes : (decryptedPad?.ttlMinutes || 5);
+    remote = decryptedPad
+      ? {
+          ...decryptedPad,
+          keepForever,
+          ttlMinutes: ttl,
+          expiresAt: keepForever ? null : (rawRemote?.expiresAt ?? decryptedPad?.expiresAt ?? null)
+        }
+      : { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: 5, keepForever: false };
     const remoteEl = document.getElementById('shared-pad-remote');
     if (remoteEl) remoteEl.textContent = decryptedPad?.text || '（空のメモ）';
     imagesInto(document.getElementById('shared-pad-remote-images'), decryptedPad?.images || [], false);
     if (conflict) conflict.hidden = false;
-    message('共有メモ: 別デバイスの変更を確認してください');
+    message('⚠️ 黒板: 別デバイスの変更を確認してください');
   }
 
   /**
@@ -440,18 +566,17 @@
       const response = await fetch('/api/shared-pad', { cache: 'no-store' });
       if (!response.ok) {
         if (response.status === 410) {
-          // 410 Gone: purged/expired on server
-          state.pad = { text: '', images: [], revision: null, expiresAt: null };
+          const configuredTtl = [5, 15, 30].includes(state.pad?.ttlMinutes) ? state.pad.ttlMinutes : 5;
+          state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever: false };
           state.dirty = false;
+          state.modeChangeOnly = false;
+          state.base = null;
           state.keyMismatch = false;
-          if (text) {
-            text.readOnly = false;
-            text.placeholder = '文字や画像を貼り付けてデバイス間で共有（5分/15分/30分で自動消去）';
-          }
+          if (text) text.readOnly = false;
           if (clearBtn) clearBtn.disabled = false;
           try { localStorage.removeItem(encKey); } catch {}
           render();
-          message('⌛ 共有メモ: 消去されました');
+          message('⌛ 黒板: 消去されました');
           return;
         }
         throw new Error();
@@ -459,31 +584,35 @@
 
       const result = await response.json();
       if (result.mode !== 'kv' && result.mode !== 'do') {
-        updateStatusDisplay('共有メモ: 端末保存済（クラウド未接続）', 'idle');
+        updateStatusDisplay('黒板: 端末保存済（クラウド未接続）', 'idle');
         return;
       }
 
       let remotePad = result.pad;
       let decryptedRemote = null;
+      const serverDeletedOrExpired = Boolean(result.deleted || result.expired);
 
       if (remotePad && remotePad.v === 2 && cryptoKey) {
         try {
           decryptedRemote = await cryptoMod.decryptPad(cryptoKey, remotePad);
           state.keyMismatch = false;
-          if (text) {
-            text.readOnly = false;
-            text.placeholder = '文字や画像を貼り付けてデバイス間で共有（5分/15分/30分で自動消去）';
-          }
+          if (text) text.readOnly = false;
           if (clearBtn) clearBtn.disabled = false;
 
           if (decryptedRemote.deleted || decryptedRemote.expired) {
-            // Server deleted / expired
-            state.pad = { text: '', images: [], revision: null, expiresAt: null };
-            state.dirty = false;
-            try { localStorage.removeItem(encKey); } catch {}
-            render();
-            message('⌛ 共有メモ: 消去されました');
-            return;
+            if (!state.dirty || state.modeChangeOnly) {
+              const configuredTtl = [5, 15, 30].includes(state.pad?.ttlMinutes) ? state.pad.ttlMinutes : 5;
+              state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever: false };
+              state.dirty = false;
+              state.modeChangeOnly = false;
+              state.base = null;
+              try { localStorage.removeItem(encKey); } catch {}
+              render();
+              message('⌛ 黒板: 消去されました');
+              return;
+            }
+            remotePad = null;
+            decryptedRemote = null;
           }
         } catch {
           state.keyMismatch = true;
@@ -492,23 +621,33 @@
             text.placeholder = '🔒 別端末の暗号鍵が異なるため編集できません。「🔑 鍵を管理」から鍵を合わせてください';
           }
           if (clearBtn) clearBtn.disabled = true;
-          updateStatusDisplay('🔒 共有メモ: 鍵不一致（要鍵同期）', 'idle');
-          message('🔒 共有メモ: 別デバイスの暗号キーが異なります（「🔑 鍵を管理」から鍵を同期してください）');
+          syncModeUi();
+          updateStatusDisplay('🔒 黒板: 鍵不一致（要鍵同期）', 'idle');
+          message('🔒 黒板: 別デバイスの暗号キーが異なります（「🔑 鍵を管理」から鍵を同期してください）');
           return;
         }
       } else if (remotePad && typeof remotePad.text === 'string') {
-        // Fallback backward compatibility for plain v1
         decryptedRemote = remotePad;
         state.keyMismatch = false;
         if (text) text.readOnly = false;
         if (clearBtn) clearBtn.disabled = false;
       } else if (!remotePad) {
         state.keyMismatch = false;
-        if (text) {
-          text.readOnly = false;
-          text.placeholder = '文字や画像を貼り付けてデバイス間で共有（5分/15分/30分で自動消去）';
-        }
+        if (text) text.readOnly = false;
         if (clearBtn) clearBtn.disabled = false;
+
+        // If the server record was deleted or expired, never allow a toggle operation to resurrect it
+        if (serverDeletedOrExpired && state.dirty && state.modeChangeOnly) {
+          const configuredTtl = [5, 15, 30].includes(state.pad?.ttlMinutes) ? state.pad.ttlMinutes : 5;
+          state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever: false };
+          state.dirty = false;
+          state.modeChangeOnly = false;
+          state.base = null;
+          try { localStorage.removeItem(encKey); } catch {}
+          render();
+          message(result.expired ? '⌛ 黒板: すでに期限切れのため変更できませんでした' : '⌛ 黒板: すでに消去済みのため変更できませんでした');
+          return;
+        }
       }
 
       if (state.dirty) {
@@ -518,31 +657,63 @@
         if (remotePad?.revision === state.pad.revision) {
           state.base = remotePad.revision;
           state.dirty = false;
-          await persist();
+          state.modeChangeOnly = false;
+          await persist(false);
+          render();
           updateStatusDisplay(null, 'sync');
           return;
         }
         if ((remotePad?.revision || null) !== state.base) {
+          // If this device only toggled mode/TTL on a stale base while another device updated the server,
+          // or if another device changed content, prevent stale rollback!
+          if (state.modeChangeOnly && decryptedRemote) {
+            const ttl = [5, 15, 30].includes(remotePad?.ttlMinutes) ? remotePad.ttlMinutes : (state.pad.ttlMinutes || 5);
+            const keepForever = Boolean(remotePad?.keepForever ?? decryptedRemote?.keepForever ?? false);
+            state.pad = {
+              text: decryptedRemote.text,
+              images: decryptedRemote.images,
+              revision: decryptedRemote.revision,
+              expiresAt: keepForever ? null : (remotePad?.expiresAt || null),
+              ttlMinutes: ttl,
+              keepForever
+            };
+            state.base = decryptedRemote.revision;
+            state.dirty = false;
+            state.modeChangeOnly = false;
+            await persist(false);
+            render();
+            updateStatusDisplay('🔒 黒板: 他端末の最新設定を反映しました', 'sync');
+            return;
+          }
           showConflict(decryptedRemote, remotePad);
           return;
         }
 
         // Encrypt payload before sending to cloud (Strict Zero-Knowledge)
-        const ttl = state.pad.ttlMinutes || 5;
+        const ttl = [5, 15, 30].includes(state.pad.ttlMinutes) ? state.pad.ttlMinutes : 5;
+        const keepForever = Boolean(state.pad.keepForever);
         const opts = {
           revision: state.pad.revision,
-          ttlMinutes: ttl
+          ttlMinutes: ttl,
+          keepForever
         };
-        if (state.pad.expiresAt) {
+        if (!keepForever && state.pad.expiresAt) {
           opts.now = state.pad.expiresAt - ttl * 60 * 1000;
         }
         const encryptedOut = await cryptoMod.encryptPad(cryptoKey, state.pad, opts);
-        if (!state.pad.expiresAt) {
+        if (keepForever) {
+          state.pad.expiresAt = null;
+          encryptedOut.expiresAt = null;
+        } else if (!state.pad.expiresAt) {
           state.pad.expiresAt = encryptedOut.expiresAt;
         } else {
           encryptedOut.expiresAt = state.pad.expiresAt;
         }
         encryptedOut.ttlMinutes = ttl;
+        encryptedOut.keepForever = keepForever;
+        if (state.modeChangeOnly) {
+          encryptedOut.modeChangeOnly = true;
+        }
 
         const saved = await fetch('/api/shared-pad', {
           method: 'POST',
@@ -550,61 +721,115 @@
           body: JSON.stringify({ pad: encryptedOut, base: state.base })
         });
 
-        const body = await saved.json();
+        let body = {};
+        try { body = await saved.json(); } catch {}
+
+        if (saved.status === 410) {
+          const configuredTtl = [5, 15, 30].includes(state.pad?.ttlMinutes) ? state.pad.ttlMinutes : 5;
+          state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever: false };
+          state.dirty = false;
+          state.modeChangeOnly = false;
+          state.base = null;
+          try { localStorage.removeItem(encKey); } catch {}
+          render();
+          message('⌛ 黒板: すでに消去または期限切れのため保存できませんでした');
+          return;
+        }
+
         if (saved.status === 409) {
           let conflictPad = body.pad;
           if (conflictPad?.v === 2 && cryptoKey) {
             try { conflictPad = await cryptoMod.decryptPad(cryptoKey, conflictPad); } catch {}
           }
+          if (state.modeChangeOnly && conflictPad && !conflictPad.deleted && !conflictPad.expired) {
+            const rTtl = [5, 15, 30].includes(body.pad?.ttlMinutes) ? body.pad.ttlMinutes : 5;
+            const rKeep = Boolean(body.pad?.keepForever ?? conflictPad?.keepForever ?? false);
+            state.pad = {
+              text: conflictPad.text,
+              images: conflictPad.images,
+              revision: conflictPad.revision,
+              expiresAt: rKeep ? null : (body.pad?.expiresAt || null),
+              ttlMinutes: rTtl,
+              keepForever: rKeep
+            };
+            state.base = conflictPad.revision;
+            state.dirty = false;
+            state.modeChangeOnly = false;
+            await persist(false);
+            render();
+            updateStatusDisplay('🔒 黒板: 他端末の最新設定を反映しました', 'sync');
+            return;
+          }
           showConflict(conflictPad, body.pad);
           return;
         }
+
         if (!saved.ok) {
-          message(body.error || '共有メモ: 送信保存に失敗しました');
+          message(body.error || '⚠️ 黒板: 送信保存に失敗しました（未同期）');
           return;
         }
 
+        if (body.pad && typeof body.pad === 'object') {
+          state.pad.keepForever = Boolean(body.pad.keepForever);
+          if ([5, 15, 30].includes(body.pad.ttlMinutes)) {
+            state.pad.ttlMinutes = body.pad.ttlMinutes;
+          }
+          state.pad.expiresAt = state.pad.keepForever ? null : (body.pad.expiresAt ?? state.pad.expiresAt);
+        }
         state.base = encryptedOut.revision;
         state.dirty = false;
+        state.modeChangeOnly = false;
         await persist(false);
-        updateStatusDisplay('🔒 共有メモ: 保存成功', 'save');
+        render();
+        updateStatusDisplay('🔒 黒板: 保存成功', 'save');
       } else {
         if (document.activeElement === text) {
-          message('共有メモ: 編集中・同期は入力後に反映');
+          message('黒板: 編集中・同期は入力後に反映');
           return;
         }
         if (decryptedRemote) {
           const ttl = [5, 15, 30].includes(remotePad?.ttlMinutes) ? remotePad.ttlMinutes : (state.pad.ttlMinutes || 5);
+          const keepForever = Boolean(remotePad?.keepForever ?? decryptedRemote?.keepForever ?? false);
           state.pad = {
             text: decryptedRemote.text,
             images: decryptedRemote.images,
             revision: decryptedRemote.revision,
-            expiresAt: remotePad?.expiresAt || null,
-            ttlMinutes: ttl
+            expiresAt: keepForever ? null : (remotePad?.expiresAt || null),
+            ttlMinutes: ttl,
+            keepForever
           };
           state.base = decryptedRemote.revision;
+          state.modeChangeOnly = false;
           await persist(false);
           render();
-          updateStatusDisplay('🔒 共有メモ: 接続・同期済', 'sync');
+          updateStatusDisplay('🔒 黒板: 接続・同期済', 'sync');
         } else {
-          state.pad = { text: '', images: [], revision: null, expiresAt: null };
+          const configuredTtl = [5, 15, 30].includes(state.pad?.ttlMinutes) ? state.pad.ttlMinutes : 5;
+          const keepForever = (serverDeletedOrExpired || state.base !== null) ? false : Boolean(state.pad?.keepForever);
+          state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever };
           state.base = null;
+          state.modeChangeOnly = false;
           try { localStorage.removeItem(encKey); } catch {}
           render();
-          updateStatusDisplay('共有メモ: 接続済（空）', 'sync');
+          updateStatusDisplay(
+            serverDeletedOrExpired
+              ? (result.expired ? '⌛ 黒板: 期限切れにより消去されました' : '⌛ 黒板: 消去されました')
+              : '黒板: 接続済（空）',
+            'sync'
+          );
         }
       }
     } catch {
-      updateStatusDisplay('共有メモ: 未接続（再接続待ち）', 'idle');
+      updateStatusDisplay('⚠️ 黒板: 未接続・未同期（再接続待ち）', 'idle');
     } finally {
       busy = false;
     }
   }
 
   if (text) {
-    text.addEventListener('input', () => changed());
+    text.addEventListener('input', () => changed(false));
     text.addEventListener('compositionstart', () => { composing = true; clearTimeout(timer); });
-    text.addEventListener('compositionend', () => { composing = false; changed(); });
+    text.addEventListener('compositionend', () => { composing = false; changed(false); });
     text.addEventListener('blur', sync);
   }
 
@@ -621,7 +846,7 @@
           break;
         }
         state.pad.images.push(src);
-        await changed();
+        await changed(true);
         render();
       } catch {
         message('画像を読み込めませんでした');
@@ -696,12 +921,17 @@
         message('🔒 別端末の暗号鍵が一致しないため、全消去できません');
         return;
       }
-      if (!text?.value && state.pad.images.length === 0) return;
-      if (!window.confirm('共有メモ帳の本文とスクショをすべて消去しますか？この変更は他のデバイスにも同期されます。')) return;
+      if (!text?.value && state.pad.images.length === 0 && !state.base) return;
+      if (!window.confirm('黒板の本文とスクショをすべて消去しますか？この変更は他のデバイスにも同期されます。')) return;
       imageEpoch += 1;
-      state.pad = { text: '', images: [], revision: crypto.randomUUID(), expiresAt: null };
+      const prevBase = state.base;
+      const delRevision = crypto.randomUUID();
+      const configuredTtl = [5, 15, 30].includes(state.pad?.ttlMinutes) ? state.pad.ttlMinutes : 5;
+      state.pad = { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: configuredTtl, keepForever: false };
       if (text) text.value = '';
-      state.dirty = true;
+      state.dirty = false;
+      state.modeChangeOnly = false;
+      state.base = null;
       try { localStorage.removeItem(encKey); } catch {}
       render();
 
@@ -713,19 +943,20 @@
             alg: 'A256GCM',
             iv: '',
             ct: '',
-            revision: state.pad.revision,
+            revision: delRevision,
             updatedAt: Date.now(),
-            expiresAt: Date.now() + 1800000,
+            expiresAt: null,
+            keepForever: false,
             deleted: true
           };
           await fetch('/api/shared-pad', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pad: tombstone, base: state.base })
+            body: JSON.stringify({ pad: tombstone, base: prevBase })
           });
         } catch {}
       }
-      message('🧹 共有メモ: 全消去完了');
+      message('🧹 黒板: 全消去完了');
     };
   }
 
@@ -747,7 +978,6 @@
 
     const shareUrl = `${window.location.origin}${window.location.pathname}#padkey=${rawKeyStr}`;
 
-    // Immediately copy share URL to clipboard for seamless UX & headless/mock test compatibility
     try {
       await navigator.clipboard.writeText(shareUrl);
       message('🔑 鍵付きURLをコピーしました！他端末のアドレスバーに貼ると鍵を共有できます');
@@ -772,7 +1002,7 @@
     const statusBanner = state.keyMismatch
       ? `<div style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; border-radius: 6px; padding: 10px; margin-bottom: 14px; font-size: 13px; color: #fca5a5;">
            ⚠️ <strong>別端末の暗号鍵と一致していません</strong><br>
-           サーバーに保存されているメモを復号できません。<br>
+           サーバーに保存されている黒板メモを復号できません。<br>
            相手端末の鍵を取り込むか、相手端末にこの鍵を共有してください。
          </div>`
       : `<div style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; border-radius: 6px; padding: 10px; margin-bottom: 14px; font-size: 13px; color: #6ee7b7;">
@@ -784,7 +1014,7 @@
       <div style="background: #18181b; border: 1px solid #3f3f46; border-radius: 12px; max-width: 480px; width: 100%; padding: 20px; box-sizing: border-box; color: #f4f4f5; font-family: sans-serif; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
           <h3 style="margin: 0; font-size: 17px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
-            <span>🔑</span> 暗号化共有メモ帳 — 鍵の管理
+            <span>🔑</span> 黒板 — 鍵の管理
           </h3>
           <button id="modal-close-x" style="background: transparent; border: none; color: #a1a1aa; font-size: 20px; cursor: pointer; padding: 4px;">✕</button>
         </div>
@@ -821,7 +1051,7 @@
             </button>
           </div>
           <p style="margin: 0; font-size: 11px; color: #a1a1aa; line-height: 1.4;">
-            ※ 相手の鍵を適用すると、相手が書いた暗号化メモを復号して閲覧・編集できるようになります。
+            ※ 相手の鍵を適用すると、相手が書いた黒板の暗号化メモを復号して閲覧・編集できるようになります。
           </p>
         </div>
 
@@ -833,7 +1063,6 @@
       </div>
     `;
 
-    // Event handlers
     const closeModal = () => { if (modal.style) modal.style.display = 'none'; };
     if (modal.querySelector) {
       const closeX = modal.querySelector('#modal-close-x');
@@ -899,15 +1128,16 @@
   if (useRemoteBtn) {
     useRemoteBtn.onclick = async () => {
       state = {
-        pad: remote || { text: '', images: [], revision: null, expiresAt: null },
+        pad: remote || { text: '', images: [], revision: null, expiresAt: null, ttlMinutes: 5, keepForever: false },
         base: remote?.revision || null,
         dirty: false,
+        modeChangeOnly: false,
         keyMismatch: false
       };
       if (conflict) conflict.hidden = true;
-      await persist();
+      await persist(false);
       render();
-      updateStatusDisplay('別デバイスの内容を反映しました');
+      updateStatusDisplay('🔒 黒板: 別デバイスの内容を反映しました', 'sync');
     };
   }
 
@@ -915,8 +1145,14 @@
   if (useLocalBtn) {
     useLocalBtn.onclick = async () => {
       state.base = remote?.revision || null;
+      if (remote && !state.modeChangeOnly) {
+        state.pad.keepForever = Boolean(remote.keepForever);
+        if ([5, 15, 30].includes(remote.ttlMinutes)) {
+          state.pad.ttlMinutes = remote.ttlMinutes;
+        }
+      }
       if (conflict) conflict.hidden = true;
-      await changed();
+      await changed(true);
       await sync();
     };
   }

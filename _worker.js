@@ -269,7 +269,7 @@ export default {
       });
     }
 
-    // Dedicated scratchpad: never modifies instruction memos.
+    // Dedicated scratchpad (Blackboard): never modifies instruction memos.
     if (url.pathname === '/api/shared-pad') {
       const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
       const reply = (body, status = 200) => new Response(JSON.stringify(body), { status, headers });
@@ -278,8 +278,22 @@ export default {
       if (authError) return authError;
       if (!env?.MEMO_KV) return reply({ mode: 'local' });
       try {
+        const now = typeof env.__NOW === 'function' ? env.__NOW() : Date.now();
+        const rawCurrent = await env.MEMO_KV.get('shared_pad', 'json');
+        const isCurrentDeleted = Boolean(rawCurrent && rawCurrent.deleted);
+        const isCurrentExpired = Boolean(
+          rawCurrent &&
+          !isCurrentDeleted &&
+          !rawCurrent.keepForever &&
+          typeof rawCurrent.expiresAt === 'number' &&
+          now >= rawCurrent.expiresAt
+        );
+        const current = (rawCurrent && !isCurrentDeleted && !isCurrentExpired) ? rawCurrent : null;
+
         if (request.method === 'GET') {
-          return reply({ mode: 'kv', pad: await env.MEMO_KV.get('shared_pad', 'json') });
+          if (isCurrentDeleted) return reply({ mode: 'kv', pad: null, deleted: true });
+          if (isCurrentExpired) return reply({ mode: 'kv', pad: null, expired: true });
+          return reply({ mode: 'kv', pad: current });
         }
         const raw = await request.text();
         if (new TextEncoder().encode(raw).length > 3000000) return reply({ error: 'メモは画像込みで3MB以内にしてください' }, 413);
@@ -291,9 +305,61 @@ export default {
         }
         if (pad.v === 2) {
           if (typeof pad.iv !== 'string' || typeof pad.ct !== 'string' ||
-              typeof pad.revision !== 'string' || pad.revision.length > 100) {
+              typeof pad.revision !== 'string' || pad.revision.length > 100 ||
+              (pad.keepForever !== undefined && typeof pad.keepForever !== 'boolean') ||
+              (pad.ttlMinutes !== undefined && ![5, 15, 30].includes(pad.ttlMinutes))) {
             return reply({ error: 'Invalid encrypted scratchpad' }, 400);
           }
+          if (pad.deleted) {
+            const tombstone = {
+              v: 2,
+              alg: 'A256GCM',
+              iv: '',
+              ct: '',
+              revision: pad.revision,
+              updatedAt: now,
+              expiresAt: null,
+              keepForever: false,
+              deleted: true
+            };
+            await env.MEMO_KV.put('shared_pad', JSON.stringify(tombstone));
+            return reply({ mode: 'kv', success: true, pad: tombstone });
+          }
+          if (!current) {
+            if (pad.modeChangeOnly || (body.base !== null && (isCurrentDeleted || isCurrentExpired))) {
+              return reply({
+                mode: 'kv',
+                error: 'gone',
+                pad: null,
+                deleted: isCurrentDeleted,
+                expired: isCurrentExpired
+              }, 410);
+            }
+          }
+          if ((current?.revision || null) !== body.base) {
+            return reply({ pad: current, deleted: isCurrentDeleted, expired: isCurrentExpired }, 409);
+          }
+          const ttl = [5, 15, 30].includes(pad.ttlMinutes) ? pad.ttlMinutes : 5;
+          const keepForever = Boolean(pad.keepForever);
+          pad.ttlMinutes = ttl;
+          pad.keepForever = keepForever;
+          delete pad.modeChangeOnly;
+          if (keepForever) {
+            pad.expiresAt = null;
+          } else if (
+            current &&
+            !current.keepForever &&
+            current.ttlMinutes === ttl &&
+            current.ct === pad.ct &&
+            current.iv === pad.iv &&
+            typeof current.expiresAt === 'number'
+          ) {
+            pad.expiresAt = current.expiresAt;
+          } else {
+            pad.expiresAt = now + ttl * 60000;
+          }
+          await env.MEMO_KV.put('shared_pad', JSON.stringify(pad));
+          return reply({ mode: 'kv', success: true, pad });
         } else {
           if (typeof pad.text !== 'string' || pad.text.length > 200000 ||
               typeof pad.revision !== 'string' || pad.revision.length > 100 ||
@@ -301,12 +367,11 @@ export default {
               pad.images.some(src => typeof src !== 'string' || !/^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+/=]+$/.test(src))) {
             return reply({ error: 'Invalid scratchpad' }, 400);
           }
+          if ((current?.revision || null) !== body.base) return reply({ pad: current }, 409);
+          await env.MEMO_KV.put('shared_pad', JSON.stringify(pad));
+          return reply({ mode: 'kv', success: true });
         }
-        const current = await env.MEMO_KV.get('shared_pad', 'json');
-        if ((current?.revision || null) !== body.base) return reply({ pad: current }, 409);
-        await env.MEMO_KV.put('shared_pad', JSON.stringify(pad));
-        return reply({ mode: 'kv', success: true });
-      } catch { return reply({ error: '共有メモの保存・取得に失敗しました' }, 500); }
+      } catch { return reply({ error: '黒板の保存・取得に失敗しました' }, 500); }
     }
 
     // API Route: Memos Endpoint (Cloudflare KV Cloud Storage)
@@ -427,7 +492,11 @@ export default {
       });
     }
 
-    // Fallback: serve static assets via Cloudflare Pages / Workers Assets
-    return env.ASSETS ? env.ASSETS.fetch(request) : new Response('Not found', { status: 404 });
+    // Serve Static Assets via Cloudflare Pages ASSETS binding
+    if (env && env.ASSETS) {
+      return env.ASSETS.fetch(request);
+    }
+
+    return new Response('Not Found', { status: 404 });
   }
 };

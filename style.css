@@ -3640,3 +3640,7 @@ html.shared-pad-expanded, html.shared-pad-expanded body { overflow: hidden; }
 .shared-pad.is-maximized > .shared-pad-images { flex-shrink: 0; max-height: 25vh; overflow-y: auto; }
 .shared-pad.is-maximized > .shared-pad-actions { flex-shrink: 0; position: sticky; bottom: 0; background: var(--bg-secondary); padding-top: 8px; }
 #shared-pad-maximize { min-height: 44px; margin-left: auto; }
+.shared-pad-keep-label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; transition: all 0.2s ease; }
+.shared-pad-keep-label input[type="checkbox"] { accent-color: #10b981; width: 15px; height: 15px; margin: 0; cursor: pointer; }
+.shared-pad-keep-label.is-active { border-color: #10b981; background: rgba(16, 185, 129, 0.16); color: #6ee7b7; font-weight: 600; }
+#shared-pad-ttl:disabled { opacity: 0.78; cursor: not-allowed; border-color: rgba(16, 185, 129, 0.45); color: #6ee7b7; }
