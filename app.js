@@ -446,8 +446,20 @@ async function fetchMemosFromCloud(quiet = false) {
   isSyncing = true;
   if (!quiet) setCloudStatus('syncing', '通常メモ: 同期確認中...');
 
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timeoutId = controller ? setTimeout(() => controller.abort(), 8000) : null;
+
   try {
-    const res = await fetch('/api/memos');
+    const fetchOptions = controller ? { signal: controller.signal } : {};
+    const res = await fetch('/api/memos', fetchOptions);
+    if (timeoutId) clearTimeout(timeoutId);
+
+    if (res.status === 401 || res.status === 403) {
+      console.warn('Cloudflare Access 認証エラー (要ログイン):', res.status);
+      setCloudStatus('local', '通常メモ: 認証期限切 (要ログイン)');
+      return;
+    }
+
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     const storageModeHeader = res.headers.get('X-Storage-Mode');
@@ -542,8 +554,13 @@ async function fetchMemosFromCloud(quiet = false) {
       setCloudStatus('local', '通常メモ: ローカル保存 (KV未接続)');
     }
   } catch (err) {
+    if (timeoutId) clearTimeout(timeoutId);
     console.warn('Cloud sync offline / error:', err);
-    setCloudStatus('local', '通常メモ: ローカル保存 (オフライン)');
+    if (err && err.name === 'AbortError') {
+      setCloudStatus('local', '通常メモ: 接続タイムアウト (ローカル保持)');
+    } else {
+      setCloudStatus('local', '通常メモ: ローカル保存 (オフライン)');
+    }
   } finally {
     isSyncing = false;
   }
@@ -606,7 +623,6 @@ async function saveMemosToCloud() {
     setLocalMemosDirty(true);
     setCloudStatus('local', '通常メモ: ローカル保存 (オフライン)');
   }
-}
 }
 
 // Main save dispatcher (local first + cloud upload)

@@ -18,7 +18,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MissionHub">
 
-  <link rel="stylesheet" href="style.css?v=20261101_v34">
+  <link rel="stylesheet" href="style.css?v=20261101_v35">
 </head>
 <body>
   <div class="app-container">
@@ -41,12 +41,12 @@
               <svg class="cloud-svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
               </svg>
-              <span id="cloud-sync-text">通常メモ: 接続確認中...</span>
+              <span id="cloud-sync-text">通常メモ: 同期中...</span>
             </span>
             <!-- Environment Badge (ステージング/検証環境のみ明示表示) -->
             <span id="env-badge" class="env-badge" style="display: none;" title="動作環境">🧪 検証環境（本番データとは独立）</span>
-            <!-- App Version Badge & Cache Refresh Button (v34: 空配列保護安全化・競合保護・検証環境明示) -->
-            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v34</span>
+            <!-- App Version Badge & Cache Refresh Button (v35: 構文エラー修正・タイムアウト保護・通常メモ復旧) -->
+            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v35</span>
             <button id="btn-cache-refresh" class="btn-cache-refresh" title="キャッシュをクリアして最新版に更新">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
@@ -867,9 +867,9 @@
     </svg>
   </button>
 
-  <!-- Application Logic (v34) -->
-  <script src="app.js?v=20261101_v34"></script>
-  <script src="shared-pad-transfer.js?v=20261101_v34"></script>
-  <script src="shared-pad.js?v=20261101_v34"></script>
+  <!-- Application Logic (v35) -->
+  <script src="app.js?v=20261101_v35"></script>
+  <script src="shared-pad-transfer.js?v=20261101_v35"></script>
+  <script src="shared-pad.js?v=20261101_v35"></script>
 </body>
 </html>
