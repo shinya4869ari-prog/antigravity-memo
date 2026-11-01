@@ -144,7 +144,7 @@ let customApps = [];
 const CATEGORY_MAP = {
   list: { label: 'リスト', icon: '📋', color: 'var(--cat-list)', badgeClass: 'badge-list' },
   task: { label: 'タスク', icon: '✅', color: 'var(--cat-task)', badgeClass: 'badge-task' },
-  schedule: { label: 'スケジュール・メモ', icon: '📅', color: 'var(--cat-schedule)', badgeClass: 'badge-schedule' },
+  schedule: { label: 'スケジュール', icon: '📅', color: 'var(--cat-schedule)', badgeClass: 'badge-schedule' },
   idea: { label: 'アイデア', icon: '💡', color: 'var(--cat-idea)', badgeClass: 'badge-idea' },
   other: { label: 'その他', icon: '📁', color: 'var(--cat-other)', badgeClass: 'badge-other' }
 };

@@ -92,7 +92,7 @@
       state.base = null;
       try { localStorage.removeItem(encKey); } catch {}
       render();
-      message(`⌛ 黒板: ${configuredTtl}分経過により自動消去しました`);
+      message(`⌛ ${configuredTtl}分経過により自動消去しました`);
       return true;
     }
     return false;
@@ -115,16 +115,16 @@
   function updateStatusDisplay(defaultMsg, eventType = 'sync') {
     if (checkExpiration()) return;
     if (state.keyMismatch) {
-      message('🔒 黒板: 鍵不一致（要鍵同期）');
+      message('🔒 鍵不一致（要鍵同期）');
       return;
     }
     if (eventType === 'idle' || state.dirty) {
       if (defaultMsg) {
         message(defaultMsg);
       } else if (state.pad?.keepForever) {
-        message('黒板: 端末保存済・同期待ち（自動削除なし）');
+        message('端末保存済・同期待ち（自動削除なし）');
       } else {
-        message('黒板: 端末保存済・同期待ち');
+        message('端末保存済・同期待ち');
       }
       return;
     }
@@ -132,9 +132,9 @@
     const hasActiveContent = Boolean(state.pad?.text || (state.pad?.images && state.pad.images.length > 0) || state.base);
     if (hasActiveContent && state.pad?.keepForever) {
       if (eventType === 'save') {
-        message('🔒 黒板: 保存成功（自動削除なし）');
+        message('🔒 保存成功（自動削除なし）');
       } else {
-        message('🔒 黒板: 接続・同期済（自動削除なし）');
+        message('🔒 接続・同期済（自動削除なし）');
       }
       return;
     }
@@ -142,9 +142,9 @@
     const mins = getRemainingMinutes();
     if (mins !== null && mins > 0) {
       if (eventType === 'save') {
-        message(`🔒 黒板: 保存成功（残り約${mins}分）`);
+        message(`🔒 保存成功（残り約${mins}分）`);
       } else {
-        message(`🔒 黒板: 接続・同期済（残り約${mins}分）`);
+        message(`🔒 接続・同期済（残り約${mins}分）`);
       }
     } else if (defaultMsg) {
       message(defaultMsg);
@@ -156,7 +156,7 @@
     const handleKeepToggleChange = async () => {
       if (state.keyMismatch) {
         keepToggle.checked = Boolean(state.pad.keepForever);
-        message('🔒 黒板: 別端末の暗号鍵が一致しないため設定を変更できません');
+        message('🔒 別端末の暗号鍵が一致しないため設定を変更できません');
         return;
       }
       // Never resurrect an already expired memo via toggle operation
@@ -179,7 +179,7 @@
       if (!hasContent) {
         state.pad.expiresAt = null;
         render();
-        message(nextKeep ? '📌 黒板: 自動削除なしに設定（入力時に保存）' : `⏳ 黒板: 自動消去を${ttl}分に設定`);
+        message(nextKeep ? '📌 自動削除なしに設定（入力時に保存）' : `⏳ 自動消去を${ttl}分に設定`);
         return;
       }
 
@@ -194,7 +194,7 @@
       render();
       await persist(true);
       updateStatusDisplay(
-        nextKeep ? '黒板: 自動削除なしへ変更（サーバー確認中…）' : `黒板: 自動消去（${ttl}分）へ変更（サーバー確認中…）`,
+        nextKeep ? '自動削除なしへ変更（サーバー確認中…）' : `自動消去（${ttl}分）へ変更（サーバー確認中…）`,
         'idle'
       );
       clearTimeout(timer);
@@ -219,7 +219,7 @@
       const hasContent = Boolean(currentText || (state.pad.images && state.pad.images.length > 0) || state.base);
       if (!hasContent) {
         render();
-        message(`⏳ 黒板: 自動消去を${nextTtl}分に設定`);
+        message(`⏳ 自動消去を${nextTtl}分に設定`);
         return;
       }
       state.pad.expiresAt = Date.now() + nextTtl * 60000;
@@ -228,7 +228,7 @@
       state.modeChangeOnly = true;
       render();
       await persist(true);
-      updateStatusDisplay(`黒板: 消去期限を${nextTtl}分に変更（サーバー確認中…）`, 'idle');
+      updateStatusDisplay(`消去期限を${nextTtl}分に変更（サーバー確認中…）`, 'idle');
       clearTimeout(timer);
       await sync();
     };
@@ -317,7 +317,7 @@
           state.base = null;
           try { localStorage.removeItem(encKey); } catch {}
           render();
-          message('⌛ 黒板: 消去済みのメモでした');
+          message('⌛ 消去済みのメモでした');
         } else {
           const ttl = [5, 15, 30].includes(remotePad?.ttlMinutes) ? remotePad.ttlMinutes : 5;
           const keepForever = Boolean(remotePad?.keepForever ?? decrypted?.keepForever ?? false);
@@ -335,7 +335,7 @@
           updateStatusDisplay(null, 'sync');
         }
 
-        if (notify) message('🔑 黒板: 暗号鍵を取り込み、最新メモを正常に復号しました！');
+        if (notify) message('🔑 暗号鍵を取り込み、最新メモを正常に復号しました！');
         return true;
       } else {
         const hasExistingCache = Boolean(localStorage.getItem(encKey));
@@ -356,7 +356,7 @@
         if (state.pad.text || (state.pad.images && state.pad.images.length)) {
           await persist(true);
         }
-        updateStatusDisplay('黒板: 鍵を設定しました（新規）', 'sync');
+        updateStatusDisplay('鍵を設定しました（新規）', 'sync');
         if (notify) message('🔑 新しい共有暗号鍵を確定保存しました');
         return true;
       }
@@ -517,7 +517,7 @@
 
   async function changed(contentModified = true) {
     if (state.keyMismatch) {
-      message('🔒 黒板: 別端末の暗号鍵が一致しないため編集できません。「🔑 鍵を管理」から鍵を合わせてください');
+      message('🔒 別端末の暗号鍵が一致しないため編集できません。「🔑 鍵を管理」から鍵を合わせてください');
       return;
     }
     if (checkExpiration()) return;
@@ -528,9 +528,9 @@
       state.pad.revision = crypto.randomUUID();
       state.dirty = true;
       state.modeChangeOnly = false;
-      if (await persist(true)) updateStatusDisplay('黒板: 暗号化保存済・同期待ち', 'idle');
+      if (await persist(true)) updateStatusDisplay('暗号化保存済・同期待ち', 'idle');
     } else {
-      if (await persist(false)) updateStatusDisplay('黒板: 暗号化保存済', 'idle');
+      if (await persist(false)) updateStatusDisplay('暗号化保存済', 'idle');
     }
     clearTimeout(timer);
     if (!composing) timer = setTimeout(sync, 1000);
@@ -551,7 +551,7 @@
     if (remoteEl) remoteEl.textContent = decryptedPad?.text || '（空のメモ）';
     imagesInto(document.getElementById('shared-pad-remote-images'), decryptedPad?.images || [], false);
     if (conflict) conflict.hidden = false;
-    message('⚠️ 黒板: 別デバイスの変更を確認してください');
+    message('⚠️ 別デバイスの変更を確認してください');
   }
 
   /**
@@ -576,7 +576,7 @@
           if (clearBtn) clearBtn.disabled = false;
           try { localStorage.removeItem(encKey); } catch {}
           render();
-          message('⌛ 黒板: 消去されました');
+          message('⌛ 消去されました');
           return;
         }
         throw new Error();
@@ -584,7 +584,7 @@
 
       const result = await response.json();
       if (result.mode !== 'kv' && result.mode !== 'do') {
-        updateStatusDisplay('黒板: 端末保存済（クラウド未接続）', 'idle');
+        updateStatusDisplay('端末保存済（クラウド未接続）', 'idle');
         return;
       }
 
@@ -608,7 +608,7 @@
               state.base = null;
               try { localStorage.removeItem(encKey); } catch {}
               render();
-              message('⌛ 黒板: 消去されました');
+              message('⌛ 消去されました');
               return;
             }
             remotePad = null;
@@ -622,8 +622,8 @@
           }
           if (clearBtn) clearBtn.disabled = true;
           syncModeUi();
-          updateStatusDisplay('🔒 黒板: 鍵不一致（要鍵同期）', 'idle');
-          message('🔒 黒板: 別デバイスの暗号キーが異なります（「🔑 鍵を管理」から鍵を同期してください）');
+          updateStatusDisplay('🔒 鍵不一致（要鍵同期）', 'idle');
+          message('🔒 別デバイスの暗号キーが異なります（「🔑 鍵を管理」から鍵を同期してください）');
           return;
         }
       } else if (remotePad && typeof remotePad.text === 'string') {
@@ -645,7 +645,7 @@
           state.base = null;
           try { localStorage.removeItem(encKey); } catch {}
           render();
-          message(result.expired ? '⌛ 黒板: すでに期限切れのため変更できませんでした' : '⌛ 黒板: すでに消去済みのため変更できませんでした');
+          message(result.expired ? '⌛ すでに期限切れのため変更できませんでした' : '⌛ すでに消去済みのため変更できませんでした');
           return;
         }
       }
@@ -682,7 +682,7 @@
             state.modeChangeOnly = false;
             await persist(false);
             render();
-            updateStatusDisplay('🔒 黒板: 他端末の最新設定を反映しました', 'sync');
+            updateStatusDisplay('🔒 他端末の最新設定を反映しました', 'sync');
             return;
           }
           showConflict(decryptedRemote, remotePad);
@@ -732,7 +732,7 @@
           state.base = null;
           try { localStorage.removeItem(encKey); } catch {}
           render();
-          message('⌛ 黒板: すでに消去または期限切れのため保存できませんでした');
+          message('⌛ すでに消去または期限切れのため保存できませんでした');
           return;
         }
 
@@ -757,7 +757,7 @@
             state.modeChangeOnly = false;
             await persist(false);
             render();
-            updateStatusDisplay('🔒 黒板: 他端末の最新設定を反映しました', 'sync');
+            updateStatusDisplay('🔒 他端末の最新設定を反映しました', 'sync');
             return;
           }
           showConflict(conflictPad, body.pad);
@@ -765,7 +765,7 @@
         }
 
         if (!saved.ok) {
-          message(body.error || '⚠️ 黒板: 送信保存に失敗しました（未同期）');
+          message(body.error || '⚠️ 送信保存に失敗しました（未同期）');
           return;
         }
 
@@ -781,10 +781,10 @@
         state.modeChangeOnly = false;
         await persist(false);
         render();
-        updateStatusDisplay('🔒 黒板: 保存成功', 'save');
+        updateStatusDisplay('🔒 保存成功', 'save');
       } else {
         if (document.activeElement === text) {
-          message('黒板: 編集中・同期は入力後に反映');
+          message('編集中・同期は入力後に反映');
           return;
         }
         if (decryptedRemote) {
@@ -802,7 +802,7 @@
           state.modeChangeOnly = false;
           await persist(false);
           render();
-          updateStatusDisplay('🔒 黒板: 接続・同期済', 'sync');
+          updateStatusDisplay('🔒 接続・同期済', 'sync');
         } else {
           const configuredTtl = [5, 15, 30].includes(state.pad?.ttlMinutes) ? state.pad.ttlMinutes : 5;
           const keepForever = (serverDeletedOrExpired || state.base !== null) ? false : Boolean(state.pad?.keepForever);
@@ -813,14 +813,14 @@
           render();
           updateStatusDisplay(
             serverDeletedOrExpired
-              ? (result.expired ? '⌛ 黒板: 期限切れにより消去されました' : '⌛ 黒板: 消去されました')
-              : '黒板: 接続済（空）',
+              ? (result.expired ? '⌛ 期限切れにより消去されました' : '⌛ 消去されました')
+              : '接続済（空）',
             'sync'
           );
         }
       }
     } catch {
-      updateStatusDisplay('⚠️ 黒板: 未接続・未同期（再接続待ち）', 'idle');
+      updateStatusDisplay('⚠️ 未接続・未同期（再接続待ち）', 'idle');
     } finally {
       busy = false;
     }
@@ -956,7 +956,7 @@
           });
         } catch {}
       }
-      message('🧹 黒板: 全消去完了');
+      message('🧹 全消去完了');
     };
   }
 
@@ -1137,7 +1137,7 @@
       if (conflict) conflict.hidden = true;
       await persist(false);
       render();
-      updateStatusDisplay('🔒 黒板: 別デバイスの内容を反映しました', 'sync');
+      updateStatusDisplay('🔒 別デバイスの内容を反映しました', 'sync');
     };
   }
 

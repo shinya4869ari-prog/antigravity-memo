@@ -408,7 +408,7 @@ body {
 /* Stats Ribbon */
 .stats-ribbon {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
   gap: 12px;
 }
 
@@ -416,13 +416,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 18px;
+  gap: 8px;
+  padding: 12px 16px;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-normal);
   backdrop-filter: blur(8px);
+  white-space: nowrap;
 }
 
 .stat-chip:hover {
@@ -450,7 +452,9 @@ body {
 .stat-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .stat-icon {
@@ -458,12 +462,14 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .stat-label {
   font-size: 0.82rem;
   color: var(--text-secondary);
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .stat-count {
@@ -471,6 +477,8 @@ body {
   font-weight: 700;
   font-family: var(--font-mono);
   color: var(--text-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* Toolbar & Filters */
@@ -2835,22 +2843,30 @@ details[open] .editor-details-summary {
     font-size: 0.88rem !important;
   }
 
-  /* 統計リボンの2列最適化 */
+  /* 統計リボンの1行維持・横スクロール最適化 */
   .stats-ribbon {
-    grid-template-columns: repeat(2, 1fr) !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
     gap: 8px !important;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
   }
   .stat-chip {
+    flex: 0 0 auto !important;
     padding: 9px 12px !important;
+    white-space: nowrap !important;
   }
   .stat-icon {
     font-size: 1.1rem !important;
   }
   .stat-label {
-    font-size: 0.75rem !important;
+    font-size: 0.78rem !important;
+    white-space: nowrap !important;
   }
   .stat-count {
     font-size: 1.15rem !important;
+    white-space: nowrap !important;
   }
 }
 
