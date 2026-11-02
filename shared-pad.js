@@ -58,6 +58,14 @@
   let remote = null, busy = false, timer, composing = false;
   let reconnectTimer1 = null, reconnectTimer2 = null;
   let imageEpoch = 0;
+
+  if (typeof window !== 'undefined') {
+    window.__isSharedPadDirty = () => Boolean(
+      state.dirty ||
+      composing ||
+      (text && typeof document !== 'undefined' && document.activeElement === text)
+    );
+  }
   let cryptoKey = null, keyInitPromise = null;
 
   const cryptoMod = window.SharedPadCrypto;
@@ -1179,7 +1187,12 @@
       }
     } catch (err) {
       if (err && err.code === 'AUTH_REQUIRED') {
-        updateStatusDisplay('🔐 再ログインが必要です（画面を更新してください）', 'idle');
+        updateStatusDisplay('🔐 セッション自動更新中...', 'idle');
+        if (typeof window !== 'undefined' && typeof window.scheduleSafeSessionRecovery === 'function') {
+          window.scheduleSafeSessionRecovery();
+        } else if (!state.dirty && !composing && (typeof document === 'undefined' || !text || document.activeElement !== text)) {
+          setTimeout(() => window.location.reload(), 1200);
+        }
       } else {
         updateStatusDisplay('⚠️ 未接続・未同期（再接続待ち）', 'idle');
       }

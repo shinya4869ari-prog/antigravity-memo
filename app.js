@@ -427,6 +427,66 @@ function updateEnvironmentDisplay() {
 let currentServerRevision = (typeof localStorage !== 'undefined' ? localStorage.getItem('agy_server_memo_revision') : null);
 let memoReconnectTimer1 = null;
 let memoReconnectTimer2 = null;
+let sessionRecoveryTimer = null;
+let consecutiveSyncFailures = 0;
+
+/**
+ * Check if the user is actively typing, editing, or viewing a modal.
+ * Prevents disruptive automatic reloads while user is interacting.
+ */
+function isUserActivelyEditing() {
+  if (typeof document === 'undefined') return false;
+  // 1. Any active open modal
+  if (document.querySelector('.modal-overlay.active')) return true;
+  // 2. Focused on any form control or contenteditable
+  const active = document.activeElement;
+  if (active) {
+    const tag = active.tagName.toLowerCase();
+    if (tag === 'textarea' || (tag === 'input' && !['button', 'submit', 'checkbox', 'radio'].includes(active.type))) {
+      return true;
+    }
+    if (active.isContentEditable) return true;
+  }
+  // 3. Shared blackboard has unsaved dirty changes
+  if (typeof window !== 'undefined' && typeof window.__isSharedPadDirty === 'function') {
+    if (window.__isSharedPadDirty()) return true;
+  }
+  return false;
+}
+
+/**
+ * Automatically and safely reload the page to refresh the Cloudflare Access session.
+ * Defers reload until user is finished editing to prevent data loss.
+ */
+function scheduleSafeSessionRecovery() {
+  if (typeof window === 'undefined') return;
+  if (sessionRecoveryTimer) return;
+
+  if (isUserActivelyEditing()) {
+    console.log('[Auth Recovery] 編集作業中のためセッション自動更新を保留します。完了後に自動実行します。');
+    setCloudStatus('local', '通常メモ: 接続再開待ち（作業完了後に自動更新）');
+    sessionRecoveryTimer = setTimeout(() => {
+      sessionRecoveryTimer = null;
+      scheduleSafeSessionRecovery();
+    }, 3500);
+    return;
+  }
+
+  setCloudStatus('syncing', '通常メモ: セッション自動更新中...');
+  sessionRecoveryTimer = setTimeout(() => {
+    sessionRecoveryTimer = null;
+    if (isUserActivelyEditing()) {
+      scheduleSafeSessionRecovery();
+      return;
+    }
+    console.log('[Auth Recovery] Cloudflare Access セッション切れを検知したため、自動リフレッシュを実行します。');
+    window.location.reload();
+  }, 1200);
+}
+if (typeof window !== 'undefined') {
+  window.scheduleSafeSessionRecovery = scheduleSafeSessionRecovery;
+  window.isUserActivelyEditing = isUserActivelyEditing;
+}
 
 function clearMemoReconnectTimers() {
   if (memoReconnectTimer1) { clearTimeout(memoReconnectTimer1); memoReconnectTimer1 = null; }
@@ -483,20 +543,22 @@ async function fetchMemosFromCloud(quiet = false) {
 
     const contentType = (res.headers?.get?.('content-type') || '').toLowerCase();
     if (res.status === 401 || res.status === 403 || res.redirected || contentType.includes('text/html')) {
-      console.warn('Cloudflare Access 認証エラー (要ログイン):', res.status);
-      setCloudStatus('local', '通常メモ: 再ログインが必要です');
+      console.warn('Cloudflare Access セッション期限切れを検知 (HTTP ' + res.status + '): 自動復帰を開始します');
+      consecutiveSyncFailures = 0;
+      setCloudStatus('syncing', '通常メモ: セッション自動更新中...');
       const badge = document.getElementById('cloud-sync-badge');
       if (badge) {
         badge.style.cursor = 'pointer';
         badge.onclick = () => window.location.reload();
       }
-      scheduleMemoReconnectRetries();
+      scheduleSafeSessionRecovery();
       return;
     }
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     clearMemoReconnectTimers();
+    consecutiveSyncFailures = 0;
     const storageModeHeader = res.headers?.get?.('X-Storage-Mode') || null;
 
     // サーバーの現在世代（Revision / ETag）を取得・記録
@@ -591,10 +653,15 @@ async function fetchMemosFromCloud(quiet = false) {
   } catch (err) {
     if (timeoutId) clearTimeout(timeoutId);
     console.warn('Cloud sync offline / error:', err);
-    if (err && err.name === 'AbortError') {
-      setCloudStatus('local', '通常メモ: 接続タイムアウト (ローカル保持)');
+    consecutiveSyncFailures++;
+    if (consecutiveSyncFailures >= 2) {
+      if (err && err.name === 'AbortError') {
+        setCloudStatus('local', '通常メモ: 接続タイムアウト (ローカル保持)');
+      } else {
+        setCloudStatus('local', '通常メモ: ローカル保存 (オフライン)');
+      }
     } else {
-      setCloudStatus('local', '通常メモ: ローカル保存 (オフライン)');
+      setCloudStatus('syncing', '通常メモ: 一時待機・再接続試行中...');
     }
     scheduleMemoReconnectRetries();
   } finally {
