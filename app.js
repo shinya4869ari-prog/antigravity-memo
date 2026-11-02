@@ -328,6 +328,33 @@ function deduplicateMemos(list) {
   return deduped.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 }
 
+// Utility: Merge local memos and server memos safely without dropping any data
+function mergeMemos(localList, serverList) {
+  if (!Array.isArray(localList)) localList = [];
+  if (!Array.isArray(serverList)) serverList = [];
+
+  const map = new Map();
+  // 1. Register server memos
+  for (const item of serverList) {
+    if (item && item.id) map.set(item.id, item);
+  }
+  // 2. Merge or override with local memos
+  for (const item of localList) {
+    if (!item || !item.id) continue;
+    if (!map.has(item.id)) {
+      map.set(item.id, item);
+    } else {
+      const existing = map.get(item.id);
+      const localTime = new Date(item.updatedAt || item.createdAt || 0).getTime();
+      const serverTime = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
+      if (localTime >= serverTime) {
+        map.set(item.id, item);
+      }
+    }
+  }
+  return deduplicateMemos(Array.from(map.values()));
+}
+
 // 1. Initial Local Load (Instant rendering, zero waiting)
 function loadMemos() {
   const saved = localStorage.getItem('agy_mission_memos');
@@ -620,14 +647,16 @@ async function fetchMemosFromCloud(quiet = false) {
       }
 
       // ケース B: サーバーにデータが存在する場合 (data.length > 0)
-      // 端末に未送信の変更がある場合 -> 同期競合 (Sync Conflict)
       if (localMemosDirty) {
-        console.warn('端末に未送信のローカルメモ変更が存在するため、サーバーデータによる上書きを停止しました。');
-        if (memoStorageMode === 'staging-memory') {
-          setCloudStatus('conflict', '通常メモ: 同期競合 (端末に未送信変更あり・ステージング)');
-        } else {
-          setCloudStatus('conflict', '通常メモ: 同期競合 (端末に未送信変更あり)');
+        console.log('[Auto Merge] 未送信ローカルメモをサーバー最新データと自動合算（マージ）してクラウドへ保存します。');
+        memos = mergeMemos(memos, data);
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('agy_mission_memos', JSON.stringify(memos));
         }
+        updateStats();
+        render();
+        // マージ結果を裏でクラウドへ即座に送信し、自動で完全同期（緑の接続済）へ復帰
+        saveMemosToCloud();
         return;
       }
 
@@ -688,10 +717,9 @@ async function saveMemosToCloud() {
     });
 
     if (res.status === 409) {
-      // 409 Conflict: サーバー側で別端末の更新があり世代不一致！
-      console.warn('サーバーで世代不一致（409 Conflict）を検知しました。別端末の最新更新を保護します。');
+      // 409 Conflict: サーバー側で別端末の更新があり世代不一致 -> 最新取得して自動合算
+      console.log('[Auto Merge] サーバー更新検知（409 Conflict）。最新データを取得して自動マージします。');
       setLocalMemosDirty(true);
-      setCloudStatus('conflict', '通常メモ: 同期競合 (サーバーに新しい更新あり・409)');
       await fetchMemosFromCloud(true);
       return;
     }
