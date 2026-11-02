@@ -156,9 +156,9 @@ const PRIORITY_MAP = {
 };
 
 const STATUS_MAP = {
-  backlog: { label: 'アイデア (Backlog)', icon: '📌' },
-  todo: { label: '指示待ち (Todo)', icon: '⏳' },
-  in_progress: { label: '作業中 (In Progress)', icon: '🚀' }
+  backlog: { label: 'ARCHIVE', icon: '🏛️' },
+  todo: { label: 'MISSIONS', icon: '🎯' },
+  in_progress: { label: 'PRIORITY', icon: '🔥' }
 };
 
 // DOM Elements

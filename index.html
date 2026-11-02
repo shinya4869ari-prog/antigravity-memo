@@ -18,7 +18,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MissionHub">
 
-  <link rel="stylesheet" href="style.css?v=20261102_v45">
+  <link rel="stylesheet" href="style.css?v=20261102_v46">
   <script>
     // 緊急キャッシュリフレッシュ: app.js の読み込み成否に関わらず動作を保証
     window.emergencyCacheRefresh = async function(e) {
@@ -70,8 +70,8 @@
             </span>
             <!-- Environment Badge (ステージング/検証環境のみ明示表示) -->
             <span id="env-badge" class="env-badge" style="display: none;" title="動作環境">🧪 検証環境（本番データとは独立）</span>
-            <!-- App Version Badge & Cache Refresh Button (v45: 同期競合の自動マージ解決・赤文字警告撤廃) -->
-            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v45</span>
+            <!-- App Version Badge & Cache Refresh Button (v46: カンバン列名刷新 ARCHIVE / MISSIONS / PRIORITY) -->
+            <span class="app-version-badge" id="app-version-badge" title="アプリバージョン">v46</span>
             <button id="btn-cache-refresh" class="btn-cache-refresh" onclick="window.emergencyCacheRefresh && window.emergencyCacheRefresh(event)" title="キャッシュをクリアして最新版に更新">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
@@ -349,8 +349,8 @@
       <div class="kanban-column" data-status="backlog" id="col-backlog">
         <div class="column-header">
           <div class="column-title">
-            <span style="color: #94a3b8;">📌</span>
-            <span>アイデアスプール (Backlog)</span>
+            <span style="color: #94a3b8;">🏛️</span>
+            <span>ARCHIVE</span>
           </div>
           <span class="column-badge" id="badge-count-backlog">0</span>
         </div>
@@ -361,8 +361,8 @@
       <div class="kanban-column" data-status="todo" id="col-todo">
         <div class="column-header">
           <div class="column-title">
-            <span style="color: #38bdf8;">⏳</span>
-            <span>Antigravity指示待ち (Todo)</span>
+            <span style="color: #38bdf8;">🎯</span>
+            <span>MISSIONS</span>
           </div>
           <span class="column-badge" id="badge-count-todo">0</span>
         </div>
@@ -373,8 +373,8 @@
       <div class="kanban-column" data-status="in_progress" id="col-in_progress">
         <div class="column-header">
           <div class="column-title">
-            <span style="color: #f59e0b;">🚀</span>
-            <span>作業中・進行中 (In Progress)</span>
+            <span style="color: #f59e0b;">🔥</span>
+            <span>PRIORITY</span>
           </div>
           <span class="column-badge" id="badge-count-in_progress">0</span>
         </div>
@@ -481,9 +481,9 @@
                 <div class="meta-field-item">
                   <label class="meta-field-label" for="input-memo-status">ステータス</label>
                   <select id="input-memo-status" class="form-select form-select-compact">
-                    <option value="todo" selected>⏳ 指示待ち</option>
-                    <option value="backlog">📌 アイデア</option>
-                    <option value="in_progress">🚀 作業中</option>
+                    <option value="todo" selected>🎯 MISSIONS</option>
+                    <option value="backlog">🏛️ ARCHIVE</option>
+                    <option value="in_progress">🔥 PRIORITY</option>
                   </select>
                 </div>
 
@@ -948,10 +948,10 @@
     </svg>
   </button>
 
-  <!-- Application Logic (v45) -->
-  <script src="app.js?v=20261102_v45"></script>
-  <script src="shared-pad-crypto.js?v=20261102_v45"></script>
-  <script src="shared-pad-transfer.js?v=20261102_v45"></script>
-  <script src="shared-pad.js?v=20261102_v45"></script>
+  <!-- Application Logic (v46) -->
+  <script src="app.js?v=20261102_v46"></script>
+  <script src="shared-pad-crypto.js?v=20261102_v46"></script>
+  <script src="shared-pad-transfer.js?v=20261102_v46"></script>
+  <script src="shared-pad.js?v=20261102_v46"></script>
 </body>
 </html>
