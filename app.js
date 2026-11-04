@@ -454,6 +454,9 @@ function updateEnvironmentDisplay() {
 let currentServerRevision = (typeof localStorage !== 'undefined' ? localStorage.getItem('agy_server_memo_revision') : null);
 let memoReconnectTimer1 = null;
 let memoReconnectTimer2 = null;
+let memoReconnectTimer3 = null;
+let activeFetchAbortController = null;
+let wakeSyncTimer = null;
 let sessionRecoveryTimer = null;
 let consecutiveSyncFailures = 0;
 
@@ -518,22 +521,35 @@ if (typeof window !== 'undefined') {
 function clearMemoReconnectTimers() {
   if (memoReconnectTimer1) { clearTimeout(memoReconnectTimer1); memoReconnectTimer1 = null; }
   if (memoReconnectTimer2) { clearTimeout(memoReconnectTimer2); memoReconnectTimer2 = null; }
+  if (memoReconnectTimer3) { clearTimeout(memoReconnectTimer3); memoReconnectTimer3 = null; }
 }
 
 function scheduleMemoReconnectRetries() {
   clearMemoReconnectTimers();
+  const triggerRetry = () => {
+    if (typeof document === 'undefined' || document.visibilityState !== 'hidden') {
+      // If previous fetch is still hanging, abort it so the fresh retry proceeds
+      if (isSyncing && activeFetchAbortController) {
+        try { activeFetchAbortController.abort(); } catch {}
+      }
+      fetchMemosFromCloud(true);
+    }
+  };
+
   memoReconnectTimer1 = setTimeout(() => {
     memoReconnectTimer1 = null;
-    if (typeof document === 'undefined' || document.visibilityState !== 'hidden') {
-      fetchMemosFromCloud(true);
-    }
+    triggerRetry();
   }, 1500);
+
   memoReconnectTimer2 = setTimeout(() => {
     memoReconnectTimer2 = null;
-    if (typeof document === 'undefined' || document.visibilityState !== 'hidden') {
-      fetchMemosFromCloud(true);
-    }
+    triggerRetry();
   }, 4500);
+
+  memoReconnectTimer3 = setTimeout(() => {
+    memoReconnectTimer3 = null;
+    triggerRetry();
+  }, 10000);
 }
 
 function setCurrentServerRevision(rev) {
@@ -557,6 +573,7 @@ async function fetchMemosFromCloud(quiet = false) {
   if (!quiet) setCloudStatus('syncing', '通常メモ: 同期確認中...');
 
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  activeFetchAbortController = controller;
   const timeoutId = controller ? setTimeout(() => controller.abort(), 8000) : null;
 
   try {
@@ -683,9 +700,12 @@ async function fetchMemosFromCloud(quiet = false) {
     if (timeoutId) clearTimeout(timeoutId);
     console.warn('Cloud sync offline / error:', err);
     consecutiveSyncFailures++;
-    if (consecutiveSyncFailures >= 2) {
-      if (err && err.name === 'AbortError') {
-        setCloudStatus('local', '通常メモ: 接続タイムアウト (ローカル保持)');
+    const isTrulyOffline = (typeof navigator !== 'undefined' && navigator.onLine === false);
+
+    // Only show "offline" if truly offline or after 3 consecutive failures to avoid false alarms on mobile wake
+    if (isTrulyOffline || consecutiveSyncFailures >= 3) {
+      if (err && err.name === 'AbortError' && !isTrulyOffline) {
+        setCloudStatus('local', '通常メモ: 接続タイムアウト (再接続待ち)');
       } else {
         setCloudStatus('local', '通常メモ: ローカル保存 (オフライン)');
       }
@@ -694,6 +714,7 @@ async function fetchMemosFromCloud(quiet = false) {
     }
     scheduleMemoReconnectRetries();
   } finally {
+    activeFetchAbortController = null;
     isSyncing = false;
   }
 }
@@ -703,6 +724,10 @@ let cloudSaveTimer = null;
 async function saveMemosToCloud() {
   lastLocalSaveTime = Date.now();
   setCloudStatus('syncing', '通常メモ: 保存中...');
+
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timeoutId = controller ? setTimeout(() => controller.abort(), 10000) : null;
+
   try {
     const postHeaders = { 'Content-Type': 'application/json' };
     if (currentServerRevision) {
@@ -713,8 +738,21 @@ async function saveMemosToCloud() {
     const res = await fetch('/api/memos', {
       method: 'POST',
       headers: postHeaders,
-      body: JSON.stringify(memos)
+      cache: 'no-store',
+      credentials: 'same-origin',
+      body: JSON.stringify(memos),
+      ...(controller ? { signal: controller.signal } : {})
     });
+    if (timeoutId) clearTimeout(timeoutId);
+
+    const contentType = (res.headers?.get?.('content-type') || '').toLowerCase();
+    if (res.status === 401 || res.status === 403 || res.redirected || contentType.includes('text/html')) {
+      console.warn('Cloudflare Access セッション期限切れを検知 (HTTP ' + res.status + '): 保存を安全に保留し自動復帰を開始します');
+      setLocalMemosDirty(true);
+      setCloudStatus('syncing', '通常メモ: セッション自動更新中...');
+      scheduleSafeSessionRecovery();
+      return;
+    }
 
     if (res.status === 409) {
       // 409 Conflict: サーバー側で別端末の更新があり世代不一致 -> 最新取得して自動合算
@@ -736,6 +774,8 @@ async function saveMemosToCloud() {
 
     // 正常保存時は未送信フラグをクリア
     setLocalMemosDirty(false);
+    clearMemoReconnectTimers();
+    consecutiveSyncFailures = 0;
 
     if (result.mode === 'staging-memory' || storageModeHeader === 'staging-memory' || memoStorageMode === 'staging-memory') {
       memoStorageMode = 'staging-memory';
@@ -749,10 +789,19 @@ async function saveMemosToCloud() {
     }
     updateEnvironmentDisplay();
   } catch (err) {
+    if (timeoutId) clearTimeout(timeoutId);
     console.warn('Failed to save to cloud:', err);
-    // 送信失敗時は未送信フラグを立てて保護
+    // 送信失敗時は未送信フラグを立てて端末メモを完全保護
     setLocalMemosDirty(true);
-    setCloudStatus('local', '通常メモ: ローカル保存 (オフライン)');
+    consecutiveSyncFailures++;
+    const isTrulyOffline = (typeof navigator !== 'undefined' && navigator.onLine === false);
+
+    if (isTrulyOffline || consecutiveSyncFailures >= 3) {
+      setCloudStatus('local', '通常メモ: ローカル保存 (オフライン)');
+    } else {
+      setCloudStatus('syncing', '通常メモ: 一時保存済・クラウド再送待機中...');
+    }
+    scheduleMemoReconnectRetries();
   }
 }
 
@@ -2407,7 +2456,10 @@ document.getElementById('btn-clear-all').addEventListener('click', async () => {
   setCloudStatus('syncing', '通常メモ: サーバー状態を確認中...');
   let confirmedRevision = null;
   try {
-    const res = await fetch('/api/memos');
+    const res = await fetch('/api/memos', {
+      cache: 'no-store',
+      credentials: 'same-origin'
+    });
     if (res.ok) {
       confirmedRevision = res.headers.get('ETag')?.replace(/["']/g, '').trim() || res.headers.get('X-Memo-Revision') || currentServerRevision;
       if (confirmedRevision) {
@@ -2479,6 +2531,8 @@ document.getElementById('btn-clear-all').addEventListener('click', async () => {
     const delRes = await fetch('/api/memos', {
       method: 'POST',
       headers: deleteHeaders,
+      cache: 'no-store',
+      credentials: 'same-origin',
       body: JSON.stringify([])
     });
 
@@ -3210,23 +3264,37 @@ if (btnSaveVoiceMemo) {
 }
 
 // Auto-sync when switching back to this tab / waking phone / network recovery
+function triggerWakeSync() {
+  if (wakeSyncTimer) {
+    clearTimeout(wakeSyncTimer);
+    wakeSyncTimer = null;
+  }
+  // Wait 700ms for mobile network interface stabilization after wake
+  wakeSyncTimer = setTimeout(() => {
+    wakeSyncTimer = null;
+    if (typeof document === 'undefined' || document.visibilityState !== 'hidden') {
+      fetchMemosFromCloud(true);
+      syncCustomAppsWithCloud();
+      scheduleMemoReconnectRetries();
+    }
+  }, 700);
+}
+
 window.addEventListener('online', () => {
-  fetchMemosFromCloud(true);
+  // Network signal is confirmed, sync immediately without delay
+  if (wakeSyncTimer) { clearTimeout(wakeSyncTimer); wakeSyncTimer = null; }
+  fetchMemosFromCloud(false);
   syncCustomAppsWithCloud();
   scheduleMemoReconnectRetries();
 });
 
 window.addEventListener('focus', () => {
-  fetchMemosFromCloud(true);
-  syncCustomAppsWithCloud();
-  scheduleMemoReconnectRetries();
+  triggerWakeSync();
 });
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
-    fetchMemosFromCloud(true);
-    syncCustomAppsWithCloud();
-    scheduleMemoReconnectRetries();
+    triggerWakeSync();
   }
 });
 

@@ -971,24 +971,32 @@
 - 次回最初に実施する作業: 本番環境（v44）での長時間放置後の自動復帰動作確認。
 - 関連する作業ログ: execution_logs/2026-11-02_v44_session_auto_recovery.md
 
-## 作業状況・引き継ぎ（2026-11-02 16:10 UTC カンバン列名刷新 ARCHIVE / MISSIONS / PRIORITY・v46本番デプロイ）
-- 最終更新日時: 2026-11-02 16:10 UTC
+## 作業状況・引き継ぎ（2026-11-04 06:27 UTC オフライン誤表示・SWセッション更新遮断・保存API認証欠落の根本解消・v47）
+- 最終更新日時: 2026-11-04 06:27 UTC (2026-11-04 15:27 JST)
 - 直近で完了した作業:
-  1. **カンバン列ヘッダーの刷新 (`index.html`)**:
-     - 左列（保管・リスト）: `🏛️ ARCHIVE`
-     - 中列（指示待ち・タスク）: `🎯 MISSIONS`
-     - 右列（至急・最優先）: `🔥 PRIORITY`
-  2. **モーダル選択肢・トースト通知の同期 (`index.html`, `app.js`)**:
-     - メモ作成/編集ダイアログのステータス選択肢ラベルを統一。
-     - `STATUS_MAP` を更新し、ドラッグ＆ドロップ移動時・リスト表示時のステータス名を同期。
-     - 内部キー（`backlog`, `todo`, `in_progress`）は完全維持し既存メモ47件との下位互換性を100%保護。
-  3. **バージョン更新 & キャッシュバスター (`index.html`, `sw.js`)**:
-     - バージョンバッジを `v46` に更新、Service Worker キャッシュ名を `antigravity-hub-v46` に更新。
-  4. **検証**: 自動テスト全件パス、既存メモ構造およびE2EE暗号化黒板の動作確認。
-- 現在進行中の作業: Git push（v46）およびCloudflare本番環境での自動反映確認。
+  1. **SWによるAccessセッション再発行遮断の解消 (`sw.js`)**:
+     - ナビゲーションリクエスト（`request.mode === 'navigate'`）において、Cloudflare Access の認証リダイレクト（3xx, redirected, 401, 403）を一切横取り・キャッシュせず、ブラウザネイティブへ透過（passthrough）して自動セッション再発行が正常に行われるよう修正。
+     - キャッシュ汚染防止（自オリジンの正常200 HTMLのみキャッシュ保存）と、純粋な回線切断時のみのオフラインフォールバックを徹底。
+     - Service Worker キャッシュを `v47`（`antigravity-hub-v47`）に更新。
+  2. **メモ保存API（`saveMemosToCloud`）の通信・認証強化 (`app.js`)**:
+     - `credentials: 'same-origin'`、`cache: 'no-store'`、タイムアウト（AbortController 10秒）を追加。
+     - セッション期限切れ（401/403/HTML）検知時の安全な自動セッション復帰連携（`scheduleSafeSessionRecovery`）を追加。
+     - 一時的な通信エラー時に即座に「オフライン」固定にせず、指数バックオフ自動再接続（`scheduleMemoReconnectRetries`）を呼んで自動再送へつなぐよう改善。
+     - 全件削除の `fetch` にも `credentials: 'same-origin'`, `cache: 'no-store'` を付与。
+  3. **スリープ復帰デバウンス ＆ 過敏なオフライン誤表示の抑制 (`app.js`, `shared-pad.js`)**:
+     - スマホ画面点灯時（`visibilitychange` / `focus`）に 700ms の安定化待機（`triggerWakeSync` / `triggerPadWakeSync`）を設け、OS回線復帰前の0msエラーを防止。
+     - 3回連続失敗または `navigator.onLine === false` の時のみ「オフライン」と表示し、一時的な揺らぎ（1〜2回）は「一時待機・再接続試行中...」として誤表示を抑制。
+     - 指数バックオフ3段階リトライ（1.5秒、4.5秒、10.0秒）を導入し、ハング中の古い fetch を abort して新規通信を通す制御を追加。
+     - `online` イベント検知時は待機なしで即座にクラウド同期を実行し、最速で緑の接続済へ復帰。
+  4. **バージョン更新 & キャッシュバスター (`index.html`)**:
+     - アプリバージョンバッジを `v47` に更新、CSS/JSのキャッシュバスターを `20261104_v47` に更新。
+  5. **検証**:
+     - 新規テスト（`tests/offline-recovery-v47.cjs`）を含む全18件のテスト（`node --test tests/*.cjs`）全パスを確認。
+- 現在進行中の作業: なし（ローカル実装・テスト完了）。
 - 未解決の問題: なし。
-- 次回最初に実施する作業: 本番環境（v46）でのカンバン表示確認。
-- 関連する作業ログ: execution_logs/2026-11-02_v46_kanban_columns_rebranding.md
+- 次回最初に実施する作業: ユーザー承認のもと本番へコミット・プッシュし、実機（PC/スマホ）でのオフライン誤表示解消と安定同期を確認。
+- 関連する作業ログ: execution_logs/2026-11-04_v47_offline_stuck_resolution.md
+
 
 
 

@@ -1,5 +1,5 @@
-// Antigravity Mission Hub - Progressive Web App Service Worker (v46)
-const CACHE_NAME = 'antigravity-hub-v46';
+// Antigravity Mission Hub - Progressive Web App Service Worker (v47)
+const CACHE_NAME = 'antigravity-hub-v47';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -58,7 +58,9 @@ self.addEventListener('fetch', (event) => {
       caches.open(CACHE_NAME).then((cache) => {
         return cache.match(request).then((response) => {
           return response || fetch(request).then((networkResponse) => {
-            cache.put(request, networkResponse.clone());
+            if (networkResponse && networkResponse.status === 200) {
+              cache.put(request, networkResponse.clone());
+            }
             return networkResponse;
           });
         });
@@ -67,8 +69,36 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. Navigation requests (HTML) & Core Scripts/Styles: Network First (Ensures immediate update)
-  if (request.mode === 'navigate' || url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname === '/') {
+  // 3. Navigation requests (HTML): Network First with Cloudflare Access passthrough
+  if (request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('/index.html')) {
+    event.respondWith(
+      fetch(request).then((networkResponse) => {
+        // If redirected (e.g. Cloudflare Access login flow) or auth required, NEVER hijack or cache
+        if (!networkResponse || networkResponse.redirected || networkResponse.status === 401 || networkResponse.status === 403 || (networkResponse.status >= 300 && networkResponse.status < 400)) {
+          return networkResponse;
+        }
+
+        // Only cache verified successful responses for our own origin
+        if (networkResponse.status === 200) {
+          const respUrl = new URL(networkResponse.url || request.url);
+          if (respUrl.origin === url.origin) {
+            const cloned = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, cloned));
+          }
+        }
+        return networkResponse;
+      }).catch(() => {
+        // Offline fallback: only when network is genuinely unreachable
+        return caches.match(request).then((cachedResponse) => {
+          return cachedResponse || caches.match('/') || caches.match('/index.html');
+        });
+      })
+    );
+    return;
+  }
+
+  // 4. Core Scripts & Styles: Network First (Ensures immediate update)
+  if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css')) {
     event.respondWith(
       fetch(request).then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
@@ -77,15 +107,13 @@ self.addEventListener('fetch', (event) => {
         }
         return networkResponse;
       }).catch(() => {
-        return caches.match(request).then((cachedResponse) => {
-          return cachedResponse || (request.mode === 'navigate' ? caches.match('/') : null);
-        });
+        return caches.match(request);
       })
     );
     return;
   }
 
-  // 4. Other static assets (Images, Icons): Stale-While-Revalidate
+  // 5. Other static assets (Images, Icons): Stale-While-Revalidate
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       const fetchPromise = fetch(request).then((networkResponse) => {

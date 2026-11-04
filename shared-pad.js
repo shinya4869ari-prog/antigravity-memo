@@ -56,7 +56,8 @@
     confirmedKeepForever: false
   };
   let remote = null, busy = false, timer, composing = false;
-  let reconnectTimer1 = null, reconnectTimer2 = null;
+  let reconnectTimer1 = null, reconnectTimer2 = null, reconnectTimer3 = null;
+  let activePadAbortController = null, padWakeSyncTimer = null, consecutivePadFailures = 0;
   let imageEpoch = 0;
 
   if (typeof window !== 'undefined') {
@@ -74,22 +75,39 @@
   function clearReconnectTimers() {
     if (reconnectTimer1) { clearTimeout(reconnectTimer1); reconnectTimer1 = null; }
     if (reconnectTimer2) { clearTimeout(reconnectTimer2); reconnectTimer2 = null; }
+    if (reconnectTimer3) { clearTimeout(reconnectTimer3); reconnectTimer3 = null; }
   }
 
   function scheduleReconnectRetries() {
     clearReconnectTimers();
+    const triggerRetry = () => {
+      if (typeof document === 'undefined' || !document.hidden) {
+        if (busy && activePadAbortController) {
+          try { activePadAbortController.abort(); } catch {}
+        }
+        sync();
+      }
+    };
+
     reconnectTimer1 = setTimeout(() => {
       reconnectTimer1 = null;
-      if (typeof document === 'undefined' || !document.hidden) sync();
+      triggerRetry();
     }, 1500);
+
     reconnectTimer2 = setTimeout(() => {
       reconnectTimer2 = null;
-      if (typeof document === 'undefined' || !document.hidden) sync();
+      triggerRetry();
     }, 4500);
+
+    reconnectTimer3 = setTimeout(() => {
+      reconnectTimer3 = null;
+      triggerRetry();
+    }, 10000);
   }
 
   async function fetchPadApi(url, options = {}, timeoutMs = 8000) {
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    activePadAbortController = controller;
     const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
     try {
       const fetchOpts = {
@@ -110,6 +128,9 @@
       return res;
     } finally {
       if (timeoutId) clearTimeout(timeoutId);
+      if (activePadAbortController === controller) {
+        activePadAbortController = null;
+      }
     }
   }
 
@@ -1184,8 +1205,11 @@
             'sync'
           );
         }
+        consecutivePadFailures = 0;
+        clearReconnectTimers();
       }
     } catch (err) {
+      consecutivePadFailures++;
       if (err && err.code === 'AUTH_REQUIRED') {
         updateStatusDisplay('🔐 セッション自動更新中...', 'idle');
         if (typeof window !== 'undefined' && typeof window.scheduleSafeSessionRecovery === 'function') {
@@ -1194,7 +1218,12 @@
           setTimeout(() => window.location.reload(), 1200);
         }
       } else {
-        updateStatusDisplay('⚠️ 未接続・未同期（再接続待ち）', 'idle');
+        const isTrulyOffline = (typeof navigator !== 'undefined' && navigator.onLine === false);
+        if (isTrulyOffline || consecutivePadFailures >= 3) {
+          updateStatusDisplay('⚠️ 未接続・未同期（再接続待ち）', 'idle');
+        } else {
+          updateStatusDisplay('再接続試行中…', 'idle');
+        }
       }
       scheduleReconnectRetries();
     } finally {
@@ -1634,16 +1663,28 @@
     };
   }
 
+  function triggerPadWakeSync() {
+    if (padWakeSyncTimer) {
+      clearTimeout(padWakeSyncTimer);
+      padWakeSyncTimer = null;
+    }
+    padWakeSyncTimer = setTimeout(() => {
+      padWakeSyncTimer = null;
+      if (!document.hidden) {
+        checkExpiration();
+        sync();
+        scheduleReconnectRetries();
+      }
+    }, 700);
+  }
+
   window.addEventListener('online', () => {
+    if (padWakeSyncTimer) { clearTimeout(padWakeSyncTimer); padWakeSyncTimer = null; }
     sync();
     scheduleReconnectRetries();
   });
   window.addEventListener('focus', () => {
-    if (!document.hidden) {
-      checkExpiration();
-      sync();
-      scheduleReconnectRetries();
-    }
+    triggerPadWakeSync();
   });
   window.addEventListener('hashchange', async () => {
     const hash = window.location.hash || '';
@@ -1656,9 +1697,7 @@
 
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
-      checkExpiration();
-      sync();
-      scheduleReconnectRetries();
+      triggerPadWakeSync();
     }
   });
 
